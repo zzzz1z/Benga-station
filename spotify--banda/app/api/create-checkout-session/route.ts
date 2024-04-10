@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from 'next/server';
 
 import { stripe } from '@/libs/stripe';
-import { getUrl } from '@/libs/helpers'; 
+import { getURL } from '@/libs/helpers'; 
 import { createOrRetrieveCustomer } from '@/libs/supabaseAdmin';
 
 export async function POST(
@@ -26,8 +26,8 @@ export async function POST(
     });
 
 
-    
     //@ts-ignore
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       billing_address_collection: 'required',
@@ -35,7 +35,7 @@ export async function POST(
       line_items: [
         {
           price: price.id,
-          quantity: 1
+          quantity
         }
       ],
       mode: 'subscription',
@@ -44,12 +44,11 @@ export async function POST(
         trial_from_plan: true,
         metadata
       },
-      success_url: `${getUrl()}/account`,
-      cancel_url: `${getUrl()}/`
+      success_url: `${getURL()}/account`,
+      cancel_url: `${getURL()}/`
     });
 
     return NextResponse.json({ sessionId: session.id });
-    
   } catch (err: any) {
     console.log(err);
     return new NextResponse('Internal Error', { status: 500 });

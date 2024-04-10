@@ -65,6 +65,7 @@ const UploadModal = () => {
             });
             
             if (songError){
+                console.log(songError)
                 setIsLoading(false);
                 return toast.error('Deu bum 1 , tenta de novo');
             }

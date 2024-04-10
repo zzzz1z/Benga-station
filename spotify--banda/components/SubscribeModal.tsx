@@ -61,8 +61,11 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
         data: { price }
       });
 
+      console.log(sessionId)
+
       const stripe = await getStripe();
       stripe?.redirectToCheckout({ sessionId });
+      
     } catch (error) {
 
 
