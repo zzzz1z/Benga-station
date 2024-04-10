@@ -26,8 +26,8 @@ export async function POST(
     });
 
 
+    
     //@ts-ignore
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       billing_address_collection: 'required',
@@ -35,7 +35,7 @@ export async function POST(
       line_items: [
         {
           price: price.id,
-          quantity
+          quantity: 1
         }
       ],
       mode: 'subscription',
@@ -49,6 +49,7 @@ export async function POST(
     });
 
     return NextResponse.json({ sessionId: session.id });
+    
   } catch (err: any) {
     console.log(err);
     return new NextResponse('Internal Error', { status: 500 });
