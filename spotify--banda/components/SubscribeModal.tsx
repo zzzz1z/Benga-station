@@ -41,18 +41,16 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
     }
   }
 
-
   const handleCheckout = async (price: Price) => {
     setPriceIdLoading(price.id);
-
     if (!user) {
       setPriceIdLoading(undefined);
-      return toast.error('Deves ter sessão iniciada');
+      return toast.error('Must be logged in');
     }
 
     if (subscription) {
       setPriceIdLoading(undefined);
-      return toast('Já faz parte');
+      return toast('Already subscribed');
     }
 
     try {
@@ -61,27 +59,18 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
         data: { price }
       });
 
-      console.log(sessionId)
-
       const stripe = await getStripe();
       stripe?.redirectToCheckout({ sessionId });
-      
     } catch (error) {
-
-
       return toast.error((error as Error)?.message);
-
-
     } finally {
-
       setPriceIdLoading(undefined);
-      
     }
   };
 
   let content = (
     <div className="text-center">
-      Sem produtos disponíveis
+      No products available.
     </div>
   )
 
@@ -92,7 +81,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
           if (!product.prices?.length) {
             return (
               <div key={product.id}>
-                Sem preços aqui
+                No prices available
               </div>
             );
           }
@@ -104,7 +93,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
               disabled={isLoading || price.id === priceIdLoading}
               className="mb-4"
             >
-              {`Faça parte da benga station por ${formatPrice(price)} a ${price.interval}`}
+              {`Subscribe for ${formatPrice(price)} a ${price.interval}`}
             </Button>
           ))
         })}
@@ -112,18 +101,18 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
     )
   }
 
-  if (subscription?.status == 'active') {
+  if (subscription) {
     content = (
       <div className="text-center">
-        Já inscrito
+        Already subscribed.
       </div>
     )
   }
 
   return (
     <Modal
-      title="Só disponível para utilizadores premiums"
-      description="Ouve as músicas que quiseres aqui na benga station"
+      title="Only for premium users"
+      description="Listen to music with Spotify Premium"
       isOpen={subscribeModal.isOpen}
       onChange={onChange}
     >
