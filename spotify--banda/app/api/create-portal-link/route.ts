@@ -1,4 +1,4 @@
-import { getUrl } from "@/libs/helpers";
+import { getURL } from "@/libs/helpers";
 import { stripe } from "@/libs/stripe";
 import { createOrRetrieveCustomer } from "@/libs/supabaseAdmin";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
@@ -25,7 +25,7 @@ export async function POST(){
 
         const { url } = await stripe.billingPortal.sessions.create({
             customer,
-            return_url: `${getUrl()}/account`
+            return_url: `${getURL()}/account`
         });
 
         return NextResponse.json({ url });
