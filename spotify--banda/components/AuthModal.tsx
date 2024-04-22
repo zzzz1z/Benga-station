@@ -36,14 +36,15 @@ const AuthModal = () => {
 
     return (
         <Modal
-         title='Bem vindo'
-         description='Iniciar sessão'
+         title='Olá'
+         description='Introduza abaixo os seus dados para iniciar sessão,
+          caso não tenha uma conta, crie uma! 👋🏿'
          isOpen={isOpen}
          onChange={onChange}
         >
             <Auth 
              magicLink
-             providers={['apple', 'github', 'google']}
+             providers={['github']}
              theme='dark'
              supabaseClient={supabaseClient}
              appearance={{

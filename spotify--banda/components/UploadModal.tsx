@@ -10,6 +10,7 @@ import uniqid from 'uniqid'
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useRouter } from "next/navigation";
 
+
 const UploadModal = () => {
     const [isLoading, setIsLoading] = useState(false);
     const uploadModal = useUploadModal();
@@ -39,12 +40,17 @@ const UploadModal = () => {
         }
     }
 
+   
     const onSubmit: SubmitHandler<FieldValues> = async (values) => {
+
+        
         try {
             setIsLoading(true);
 
             const imageFile = values.image?.[0];
+
             const songFile = values.song?.[0];
+
 
             if ( !imageFile || !songFile || !user) {
              toast.error('wawe coisa');
@@ -173,7 +179,7 @@ const UploadModal = () => {
                 
                 <div>
                     <div className="pb-1">
-                        Escolhe uma imagem    
+                        Escolha uma imagem    
                     </div>
 
 
@@ -192,11 +198,8 @@ const UploadModal = () => {
                 </div>
                  
                 <Button disabled={isLoading} type="submit">
-                 Submeter Música
+                 Fazer Upload
                 </Button>
-
-
-                
 
             </form>
         </Modal>

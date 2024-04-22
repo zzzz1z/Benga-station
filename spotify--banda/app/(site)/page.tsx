@@ -45,9 +45,9 @@ export default async function Home() {
             "
           >
 
-            <ListaItens 
+            <ListaItens
              image="/images/likedit.png"
-             name="Liked songs"
+             name="Músicas gostadas"
              href="liked"
             />
 
@@ -63,7 +63,10 @@ export default async function Home() {
          </h1>
        </div>
 
-       <PageContent songs={songs}/>
+       <PageContent
+        
+        songs={songs}>
+        </PageContent>
      </div>
     
 

@@ -23,6 +23,7 @@ export const postData = async ({url,data}:{url:string,data?:{price:Price}}) => {
     console.log('Error in POST',{url,data,res})
 
     throw new Error(res.statusText)
+    
   }
 
   return res.json()
