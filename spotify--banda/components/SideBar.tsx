@@ -8,17 +8,19 @@ import { HiHome } from "react-icons/hi";
 import Box from "./Box";
 import SideBarItem from "./SideBarItem";
 import Biblioteca from "./Biblioteca";
-import { Song } from "@/types";
+import { Playlist, Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
 import { twMerge } from "tailwind-merge";
 
 interface sidebarProps{
     children: React.ReactNode;
     songs: Song[];
+    playlist: Playlist[];
 }
 const SideBar: React.FC <sidebarProps> = ({
     children,
-    songs
+    songs,
+    playlist
 }) => {
 
     const pathname = usePathname();
@@ -35,8 +37,8 @@ const SideBar: React.FC <sidebarProps> = ({
         },
         {
             icon: BiSearch,
-            label: 'Search',
-            active: pathname === '/Search',
+            label: 'Pesquisar',
+            active: pathname === '/search',
             href: '/search',
         }
     ], [pathname]);
@@ -75,7 +77,7 @@ const SideBar: React.FC <sidebarProps> = ({
            
          </Box>
          <Box className="overflow-y-auto h-full">
-            <Biblioteca songs={songs}/>
+            <Biblioteca playlists={playlist} songs={songs}/>
          </Box>
         </div>
         <main className="h-full flex-1 overflow-y-auto py-2">

@@ -146,6 +146,7 @@ const Header: React.FC <HeaderProps> = ({
          "
         >
           {user ? (
+
             <div className="flex gap-x-4 items-center">
               <Button
                onClick={handleLogout}
@@ -156,6 +157,16 @@ const Header: React.FC <HeaderProps> = ({
               </Button>
 
               <Button
+               onClick={()=> router.push('/playlists')}
+               className="bg-white px-6 py-2"
+              >
+                Playlists    
+              
+              </Button>
+
+              
+
+              <Button
                onClick={()=> router.push('/account')}
                className="bg-white"
               >
@@ -163,7 +174,11 @@ const Header: React.FC <HeaderProps> = ({
 
               </Button>
             </div>
-          ) : (
+          ) 
+          
+          :
+          
+          (
 
           <>
 

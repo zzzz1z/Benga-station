@@ -2,6 +2,7 @@ import getSongsByT from "@/actions/getSongsByT";
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import SearchContent from "./components/SearchContent";
+import getPlaylistsByT from "@/actions/getPlaylistsByT";
 
 interface SearchProps {
     searchParams: {
@@ -11,6 +12,7 @@ interface SearchProps {
 
 const Search = async ({ searchParams}: SearchProps) => {
     const songs = await getSongsByT(searchParams.title);
+    const playlists = await getPlaylistsByT(searchParams.title)
 
     return (
         <div
@@ -32,7 +34,7 @@ const Search = async ({ searchParams}: SearchProps) => {
                 </div>
                 
             </Header>
-            <SearchContent songs={songs}/>
+            <SearchContent playlists={playlists} songs={songs}/>
     
         </div>
     )

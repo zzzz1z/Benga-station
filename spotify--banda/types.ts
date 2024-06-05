@@ -13,6 +13,14 @@ export interface UserDetails {
 
 
 
+export type PlaylistSong = {
+  playlist_id: string;
+  song_id: string;
+  };
+  
+
+
+
 
 export interface ProductWithPrice extends Product { 
     prices?: Price[];
@@ -25,7 +33,25 @@ export interface Song {
     title: string;
     song_path: string;
     image_path: string;
+}
 
+export interface Songs {
+    id: string;
+    user_id: string;
+    author: string;
+    title: string;
+    song_path: string;
+    image_path: string;
+}
+
+export interface Playlist {
+    id: string;
+    user_id: string;
+    description: string;
+    author: string;
+    title: string;
+    created_at: string;
+    songs: Song[];
 }
 
 export interface Product {

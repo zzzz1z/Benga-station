@@ -3,19 +3,22 @@
 import useAuthModal from "@/hooks/useAuthModal"
 import useUploadModal from "@/hooks/useUploadModal"
 import { useUser } from "@/hooks/useUser"
-import { Song } from "@/types"
+import { Playlist, Song } from "@/types"
 import { AiOutlinePlus } from "react-icons/ai"
 import { TbPlaylist } from "react-icons/tb"
 import MediaItem from "./MediaItem"
 import useOnPlay from "@/hooks/useOnPlay"
 import useSubscribeModal from "@/hooks/useSubscribeModal.ts"
+import PlaylistItem from "@/app/playlists/components/PlaylistsItem"
 
 interface BibliotecaProps {
   songs: Song[];
+  playlists: Playlist[];
 }
 
 const Biblioteca: React.FC< BibliotecaProps> = ({
-  songs
+  songs,
+  playlists
 
 }) => {
   const subscribeModal = useSubscribeModal();
@@ -65,9 +68,10 @@ const Biblioteca: React.FC< BibliotecaProps> = ({
              text-neutral-400
              font-medium
              text-md
+             flex-wrap
              "
         >
-              A tua biblioteca de músicas
+         Adicionar música nova  
         </p>
 
         </div>
@@ -101,7 +105,20 @@ const Biblioteca: React.FC< BibliotecaProps> = ({
             key={item.id} 
             data={item}/>
           )
-         }
+        }
+
+        {playlists.map((item) => 
+        
+         <PlaylistItem 
+          onClick={(id: string) => onPlay(id)} 
+          key={item.id} 
+          data={item}/>
+         )
+        }
+
+         
+
+          
       </div>
 
       </div>
