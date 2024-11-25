@@ -15,6 +15,6 @@ export async function middleware(req: NextRequest) {
         res
     }, {supabaseKey, supabaseUrl});
 
-    await supabase.auth.getSession();
+    await supabase.auth.getUser();
     return res;
 }

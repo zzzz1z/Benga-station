@@ -10,9 +10,11 @@ interface SearchProps {
     }
 };
 
+export const revalidate = 0;
+
 const Search = async ({ searchParams}: SearchProps) => {
     const songs = await getSongsByT(searchParams.title);
-    const playlists = await getPlaylistsByT(searchParams.title)
+    
 
     return (
         <div
@@ -34,7 +36,7 @@ const Search = async ({ searchParams}: SearchProps) => {
                 </div>
                 
             </Header>
-            <SearchContent playlists={playlists} songs={songs}/>
+            <SearchContent  songs={songs}/>
     
         </div>
     )

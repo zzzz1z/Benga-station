@@ -7,17 +7,13 @@ const getPlaylistsByUserId = async (): Promise<Playlist[]> => {
         cookies: cookies
     });
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: {user} } = await supabase.auth.getUser();
     
-    if(sessionError){
-        console.log(sessionError.message);
-        return [];
-    } 
 
     
     
     
-    const { data, error } = await supabase.from('Playlists').select('*').eq('user_id', sessionData.session?.user.id).order('created_at', { ascending: false});
+    const { data, error } = await supabase.from('Playlists').select('*').eq('user_id',user?.id).order('created_at', { ascending: false});
 
 
     if (error){

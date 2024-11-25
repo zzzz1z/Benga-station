@@ -1,6 +1,6 @@
 import { ProductWithPrice } from "@/types";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 const getActiveProductsWithPrices = async (): Promise<ProductWithPrice[]> => {
 

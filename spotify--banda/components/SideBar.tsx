@@ -11,6 +11,8 @@ import Biblioteca from "./Biblioteca";
 import { Playlist, Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
 import { twMerge } from "tailwind-merge";
+import { SlPlaylist } from "react-icons/sl";
+
 
 interface sidebarProps{
     children: React.ReactNode;
@@ -40,7 +42,15 @@ const SideBar: React.FC <sidebarProps> = ({
             label: 'Pesquisar',
             active: pathname === '/search',
             href: '/search',
+        },
+        {
+            icon: SlPlaylist,
+            label: 'Playlists',
+            active: pathname === '/playlists',
+            href: '/playlists',
         }
+
+
     ], [pathname]);
 
 

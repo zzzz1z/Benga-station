@@ -11,7 +11,7 @@ function useDebounce<T>(value: T, delay?: number) : T {
 
             setDebouncedValue (value)
 
-        }, delay || 500);
+        }, delay ?? 200);
 
         return () => {
 

@@ -13,7 +13,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
 }, ref) => {
   return (
     <input
-     type={type}
+     
      className={twMerge(`
       flex
       w-full
@@ -33,6 +33,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
       focus:outline-none
      `,
      className)}
+     type={type}
      disabled={disabled}
      ref={ref}
      {...props}

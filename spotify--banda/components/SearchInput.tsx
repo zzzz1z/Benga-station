@@ -9,15 +9,20 @@ import { useRouter } from "next/navigation";
 const SearchInput = () => {
 
     const router = useRouter();
-    const [value, setValue] = useState<string>('');
-    const debouncedValue = useDebounce<string>(value, 500)
+    const [value, setValue] = useState<string>('')
+    const debouncedValue = useDebounce<string>(value, 500);
+
 
 
     useEffect(()=>{
 
         const query = {
             title: debouncedValue,
-        }
+
+        };
+
+
+
 
         const url = qs.stringifyUrl({
             url: '/search',
@@ -31,7 +36,9 @@ const SearchInput = () => {
     <Input
      placeholder="O quê que queres ouvir?"
      value={value}
-     onChange={(e) => setValue(e.target.value)}
+     onChange={(e) =>{ 
+        console.log("Input Value:", e.target.value);
+        setValue(e.target.value)}}
      />
   )
 }
