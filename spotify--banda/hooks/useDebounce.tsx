@@ -7,11 +7,13 @@ function useDebounce<T>(value: T, delay?: number) : T {
 
     useEffect (() => {
 
+        const processedValue = typeof value === "string" ? (value.toLowerCase() as T) : value;
+
         const timer = setTimeout(() => {
 
-            setDebouncedValue (value)
+            setDebouncedValue (processedValue)
 
-        }, delay ?? 200);
+        }, delay ?? 100);
 
         return () => {
 
