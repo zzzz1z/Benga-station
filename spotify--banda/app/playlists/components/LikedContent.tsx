@@ -43,17 +43,6 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
         
     }
 
-
-    if(playlists.length === 0){
-        return (
-            
-            <Button
-             onClick={onClick}>
-                Criar Playlist
-            </Button>
-        )
-    }
-
     
   return (
     <div className="flex flex-col gap-y-2 w-full p-6">

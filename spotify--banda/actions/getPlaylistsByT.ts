@@ -13,7 +13,7 @@ const getPlaylistsByT = async (title: string): Promise<Playlist[]> => {
         return allPlaylists
     }
 
-    const { data, error } = await supabase.from('Playlists').select('*').ilike('title', `${title}`).order('created_at', { ascending: false});
+    const { data, error } = await supabase.from('Playlists').select('*').ilike('title', `${title}`);
 
     if (error){
         console.log(error)

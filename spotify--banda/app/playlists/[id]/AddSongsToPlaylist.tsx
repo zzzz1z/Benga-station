@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react'; 
 import {  Songs} from '@/types';
 import './AddSongsToPlaylist.css'
-import PlaylistItem from '../components/PlaylistsItem';
+import MediaItem from '@/components/MediaItem';
+import AddButton from '../components/AddButton';
 
 
 
@@ -22,8 +23,11 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filteredSongs, setFilteredSongs] = useState<Songs[]>([]);
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
-
   const supabaseClient = useSupabaseClient();
+
+
+
+
 
   useEffect(() => {
     const fetchSongs = async () => {
@@ -50,6 +54,10 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
 
 
 
+
+
+
+
   useEffect(() => {
     setFilteredSongs(
       songs.filter(song =>
@@ -60,6 +68,10 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
   }, [searchTerm, songs]);
 
 
+
+
+
+
   const handleCheckboxChange = (songId: string) => {
     const newSelected = selectedSongIds.includes(songId)
       ? selectedSongIds.filter(id => id !== songId)
@@ -67,6 +79,10 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
 
     setSelectedSongIds(newSelected);
   };
+
+
+
+
 
   const addSongsToPlaylist = async (playlistId: string, songIds: string[]) => {
     const songsToAdd = songIds.map(songId => ({
@@ -91,6 +107,10 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
   };
 
 
+
+
+
+  
   useEffect(() => {
     if (playlistId && selectedSongIds.length > 0) {
       const createPlaylistAndAddSongs = async () => {
@@ -146,21 +166,32 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> =  ({
 <div className="add-songs-container">
       <input
         type="text"
-        placeholder="Search for songs"
+        placeholder="Pesquisar"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       <ul className="song-list">
+
         {filteredSongs.map(song => (
-          <li key={song.id} className="song-item">
-            <input
-              type="checkbox"
-              id={song.id}
-              checked={selectedSongIds.includes(song.id)}
-              onChange={() => handleCheckboxChange(song.id)}
-            />
-            <label htmlFor={song.id}>{song.title} - {song.author}</label>
-          </li>
+          <div
+          key={song.id}
+          className="flex gap-x-4 w-full" 
+         >
+
+
+          
+           <div className=" flex-1">
+             <MediaItem
+              data={song}
+             />
+           </div>
+
+
+           <AddButton playlistId={song.id}/>
+
+
+
+         </div>
         ))}
       </ul>
     </div>

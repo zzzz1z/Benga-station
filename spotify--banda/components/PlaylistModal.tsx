@@ -1,11 +1,10 @@
 'use client'
 import Modal from "./Modal";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
-import {  useState } from "react";
+import {   useState } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
-import React from "react";
 import { Playlist, Song } from "@/types";
 import AddSongToPlaylistModal from "@/app/playlists/[id]/AddSongsToPlaylist";
 import Button from "./Botão";
@@ -71,7 +70,7 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
     }
 
     const {
-        reset, register
+        reset
     } = useForm<FieldValues>()
     
 
@@ -86,27 +85,47 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
     return (
         <Modal 
          title="Criar uma nova lista de reprodução 📝"
-         description='Adiciona uma capa, escolhe as músicas e cria tua própria lista de reprodução! 🏃🏾'
+         description='Escolha as músicas e cria tua própria lista de reprodução! 🏃🏾'
          isOpen = {playlistModal.isOpen}
          onChange={onChange}
         >
-           <form onSubmit={handleSubmit}>
-            <input
-             required
-             type="text"
-             placeholder="Name"
-             value={title}
-             onChange={(e) => setTitle(e.target.value)}
-            />
-            <textarea
+           <form className="
+            flex-col justify-items-center p-2 m-auto
+           ">
+            <div className="flex-col justify-items-center p-3 m-0 w-full"> 
+
+
+            <div className="h-9 m-auto">
+                
+            
+              <input className="h-7 m-auto w-full"
+               required
+               type="text"
+               placeholder="title"
+               value={title}
+               onChange={(e) => setTitle(e.target.value)}
+               />
+             </div>
+
+            
+            <div className="h-7 m-auto">
+             <input className="h-7 w-full"
              placeholder="Description"
              value={description}
              onChange={(e) => setDescription(e.target.value)}
-            />
+             />
+
+
+            </div>
+
+            </div>
+
+    
+           
 
             <AddSongToPlaylistModal playlistId={playlistId} />
 
-           <Button type="submit"> Criar Playlist </Button>
+           <Button onClick={handleSubmit} > Criar Playlist </Button>
 
          </form>
         </Modal>

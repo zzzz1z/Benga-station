@@ -8,9 +8,15 @@
     margin: 0 auto;
   }
   
-  .add-songs-container input,
-  .add-songs-container button {
+  .add-songs-container input{
     width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  .add-songs-container button {
+
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;
@@ -39,13 +45,13 @@
   }
   
   .add-songs-container button {
-    background-color: #0070f3;
+   
     color: white;
     border: none;
     cursor: pointer;
   }
   
   .add-songs-container button:hover {
-    background-color: #005bb5;
+    background-color: #a52a2a;
   }
   

@@ -19,10 +19,8 @@ const AddButton: React.FC<AddButtonProps> = ({
 
     const router = useRouter();
     const { supabaseClient } = useSessionContext();
-
     const authModal = useAuthModal();
     const { user } = useUser();
-
     const [isAdded, setIsAdded] = useState(false);
 
 
@@ -32,18 +30,20 @@ const AddButton: React.FC<AddButtonProps> = ({
         }
 
         const fetchData = async () => {
-            const { data, error } = await supabaseClient.from('Playlists_Favoritas').select('*').eq('user_id', user.id).eq('playlist_id', playlistId).single();
-
+            const { data, error } = await supabaseClient.from('Playlists_Favoritas').select('*').eq('user_id', user.id).eq('playlist_id', playlistId).maybeSingle();
             if(!error && data){
                 setIsAdded(true)
-
             }
         };
-
         fetchData();
     }, [playlistId, supabaseClient, user?.id])
 
+
+
+
     const Icon = isAdded ? MdBookmarkAdded : MdOutlineBookmarkAdded
+
+
 
     const handleClick = async () => {
         if(!user) {
@@ -65,7 +65,9 @@ const AddButton: React.FC<AddButtonProps> = ({
             }
 
         } else {
-            const {error} = await supabaseClient.from('Playlists_Favoritas').insert({
+
+
+            const {error} = await supabaseClient.from('Playlists_F').insert({
                 playlist_id: playlistId,
                 user_id: user.id
             });
@@ -73,15 +75,11 @@ const AddButton: React.FC<AddButtonProps> = ({
             if(error){
                 toast.error(error.message)
             } else { 
-
                 setIsAdded(true)
-                toast.success('Playlist adicionada aos favoritos!');
+                toast.success('Playlist_F_Created');
             }
         }
-
         router.refresh();
-
-
     }
 
   return (
