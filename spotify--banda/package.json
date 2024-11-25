@@ -38,7 +38,7 @@
     "@react-navigation/native": "^6.1.10",
     "@react-navigation/stack": "^6.3.21",
     "@types/node": "^20",
-    "@types/react": "18.2.0",
+    "@types/react": "^18.3.12",
     "@types/react-dom": "^18",
     "@types/react-navigation": "^3.4.0",
     "@types/uniqid": "^5.3.4",
