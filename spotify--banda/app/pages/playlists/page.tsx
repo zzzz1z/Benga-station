@@ -1,6 +1,5 @@
 import Header from "@/components/Header";
 import LikedContent from "./components/LikedContent";
-import getLikedPlaylists from "@/actions/getLikedPlaylists";
 import Image from "next/image";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
 
@@ -13,8 +12,6 @@ const Liked = async () => {
  
   const playlist = await getPlaylistsByUserId();
 
-
-  
 
 
   return (

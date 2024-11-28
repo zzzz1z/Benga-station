@@ -2,6 +2,7 @@
 
 import useAuthModal from "@/hooks/useAuthModal";
 import { useUser } from "@/hooks/useUser";
+import { Songs } from "@/types";
 import { useSessionContext } from "@supabase/auth-helpers-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,10 +12,11 @@ import { MdOutlineBookmarkAdded,MdBookmarkAdded  } from "react-icons/md";
 
 interface AddButtonProps {
     playlistId: string;
+    songId: string;
 }
 
 const AddButton: React.FC<AddButtonProps> = ({
-    playlistId
+    playlistId, songId
 }) => {
 
     const router = useRouter();
@@ -53,7 +55,7 @@ const AddButton: React.FC<AddButtonProps> = ({
         if(isAdded){
 
             const {error} = await supabaseClient
-            .from('Playlists_Favoritas')
+            .from('Playlists_songs')
             .delete()
             .eq('user_id', user.id)
             .eq('playlist_id', playlistId);
@@ -67,16 +69,17 @@ const AddButton: React.FC<AddButtonProps> = ({
         } else {
 
 
-            const {error} = await supabaseClient.from('Playlists_F').insert({
+            const {error} = await supabaseClient.from('Playlists_songs').insert({
                 playlist_id: playlistId,
-                user_id: user.id
+                user_id: user.id,
+                songId: songId
             });
 
             if(error){
                 toast.error(error.message)
             } else { 
                 setIsAdded(true)
-                toast.success('Playlist_F_Created');
+                toast.success('Playlist_songs');
             }
         }
         router.refresh();

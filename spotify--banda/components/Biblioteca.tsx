@@ -9,7 +9,7 @@ import { TbPlaylist } from "react-icons/tb"
 import MediaItem from "./MediaItem"
 import useOnPlay from "@/hooks/useOnPlay"
 import useSubscribeModal from "@/hooks/useSubscribeModal.ts"
-import PlaylistItem from "@/app/playlists/components/PlaylistsItem"
+import PlaylistItem from "@/app/pages/playlists/components/PlaylistsItem"
 
 interface BibliotecaProps {
   songs: Song[];

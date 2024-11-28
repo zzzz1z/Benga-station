@@ -1,9 +1,9 @@
 'use client'
 
 import useLoadImage from "@/hooks/useLoadImage";
-import usePlayer from "@/hooks/usePlayer";
 import { Playlist } from "@/types";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 
 interface PlaylistItemProps  {
@@ -16,21 +16,24 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({
 }) => {
 
   
-  const player = usePlayer();
   const imageUrl = useLoadImage(data as any);
+  const router = useRouter();
 
+
+  
   const handleClick = () => {
     
     if(onClick) {
-      return onClick(data.id);
+      
+      router.push(`/playlists/${data?.id}`)
     }
 
-    return player.setId(data.id)
+    
   }
 
   return (
     <div
-     onClick={handleClick}
+    onClick={handleClick}
      className="
      flex
      items-center

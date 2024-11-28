@@ -47,7 +47,7 @@ const SideBar: React.FC <sidebarProps> = ({
             icon: SlPlaylist,
             label: 'Playlists',
             active: pathname === '/playlists',
-            href: '/playlists',
+            href: '/pages/playlists',
         }
 
 

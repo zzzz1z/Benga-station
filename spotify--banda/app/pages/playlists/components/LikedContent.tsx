@@ -6,8 +6,8 @@ import useAuthModal from "@/hooks/useAuthModal";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
 import useSubscribeModal from "@/hooks/useSubscribeModal.ts";
 import { useUser } from "@/hooks/useUser";
-import AddButton from "./AddButton";
 import PlaylistItem from "./PlaylistsItem";
+import { useRouter } from "next/navigation";
 
 
 interface LikedPlaylistsProps {
@@ -24,6 +24,7 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
     const authModal = useAuthModal();
     const subscribeModal = useSubscribeModal();
     const playlistModal = usePlaylistModal();
+    const router = useRouter()
 
 
     
@@ -34,14 +35,14 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
           return authModal.onOpen();
         }
     
-        if(!subscription){
-          return subscribeModal.onOpen();
-        }
-    
         return playlistModal.onOpen();
 
         
     }
+
+    const onPlaylistClick = (playlistId: string) => {
+      router.push(`pages/playlists/${playlistId}`);
+  };
 
     
   return (
@@ -63,12 +64,12 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
 
            <div className="flex-1">
              <PlaylistItem 
-               onClick={() =>{}}
+               onClick={onPlaylistClick}
                data={playlist}
             />
         </div>
                     
-        <div><AddButton playlistId={playlist.id}/></div>
+      
 
         </div>
       ))}

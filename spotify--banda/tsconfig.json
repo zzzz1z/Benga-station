@@ -21,6 +21,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/playlists/components/ModalPl.js", "components/AddPlaylistModal.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/pages/playlists/components/ModalPl.js", "components/AddPlaylistModal.js"],
   "exclude": ["node_modules"]
 }

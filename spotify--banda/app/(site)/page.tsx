@@ -47,7 +47,7 @@ export default async function Home() {
 
             <ListaItens
              image="/images/likedit.png"
-             name="Músicas gostadas"
+             name="Músicas favoritas"
              href="liked"
             />
 
