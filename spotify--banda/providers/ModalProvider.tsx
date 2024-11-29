@@ -33,7 +33,7 @@ const ModalProvider: React.FC<ModalProviderProps> = ({
       <AuthModal/>
       <UploadModal/>
       <SubscribeModal products={products}/>
-      <PlaylistModal playlistId={''} songId={''}/> 
+      <PlaylistModal/> 
          
     </>
       
