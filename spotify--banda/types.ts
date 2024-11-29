@@ -52,6 +52,7 @@ export interface Playlist {
     title: string;
     created_at: string;
     songs: Song[];
+    cover_image: string;
 }
 
 export interface Product {

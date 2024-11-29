@@ -4,7 +4,6 @@ import { Playlist } from "@/types";
 import Button from "@/components/Botão";
 import useAuthModal from "@/hooks/useAuthModal";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
-import useSubscribeModal from "@/hooks/useSubscribeModal.ts";
 import { useUser } from "@/hooks/useUser";
 import PlaylistItem from "./PlaylistsItem";
 import { useRouter } from "next/navigation";

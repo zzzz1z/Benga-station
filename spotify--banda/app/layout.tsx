@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Para ouvir música",
 };
 
-export default async function RootLayout({
+ async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -53,3 +53,5 @@ export default async function RootLayout({
     </html>
   );
 }
+
+export default RootLayout

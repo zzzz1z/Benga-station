@@ -25,12 +25,11 @@
   
   .song-list {
     width: 100%;
-    max-height: 100px; /* Limita a altura da lista de sugestões */
+    max-height: 200px; /* Limita a altura da lista de sugestões */
     overflow-y: auto; /* Adiciona barra de rolagem vertical se necessário */
     border: 1px solid #ccc;
     border-radius: 4px;
-    margin-bottom: 10px;
-    padding: 0; /* Remove o espaçamento interno padrão da lista */
+    height: 200%;
   }
   
   .song-item {
@@ -40,9 +39,7 @@
     padding: 10px; /* Adiciona espaçamento interno para os itens da lista */
   }
   
-  .song-item input {
-    margin-right: 10px;
-  }
+
   
   .add-songs-container button {
    

@@ -12,8 +12,9 @@ import { useUser } from "@/hooks/useUser";
 import Button from "./Botão";
 import { FaUserAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
-import Player from "./Player";
 import usePlayer from "@/hooks/usePlayer";
+import { SlPlaylist } from "react-icons/sl";
+import { FcLike } from "react-icons/fc";
 
 interface HeaderProps{
     children: React.ReactNode;
@@ -71,72 +72,92 @@ const Header: React.FC <HeaderProps> = ({
           "
         >
          <button
-             onClick={()=> router.back()} 
-             className="
-             rounded-full
-             bg-black
-             flex
-             items-center
-             justify-center
-             hover:opacity-75
-             transition
-             "
-          >
-              <RxCaretLeft 
-              className="text-white" size={35}
-              />
+          onClick={()=> router.back()} 
+          className="
+          rounded-full
+        bg-black
+          flex
+          items-center
+          justify-center
+          hover:opacity-75
+          transition
+          "
+        >
+          <RxCaretLeft 
+          className="text-white" size={35}
+          />
 
-          </button>
-
-          <button 
-             onClick={()=> router.forward()} 
-             className="
-             rounded-full
-             bg-black
-             flex
-             items-center
-             justify-center
-             hover:opacity-75
-             transition
-             "
+        </button>
+    
+    
+        <button 
+          onClick={()=> router.forward()} 
+          className="
+          rounded-full
+          bg-black
+          flex
+          items-center
+          justify-center
+          hover:opacity-75
+          transition
+          "
           >
               <RxCaretRight 
               className="text-white" size={35}
               />
 
-          </button>   
+        </button>   
+
+
+
         </div>
+
+
+
         <div className="flex md:hidden gap-x-2 items-center">
 
-            <button
+          <button
             // redirecionar para pagina inicial
             onClick={()=> router.push('/')}
-             className="
-             rounded-full
-             p-2
-             bg-white
-             flex
-             items-center
-             justify-center
-             hover:opacity-75transition
-             ">
-             <HiHome className="text-black" size={20}/>
-            </button>
-            <button
+            className="
+            rounded-full
+            p-2
+          bg-white
+            flex
+            items-center
+            justify-center
+            hover:opacity-75transition
+            ">
+            <HiHome className="text-black" size={20}/>
+          </button>
+
+
+
+
+
+          <button
             // redirecionar para pagina de pesquisa
-             onClick={()=> router.push('/search')}
-             className="
-             rounded-full
-             p-2
-             bg-white
-             flex
-             items-center
-             justify-center
-             hover:opacity-75transition
-             ">
-             <BiSearch className="text-black" size={20}/>
-            </button> 
+          onClick={()=> router.push('/search')}
+          className="
+          rounded-full
+          p-2
+        bg-white
+          flex
+          items-center
+          justify-center
+          hover:opacity-75transition
+          ">
+            <BiSearch className="text-black" size={20}/>
+          </button> 
+
+
+
+
+
         </div>
+
+
+
         <div 
          className="
          flex
@@ -145,35 +166,87 @@ const Header: React.FC <HeaderProps> = ({
          gap-x-4
          "
         >
+
+
+
+
           {user ? (
+           <>
+
+            <div className="flex md:hidden gap-x-2 items-center">
+
+
+            <button
+            // redirecionar para pagina de pesquisa
+              onClick={()=> router.push('/playlists')}
+              className="
+              rounded-full
+              p-2
+              bg-white
+              flex
+              items-center
+              justify-center
+              hover:opacity-75transition
+            ">
+              <SlPlaylist className="text-black" size={20}/>
+            </button> 
+
+            <button
+            // redirecionar para pagina de pesquisa
+              onClick={()=> router.push('/liked')}
+              className="
+              rounded-full
+              p-2
+              bg-white
+              flex
+              items-center
+              justify-center
+              hover:opacity-75transition
+              ">
+              <FcLike className="text-black" size={20}/>
+            </button>  
+            </div>
+            
+
+
 
             <div className="flex gap-x-4 items-center">
-              <Button
-               onClick={handleLogout}
-               className="bg-white px-6 py-2"
-              >
+
+            
+            <Button
+              onClick={()=> router.push('/account')}
+              className="bg-white"
+            >
+              <FaUserAlt/>
+
+            </Button>
+
+
+
+
+
+            <Button
+              onClick={handleLogout}
+              className="bg-white px-6 py-2"
+            >
                 Sair  
               
-              </Button>
+            </Button>
 
-              <Button
-               onClick={()=> router.push('/playlists')}
-               className="bg-white px-6 py-2"
-              >
-                Playlists    
-              
-              </Button>
+
 
               
 
-              <Button
-               onClick={()=> router.push('/account')}
-               className="bg-white"
-              >
-                <FaUserAlt/>
+              
 
-              </Button>
+           
+
             </div>
+          </>
+
+
+
+
           ) 
           
           :

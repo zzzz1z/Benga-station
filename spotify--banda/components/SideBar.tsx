@@ -1,6 +1,7 @@
 
 "use client";
 
+import { FcLike } from "react-icons/fc";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { BiSearch } from "react-icons/bi";
@@ -48,6 +49,12 @@ const SideBar: React.FC <sidebarProps> = ({
             label: 'Playlists',
             active: pathname === '/playlists',
             href: '/playlists',
+        },
+        {
+            icon:FcLike,
+            label: 'Fav <3',
+            active: pathname === '/liked',
+            href: '/liked'
         }
 
 

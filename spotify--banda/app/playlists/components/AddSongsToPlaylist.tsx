@@ -6,6 +6,7 @@ import { Songs } from '@/types';
 import './AddSongsToPlaylist.css';
 import MediaItem from '@/components/MediaItem';
 import { useUser } from '@/hooks/useUser';
+import toast from 'react-hot-toast';
 
 interface AddSongToPlaylistProps {
   playlistId: string; // Required to ensure a valid playlist context
@@ -82,42 +83,83 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }
 
       console.log('Songs added successfully.');
       setSelectedSongIds([]); // Clear selected songs after adding
-      alert('Songs added to playlist!');
+      toast('Músicas adicionadas à playlist');
     } catch (error) {
       console.error('Error adding songs:', error);
-      alert('Failed to add songs. Please try again.');
+      alert('Houve um erro ao tentar adicionar as músicas, por favor tente outra vez.');
     }
   };
 
   return (
     <div className="add-songs-container">
+
+
+
+
+
       <input
         type="text"
-        placeholder="Search for a song"
+        placeholder="pesquisar"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
-      <ul className="song-list">
+
+
+
+
+      <ul className="song-list overflow-hidden  ">
         {isLoading ? (
           <p>Loading songs...</p>
-        ) : filteredSongs.length > 0 ? (
+        ) : filteredSongs.length > 0 ? 
+
+
+
+
+
+        
+        (
+
+
           filteredSongs.map((song) => (
-            <li key={song.id} className="song-item">
+            <li key={song.id} className="flex m-0">
+
+
+
+
+
               <MediaItem data={song} />
-              <label>
-                <input
+
+
+
+
+              <label className='m-auto w-20'>
+
+
+
+                <input 
                   type="checkbox"
                   checked={selectedSongIds.includes(song.id)}
                   onChange={() => handleCheckboxChange(song.id)}
                 />
-                Add to Playlist
+
               </label>
+
+
+
             </li>
           ))
+
+
+
+
+
         ) : (
-          <p>No songs found.</p>
+
+
+          <p> Nenhuma música encontrada </p>
         )}
+        
       </ul>
 
       <button
@@ -125,7 +167,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }
         disabled={selectedSongIds.length === 0}
         className="add-songs-button"
       >
-        Add Selected Songs
+       Adicionar músicas selecionadas
       </button>
     </div>
   );
