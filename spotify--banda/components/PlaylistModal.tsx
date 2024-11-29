@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
-import AddSongToPlaylistModal from "@/app/pages/playlists/[id]/AddSongsToPlaylist";
+import AddSongToPlaylistModal from "@/app/playlists/components/AddSongsToPlaylist";
 import Button from "./Botão";
 
 const PlaylistModal: React.FC = () => {

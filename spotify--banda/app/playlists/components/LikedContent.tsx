@@ -8,6 +8,7 @@ import useSubscribeModal from "@/hooks/useSubscribeModal.ts";
 import { useUser } from "@/hooks/useUser";
 import PlaylistItem from "./PlaylistsItem";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 
 interface LikedPlaylistsProps {
@@ -20,11 +21,21 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
 }) => {
 
     
-    const { user, subscription} = useUser();
+    const { user, isLoading} = useUser();
     const authModal = useAuthModal();
-    const subscribeModal = useSubscribeModal();
     const playlistModal = usePlaylistModal();
     const router = useRouter()
+
+
+    useEffect(()=>{
+
+
+      if(!isLoading && !user) {
+          router.replace('/')
+      }
+
+
+  }, [isLoading, user, router])
 
 
     
@@ -41,7 +52,7 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
     }
 
     const onPlaylistClick = (playlistId: string) => {
-      router.push(`pages/playlists/${playlistId}`);
+      router.push(`/playlists/${playlistId}`);
   };
 
     
