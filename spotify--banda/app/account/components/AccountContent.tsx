@@ -68,7 +68,7 @@ const AccountContent =  () => {
                     Plano Atual: <b>{subscription?.prices?.products?.name}</b> 🥸
                 </p>
                 <Button
-                disabled={loading || isLoading}
+                disabled={loading ?? isLoading}
                 onClick={redirectToCustomerPortal}
                 className='w-[300px]'
                 >

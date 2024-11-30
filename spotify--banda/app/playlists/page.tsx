@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import LikedContent from "./components/LikedContent";
 import Image from "next/image";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
+import Button from "@/components/Botão";
 
 
 
@@ -44,6 +45,7 @@ const Liked = async () => {
                 >
                     <Image
                      fill
+                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                      alt='Lista de Músicas'
                      className="object-cover"
                      src='/images/likedit.png'
@@ -78,6 +80,7 @@ const Liked = async () => {
        
 
      </Header>
+   
      <LikedContent playlists={playlist}/>
      
 

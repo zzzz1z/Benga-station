@@ -1,176 +1,134 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { Songs } from '@/types';
-import './AddSongsToPlaylist.css';
-import MediaItem from '@/components/MediaItem';
-import { useUser } from '@/hooks/useUser';
-import toast from 'react-hot-toast';
+import useLoadImagePlaylist from "@/hooks/useLoadImagePlaylist";
+import { Playlist } from "@/types";
+import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { FiDelete } from "react-icons/fi";
+import toast from "react-hot-toast"; // For user feedback
 
-interface AddSongToPlaylistProps {
-  playlistId: string; // Required to ensure a valid playlist context
+interface PlaylistItemProps {
+  data: Playlist;
+  onClick?: (id: string) => void;
 }
 
-const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }) => {
-  const [songs, setSongs] = useState<Songs[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filteredSongs, setFilteredSongs] = useState<Songs[]>([]);
-  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
+  if (!data) {
+    return null; // Handle null/undefined data gracefully
+  }
+
+  const imageUrl = useLoadImagePlaylist(data); // Ensure useLoadImage fetches `cover_image`
+  const router = useRouter();
   const supabaseClient = useSupabaseClient();
-  const {user} = useUser()
 
-  // Fetch all songs from the database
-  useEffect(() => {
-    const fetchSongs = async () => {
-      try {
-        setIsLoading(true);
-        const { data: songs, error } = await supabaseClient.from('Songs').select('*');
-
-        if (error) {
-          throw error;
-        }
-
-        setSongs(songs || []);
-        setFilteredSongs(songs || []);
-      } catch (error) {
-        console.error('Error fetching songs:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSongs();
-  }, [supabaseClient]);
-
-  // Filter songs based on the search term
-  useEffect(() => {
-    setFilteredSongs(
-      songs.filter((song) =>
-        song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        song.author.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [searchTerm, songs]);
-
-  const handleCheckboxChange = (songId: string) => {
-    setSelectedSongIds((prevSelected) =>
-      prevSelected.includes(songId)
-        ? prevSelected.filter((id) => id !== songId)
-        : [...prevSelected, songId]
-    );
+  const handleClick = () => {
+    if (!data?.id) {
+      toast.error("Playlist ID is missing. Cannot navigate.");
+      return;
+    }
+    router.push(`/playlists/${data.id}`);
+    onClick?.(data.id);
   };
 
-  const handleAddSongs = async () => {
-    if (!playlistId || selectedSongIds.length === 0) {
-      alert('Select at least one song to add to the playlist.');
+  const deletePlaylist = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation(); // Prevent triggering the `handleClick` event
+
+    if (!data?.id) {
+      toast.error("Playlist ID is missing. Cannot delete.");
       return;
     }
 
-    try {
-      const songsToAdd = selectedSongIds.map((songId) => ({
-        playlist_id: playlistId,
-        song_id: songId, 
-        user_id: user?.id
-      }));
+    const confirmDelete = confirm(`Are you sure you want to delete "${data?.title ?? 'this playlist'}"?`);
+    if (!confirmDelete) return;
 
-      const { error } = await supabaseClient.from('playlist_songs').insert(songsToAdd);
+    try {
+      const { error } = await supabaseClient
+        .from('Playlists')
+        .delete()
+        .eq('id', data.id);
 
       if (error) {
         throw error;
       }
 
-      console.log('Songs added successfully.');
-      setSelectedSongIds([]); // Clear selected songs after adding
-      toast('Músicas adicionadas à playlist');
+      toast.success('Playlist deleted successfully.');
+      router.refresh(); // Refresh to reflect the updated list
     } catch (error) {
-      console.error('Error adding songs:', error);
-      alert('Houve um erro ao tentar adicionar as músicas, por favor tente outra vez.');
+      console.error('Error deleting playlist:', error);
+      toast.error('Failed to delete playlist. Please try again.');
     }
   };
 
   return (
-    <div className="add-songs-container">
+    <div
+      onClick={handleClick}
+      className="
+        flex
+        items-center
+        gap-x-3
+        cursor-pointer
+        hover:bg-neutral-800/50
+        w-full
+        p-2
+        rounded-md
+      "
+    >
+      {/* Playlist Cover */}
+      <div
+        className="
+          relative
+          rounded-md
+          min-h-[48px]
+          min-w-[48px]
+          overflow-hidden
+          hover:scale-105 transition-transform duration-300 ease-in-out
+          border border-gray-700 shadow-lg
 
 
 
-
-
-      <input
-        type="text"
-        placeholder="pesquisar"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-
-
-
-
-
-      <ul className="song-list overflow-hidden  ">
-        {isLoading ? (
-          <p>Loading songs...</p>
-        ) : filteredSongs.length > 0 ? 
-
-
-
-
-
-        
-        (
-
-
-          filteredSongs.map((song) => (
-            <li key={song.id} className="flex m-0">
-
-
-
-
-
-              <MediaItem data={song} />
-
-
-
-
-              <label className='m-auto w-20'>
-
-
-
-                <input 
-                  type="checkbox"
-                  checked={selectedSongIds.includes(song.id)}
-                  onChange={() => handleCheckboxChange(song.id)}
-                />
-
-              </label>
-
-
-
-            </li>
-          ))
-
-
-
-
-
-        ) : (
-
-
-          <p> Nenhuma música encontrada </p>
-        )}
-        
-      </ul>
-
-      <button
-        onClick={handleAddSongs}
-        disabled={selectedSongIds.length === 0}
-        className="add-songs-button"
+        "
       >
-       Adicionar músicas selecionadas
-      </button>
+        <Image
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          src={imageUrl ?? '/images/likedit.png'} // Default fallback image
+          alt={`${data?.title ?? 'Playlist'} Cover`}
+          className="object-cover"
+        />
+      </div>
+
+      {/* Playlist Title */}
+      <div
+        className="
+          flex
+          flex-col
+          gap-y-1
+          overflow-hidden
+        "
+      >
+        <p className="text-white truncate">{data?.title ?? 'Untitled Playlist'}</p>
+      </div>
+
+      {/* Delete Button */}
+      <div className="ml-auto">
+        <button
+          onClick={deletePlaylist}
+          className="
+            text-red-500
+            hover:text-red-700
+            focus:outline-none
+            focus:ring-2
+            focus:ring-red-500
+            focus:ring-opacity-50
+          "
+          title="Delete Playlist"
+        >
+          <FiDelete size={20} />
+        </button>
+      </div>
     </div>
   );
 };
 
-export default AddSongToPlaylistModal;
+export default PlaylistItem;

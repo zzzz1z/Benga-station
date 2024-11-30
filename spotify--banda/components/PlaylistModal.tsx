@@ -8,6 +8,7 @@ import usePlaylistModal from "@/hooks/usePlaylistModal";
 import AddSongToPlaylistModal from "@/app/playlists/components/AddSongsToPlaylist";
 import Button from "./Botão";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { Playlist } from "@/types";
 
 const PlaylistModal: React.FC = () => {
   const playlistModal = usePlaylistModal();
@@ -16,7 +17,7 @@ const PlaylistModal: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [playlistId, setPlaylistId] = useState<string | null>(null);
+  const [playlistId, setPlaylistId] = useState<Playlist | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [image, setImage] = useState<File | null>(null); // State for the uploaded image
   const [imageUrl, setImageUrl] = useState<string | null>(null); // Store the image URL
@@ -46,7 +47,7 @@ const PlaylistModal: React.FC = () => {
   
       // If an image is uploaded, upload it to Supabase Storage
       if (image) {
-        const fileName = `${Date.now()}-${image.name}`;
+        const fileName = `${image.name}`;
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('playlist-covers')
           .upload(fileName, image);
@@ -56,7 +57,7 @@ const PlaylistModal: React.FC = () => {
           throw new Error("Failed to upload image.");
         }
   
-        imagePath = uploadData?.path || '';
+        imagePath = uploadData?.path ?? '';
         console.log("Image uploaded successfully:", imagePath);
   
         // Retrieve the public URL of the uploaded image
@@ -65,7 +66,7 @@ const PlaylistModal: React.FC = () => {
           .getPublicUrl(imagePath);
   
        
-        publicURL = urlData.publicUrl || '';
+        publicURL = urlData.publicUrl ?? '';
         console.log("Public URL retrieved:", publicURL);
   
         setImageUrl(publicURL); // Store the public URL for preview
@@ -119,7 +120,7 @@ const PlaylistModal: React.FC = () => {
       isOpen={playlistModal.isOpen}
       onChange={(open) => !open && handleCloseModal()}
     >
-      <form className="flex flex-col">
+      <form className="flex m-auto flex-col w-50 items-center gap-4">
       
       
       
@@ -137,15 +138,12 @@ const PlaylistModal: React.FC = () => {
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="border p-2 rounded"
+          className="border p-2 rounded w-full"
         />
-        {image && <p>Selected image: {image.name}</p>}
-
-        
 
         {/* Playlist Title */}
         <input
-          className="border p-2 rounded"
+          className=" w-full border p-2 rounded"
           required
           type="text"
           placeholder="título"
@@ -155,7 +153,7 @@ const PlaylistModal: React.FC = () => {
 
         {/* Playlist Description */}
         <input
-          className="border p-2 rounded"
+          className="border p-2 rounded w-full"
           type="text"
           placeholder="sinopse (opcional)"
           value={description}
@@ -164,19 +162,26 @@ const PlaylistModal: React.FC = () => {
         
         
         {/* Submit Button */}
-        <Button
-          onClick={handleCreatePlaylist}
-          disabled={isCreating || !!playlistId} // Disable if creating or already created
-        >
-          {isCreating ? "Criando" : "Feito!"}
-        </Button>
+        
 
         
         {/* Song Selection */}
         {playlistId ? (
-          <AddSongToPlaylistModal playlistId={playlistId} />
+          <AddSongToPlaylistModal data={playlistId} />
         ) : (
-          <p className="text-gray-700"></p>
+          <>
+          
+          <Button
+          onClick={handleCreatePlaylist}
+          disabled={isCreating ?? !!playlistId} // Disable if creating or already created
+        >
+          {isCreating ? "Criando" : "Feito!"}
+        </Button>
+          <p className="text-gray-700">esqueci</p>
+          
+          </>
+        
+        
         )}
 
        

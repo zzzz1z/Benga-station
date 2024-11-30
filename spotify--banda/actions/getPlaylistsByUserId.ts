@@ -1,5 +1,3 @@
-// @ts-ignore
-
 
 
 import { Playlist } from "@/types";
@@ -7,8 +5,11 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 const getPlaylistsByUserId = async (): Promise<Playlist[]> => {
+
+
+
     const supabase = createServerComponentClient({        
-        cookies: cookies
+        cookies:  cookies
     });
 
     const { data: {user} } = await supabase.auth.getUser();
@@ -25,7 +26,7 @@ const getPlaylistsByUserId = async (): Promise<Playlist[]> => {
     }
     
 
-    return (data as any) || [];
+    return (data as any) ?? [];
 }
 
 

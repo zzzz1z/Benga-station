@@ -2,8 +2,11 @@
 
 import useLoadImagePlaylist from "@/hooks/useLoadImagePlaylist";
 import { Playlist } from "@/types";
+import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { FiDelete } from "react-icons/fi";
+import toast from "react-hot-toast"; // For user feedback
 
 interface PlaylistItemProps {
   data: Playlist;
@@ -13,12 +16,37 @@ interface PlaylistItemProps {
 const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
   const imageUrl = useLoadImagePlaylist(data); // Ensure useLoadImage fetches `cover_image`
   const router = useRouter();
+  const supabaseClient = useSupabaseClient();
 
   const handleClick = () => {
     // Navigate to playlist and trigger optional callback
     router.push(`/playlists/${data?.id}`);
     if (onClick) {
       onClick(data.id);
+    }
+  };
+
+  const deletePlaylist = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation(); // Prevent triggering the `handleClick` event
+
+    const confirmDelete = confirm(`Are you sure you want to delete "${data.title}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await supabaseClient
+        .from('Playlists')
+        .delete()
+        .eq('id', data.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Playlist deleted successfully.');
+      router.refresh(); // Refresh to reflect the updated list
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
+      toast.error('Failed to delete playlist. Please try again.');
     }
   };
 
@@ -47,12 +75,12 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
         "
       >
         <Image
-        fill
-        src={imageUrl || '/images/likedit.png'} // Default fallback image
-        alt={`${data.cover_image} Cover`}
-        className="object-cover"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          src={imageUrl ?? '/images/likedit.png'} // Default fallback image
+          alt={`${data.title} Cover`}
+          className="object-cover"
         />
-
       </div>
 
       {/* Playlist Title */}
@@ -65,6 +93,24 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
         "
       >
         <p className="text-white truncate">{data.title}</p>
+      </div>
+
+      {/* Delete Button */}
+      <div className="ml-auto">
+        <button
+          onClick={deletePlaylist}
+          className="
+            text-red-500
+            hover:text-red-700
+            focus:outline-none
+            focus:ring-2
+            focus:ring-red-500
+            focus:ring-opacity-50
+          "
+          title="Delete Playlist"
+        >
+          <FiDelete size={50} />
+        </button>
       </div>
     </div>
   );

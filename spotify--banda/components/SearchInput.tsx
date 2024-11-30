@@ -26,7 +26,7 @@ const SearchInput = () => {
             if (error) {
                 console.error('Error fetching data:', error);
             } else {
-                setData(data || []);
+                setData(data ?? []);
             }
         };
 

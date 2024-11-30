@@ -14,7 +14,7 @@ const getActiveProductsWithPrices = async (): Promise<ProductWithPrice[]> => {
         console.log(error)
     }
 
-    return (data as any) || [];
+    return (data as any) ?? [];
 }
 
 

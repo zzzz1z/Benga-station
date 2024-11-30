@@ -15,12 +15,12 @@ import { twMerge } from "tailwind-merge";
 import { SlPlaylist } from "react-icons/sl";
 
 
-interface sidebarProps{
+interface SidebarProps{
     children: React.ReactNode;
     songs: Song[];
     playlist: Playlist[];
 }
-const SideBar: React.FC <sidebarProps> = ({
+const SideBar: React.FC <SidebarProps> = ({
     children,
     songs,
     playlist
@@ -47,7 +47,7 @@ const SideBar: React.FC <sidebarProps> = ({
         {
             icon: SlPlaylist,
             label: 'Playlists',
-            active: pathname === '/playlists',
+            active: pathname ===  '/playlists',
             href: '/playlists',
         },
         {

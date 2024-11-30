@@ -5,9 +5,12 @@
       "dom.iterable",
       "esnext"
     ],
+
+    "strictNullChecks": true, // Enables strict checking of null and undefined values
+    "strict": true, // Enables all strict mode options
+    "forceConsistentCasingInFileNames": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",

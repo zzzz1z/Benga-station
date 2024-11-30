@@ -2,12 +2,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-  
+    justify-content: space-between;
+    min-width: none;
+    height: 100%;
+    min-height: none;
+    max-height: 100%;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+
   .add-songs-container input{
     width: 100%;
     padding: 10px;
@@ -22,15 +29,22 @@
     border: 1px solid #ccc;
     border-radius: 4px;
   }
-  
+
+  .song-list::-webkit-scrollbar {
+    display: none;
+  }
+
+
   .song-list {
+    -ms-overflow-style: none;
+    /*IEandEdge*/
+    scrollbar-width: none;
     width: 100%;
-    max-height: 200px; /* Limita a altura da lista de sugestões */
-    overflow-y: auto; /* Adiciona barra de rolagem vertical se necessário */
-    border: 1px solid #ccc;
+    max-height: 200px;
+    /*Limitaaalturadalistadesugestões*/border: 1px solid #ccc;
     border-radius: 4px;
     height: 200%;
-  }
+}
   
   .song-item {
     display: flex;

@@ -12,7 +12,7 @@ const getSongs = async (): Promise<Song[]> => {
         console.log(error)
     }
 
-    return (data as any) || [];
+    return (data as any) ?? [];
 }
 
 
