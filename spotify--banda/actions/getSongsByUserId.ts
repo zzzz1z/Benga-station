@@ -3,9 +3,12 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 const getSongsByUserId = async (): Promise<Song[]> => {
-    const supabase = createServerComponentClient({        
+const supabase = createServerComponentClient({        
         cookies: cookies
     });
+    await cookies()
+
+    
 
     const { data: {user} } = await supabase.auth.getUser();
     

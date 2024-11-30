@@ -34,6 +34,7 @@ const MediaItem: React.FC<MediaItemProps> = ({
       {/* Image Container */}
       <div className="relative rounded-md min-h-[48px] min-w-[48px] overflow-hidden">
         <Image
+          priority
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           src={imageUrl ?? '/images/likedit.png'}

@@ -16,6 +16,7 @@ const ModalProvider: React.FC<ModalProviderProps> = ({
     products
 }
 ) => {
+    
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {

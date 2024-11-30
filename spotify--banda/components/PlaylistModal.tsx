@@ -10,6 +10,14 @@ import Button from "./Botão";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { Playlist } from "@/types";
 
+
+
+
+
+
+
+
+
 const PlaylistModal: React.FC = () => {
   const playlistModal = usePlaylistModal();
   const supabaseClient = useSupabaseClient();
@@ -17,7 +25,7 @@ const PlaylistModal: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [playlistId, setPlaylistId] = useState<Playlist | null>(null);
+  const [playlistId, setPlaylistId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [image, setImage] = useState<File | null>(null); // State for the uploaded image
   const [imageUrl, setImageUrl] = useState<string | null>(null); // Store the image URL
@@ -47,7 +55,7 @@ const PlaylistModal: React.FC = () => {
   
       // If an image is uploaded, upload it to Supabase Storage
       if (image) {
-        const fileName = `${image.name}`;
+        const fileName = `${Date.now()}${image.name}`;
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('playlist-covers')
           .upload(fileName, image);
@@ -104,21 +112,13 @@ const PlaylistModal: React.FC = () => {
   };
   
 
-  const handleCloseModal = () => {
-    setTitle('');
-    setDescription('');
-    setPlaylistId(null);
-    setImage(null); // Reset image state
-    setImageUrl(null); // Reset image URL state
-    playlistModal.onClose();
-  };
 
   return (
     <Modal
       description="Para adicionar músicas, primeiro crie uma playlist "
       title="Criar nova lista de reprodução"
       isOpen={playlistModal.isOpen}
-      onChange={(open) => !open && handleCloseModal()}
+      onChange={playlistModal.onClose}
     >
       <form className="flex m-auto flex-col w-50 items-center gap-4">
       
@@ -167,7 +167,7 @@ const PlaylistModal: React.FC = () => {
         
         {/* Song Selection */}
         {playlistId ? (
-          <AddSongToPlaylistModal data={playlistId} />
+          <AddSongToPlaylistModal playlistId={playlistId} />
         ) : (
           <>
           

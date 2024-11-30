@@ -33,6 +33,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
       {/* Image Container */}
       <div className="relative min-h-[64px] min-w-[64px]">
         <Image
+        priority
           className="object-cover"
           fill={fill} // Using the fill prop
           sizes={sizes} // Responsive sizes passed down from parent

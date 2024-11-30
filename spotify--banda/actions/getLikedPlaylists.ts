@@ -3,6 +3,8 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 const getLikedPlaylists = async (): Promise<Playlist[]> => {
+    
+    await cookies();
     const supabase = createServerComponentClient({        cookies: cookies
     });
 

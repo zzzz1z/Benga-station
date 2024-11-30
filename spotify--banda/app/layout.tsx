@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
 import "./globals.css";
@@ -11,12 +12,14 @@ import Player from "@/components/Player";
 import getActiveProductsWithPrices from "@/actions/getActiveProductsWithPrices";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
 
-const font = Figtree({ subsets: ["latin"] });
+const font = Figtree({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Benga station",
   description: "Para ouvir música",
 };
+
+// Additional component or app logic goes here.
 
  async function RootLayout({
   children,

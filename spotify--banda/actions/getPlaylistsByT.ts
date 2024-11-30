@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import getPlaylists from "./getPlaylists";
 
 const getPlaylistsByT = async (title: string): Promise<Playlist[]> => {
+    
+    await cookies()
     const supabase = createServerComponentClient({        
         cookies: cookies
     });

@@ -30,7 +30,7 @@ const PlaylistDetails: React.FC = () => {
     }
 
     const fetchPlaylist = async () => {
-      setLoading(true);
+      loading;
 
       try {
         console.log('Fetching playlist with ID:', id);

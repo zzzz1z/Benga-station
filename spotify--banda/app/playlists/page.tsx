@@ -49,6 +49,7 @@ const Liked = async () => {
                      alt='Lista de Músicas'
                      className="object-cover"
                      src='/images/likedit.png'
+                     priority
                      
                     />
 
@@ -93,3 +94,4 @@ const Liked = async () => {
 }
 
 export default Liked;
+

@@ -45,7 +45,8 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                     overflow-hidden
                 "
             >
-                <Image
+            <Image
+                priority
                     className="object-cover"
                     src={imagePath ?? '/images/likedit.png'}
                     fill

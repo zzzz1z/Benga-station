@@ -75,6 +75,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
         "
       >
         <Image
+          priority
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           src={imageUrl ?? '/images/likedit.png'} // Default fallback image
