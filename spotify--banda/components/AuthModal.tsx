@@ -14,20 +14,21 @@ const AuthModal = () => {
     const supabaseClient = useSupabaseClient();
     const router = useRouter();
     const { session } = useSessionContext();
-    const {onClose, isOpen} = useAuthModal();
+    const authModal = useAuthModal();
+  
 
 
     useEffect(() => {
         if(session) {
             router.refresh();
-            onClose();
+            authModal.onClose();
         }
 
-    }, [session, router, onClose]);
+    }, [session, router, authModal.onClose]);
 
     const onChange = (open: boolean) => {
-        if (!isOpen) {
-            onClose();
+        if (!authModal.isOpen) {
+            authModal.onClose();
         }
 
     }
@@ -39,7 +40,7 @@ const AuthModal = () => {
          title='Olá'
          description='Introduza abaixo os seus dados para iniciar sessão,
           caso não tenha uma conta, crie uma! 👋🏿'
-         isOpen={isOpen}
+         isOpen={authModal.isOpen}
          onChange={onChange}
         >
             <Auth 

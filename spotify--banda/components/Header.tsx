@@ -5,7 +5,6 @@ import { BiSearch } from "react-icons/bi";
 import { HiHome } from "react-icons/hi";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import { twMerge } from "tailwind-merge";
-import Botão from "./Botão";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useUser } from "@/hooks/useUser";
@@ -251,12 +250,12 @@ const Header: React.FC <HeaderProps> = ({
           
           :
           
-          (
+          ( 
 
           <>
 
             <div>
-                <Botão
+                <Button
                  onClick={authModal.onOpen}
                  className="
                  bg-transparent
@@ -264,11 +263,11 @@ const Header: React.FC <HeaderProps> = ({
                   "
                 >
                  Registar    
-                </Botão>
+                </Button>
             </div>
 
             <div>
-                <Botão
+                <Button
                  onClick={authModal.onOpen}
                  className="
                  bg-red-700
@@ -277,7 +276,7 @@ const Header: React.FC <HeaderProps> = ({
                   "
                 >
                  Iniciar sessão    
-                </Botão>
+                </Button>
             </div>
 
             </>
