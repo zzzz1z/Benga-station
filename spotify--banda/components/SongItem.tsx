@@ -78,7 +78,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                     opacity-0
                     transition-opacity
                 "
-                role="none"
+                role="presentation"
             >
                 <PlayButton />
             </div>
