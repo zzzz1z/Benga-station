@@ -33,6 +33,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                 transition
                 p-3
             "
+         
         >
             {/* Image Container */}
             <div
@@ -77,6 +78,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                     opacity-0
                     transition-opacity
                 "
+                role="none"
             >
                 <PlayButton />
             </div>
