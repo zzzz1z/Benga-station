@@ -2,20 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { Songs } from '@/types';
 import './AddSongsToPlaylist.css';
 import MediaItem from '@/components/MediaItem';
 import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
+import { Song } from '@/types';
+
 
 interface AddSongToPlaylistProps {
   playlistId: string; // Required to ensure a valid playlist context
 }
 
 const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }) => {
-  const [songs, setSongs] = useState<Songs[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filteredSongs, setFilteredSongs] = useState<Songs[]>([]);
+  const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   

@@ -1,3 +1,4 @@
+import { JSX } from "react";
 import Stripe from "stripe";
 
 export interface UserDetails {
@@ -13,11 +14,6 @@ export interface UserDetails {
 
 
 
-export type PlaylistSong = {
-  playlist_id: string;
-  song_id: string;
-  };
-  
 
 
 
@@ -27,15 +23,6 @@ export interface ProductWithPrice extends Product {
 }
 
 export interface Song {
-    id: string;
-    user_id: string;
-    author: string;
-    title: string;
-    song_path: string;
-    image_path: string;
-}
-
-export interface Songs {
     id: string;
     user_id: string;
     author: string;

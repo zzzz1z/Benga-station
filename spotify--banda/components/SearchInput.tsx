@@ -58,6 +58,10 @@ const SearchInput = () => {
         }
     }, [debouncedValue, data, router]);
 
+    if(!results){
+        return
+    }
+
     return (
         <div>
             <Input

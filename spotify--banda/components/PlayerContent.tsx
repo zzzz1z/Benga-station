@@ -113,6 +113,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
   return (
     <div className=" grid grid-cols-2 md:grid-cols-3 h-full">
+
       <div className="
        flex
        w-full
@@ -134,6 +135,20 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
        items-center
        "
       >
+
+
+        <AiFillStepBackward
+          onClick={onPlayPrevious}
+          size={30}
+          className="
+          text-neutral-400
+          cursor-pointer
+          hover:text-white
+          transition
+          "
+          />
+
+
         <div
          onClick={handlePlay}
          className="
@@ -152,6 +167,22 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
 
         </div>
+
+        <AiFillStepForward
+             onClick={onPlayNext}
+             size={30}
+             className="
+              text-neutral-400
+              cursor-pointer
+              hover:text-white
+              transition
+              "
+              
+            
+            />
+
+
+
       </div>
 
       <div 
@@ -165,16 +196,25 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
         max-w-[722px]
         gap-x-6"
       >
+
+
+
+
+
         <AiFillStepBackward
          onClick={onPlayPrevious}
          size={30}
          className="
           text-neutral-400
           cursor-pointer
-          hover:text-whit e
+          hover:text-white
           transition
           "
           />
+
+
+
+          
           <div 
            onClick={handlePlay}
            className="
@@ -189,8 +229,16 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
             cursor-pointer
             "
             >
+
+
               <Icon size={30} className="text-red-500"/>
+              
+
             </div>
+
+
+
+
             <AiFillStepForward
              onClick={onPlayNext}
              size={30}
