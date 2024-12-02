@@ -56,7 +56,7 @@ const AccountContent =  () => {
 
     return (
         <div>
-            YA
+            EM DESENVOLVIMENTO OK? farei muito mais rapido se voês doarem 
         </div>
     )
     /*

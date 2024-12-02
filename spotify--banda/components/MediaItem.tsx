@@ -29,7 +29,7 @@ const MediaItem: React.FC<MediaItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      className="flex items-center gap-x-3 cursor-pointer hover:bg-neutral-800/50 w-full p-2 rounded-md"
+      className="flex items-center gap-x-3 m-0 cursor-pointer hover:bg-neutral-800/50 w-80 p-2 rounded-md"
     >
       {/* Image Container */}
       <div className="relative rounded-md min-h-[48px] min-w-[48px] overflow-hidden">
@@ -44,7 +44,7 @@ const MediaItem: React.FC<MediaItemProps> = ({
       </div>
 
       {/* Text Info Section */}
-      <div className="flex items-start overflow-hidden flex-col gap-y-1">
+      <div className="flex items-start overflow-auto flex-col gap-y-1">
         <p className="text-white truncate">{data.title}</p>
         <p className="text-neutral-400 text-sm truncate">{data.author}</p>
       </div>
