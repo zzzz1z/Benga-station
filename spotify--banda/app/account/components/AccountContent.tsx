@@ -15,7 +15,7 @@ const AccountContent =  () => {
 
     const router = useRouter();
     const subscribeModal = useSubscribeModal();
-    const { isLoading, subscription, user} = useUser();
+    const { isLoading, user} = useUser();
 
     const [loading, setLoading] = useState(false);
 
@@ -53,6 +53,13 @@ const AccountContent =  () => {
 
         }
     }
+
+    return (
+        <div>
+            YA
+        </div>
+    )
+    /*
   return (
     <div className='mb-7 px-6'>
        
@@ -85,7 +92,7 @@ const AccountContent =  () => {
             </div>
         )}
     </div>
-  )
+  )*/
 }
 
 

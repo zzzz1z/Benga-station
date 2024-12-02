@@ -31,7 +31,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
   products
 }) => {
   const subscribeModal = useSubscribeModal();
-  const { user, isLoading, subscription } = useUser();
+  const { user, isLoading } = useUser();
 
   const [priceIdLoading, setPriceIdLoading] = useState<string>();
 
@@ -48,10 +48,12 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
       return toast.error('Must be logged in');
     }
 
+    /*
+
     if (subscription) {
       setPriceIdLoading(undefined);
       return toast('Already subscribed');
-    }
+    }*/
 
     try {
       const { sessionId } = await postData({
@@ -101,13 +103,13 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({
     )
   }
 
-  if (subscription) {
+  /*if (subscription) {
     content = (
       <div className="text-center">
         Already subscribed.
       </div>
     )
-  }
+  }*/
 
   return (
     <Modal

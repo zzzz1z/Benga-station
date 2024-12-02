@@ -7,7 +7,7 @@ import useSubscribeModal from "./useSubscribeModal.ts";
 const useOnPlay = (songs: Song[]) => {
     const player = usePlayer();
     const authModal = useAuthModal();
-    const { user, subscription } = useUser();
+    const { user, } = useUser();
     const subscribeModal = useSubscribeModal();
 
     const onPlay = (id: string) => {
@@ -15,10 +15,8 @@ const useOnPlay = (songs: Song[]) => {
             return authModal.onOpen();
         }
 
-        if(!subscription){
-            return subscribeModal.onOpen();
-        }
-        console.log(subscription)
+    
+      
 
         player.setId(id);
         player.setIds(songs.map((song) => song.id))
