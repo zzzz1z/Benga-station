@@ -18,11 +18,10 @@ const MediaItem: React.FC<MediaItemProps> = ({
   const imageUrl = useLoadImage(data);
 
   const handleClick = () => {
-    // If onClick is passed, call it. Otherwise, set the player ID.
     if (onClick) {
       onClick(data.id);
     } else {
-      player.setId(data.id); // Assuming this sets the player's current track or context.
+      player.setId(data.id);
     }
   };
 
@@ -38,15 +37,19 @@ const MediaItem: React.FC<MediaItemProps> = ({
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           src={imageUrl ?? '/images/likedit.png'}
-          alt={data.title ?? 'Media Item'} // Improve accessibility with meaningful alt text
+          alt={data.title ?? 'Media Item'}
           className="object-cover"
         />
       </div>
 
       {/* Text Info Section */}
-      <div className="flex items-start overflow-auto flex-col gap-y-1">
-        <p className="text-white truncate">{data.title}</p>
-        <p className="text-neutral-400 text-sm truncate">{data.author}</p>
+      <div className="flex items-start flex-col gap-y-1 w-full">
+        <p className="text-white text-ellipsis overflow-hidden whitespace-nowrap">{data.title}</p>
+        
+        {/* Scrolling author name */}
+        <div className="author-name-container overflow-hidden">
+          <p className="text-neutral-400 text-sm marquee">{data.author}</p>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import useDebounce from "@/hooks/useDebounce";
 import { useEffect, useState } from "react";
@@ -11,17 +11,16 @@ import { useSupabaseClient } from "@supabase/auth-helpers-react";
 const SearchInput = () => {
     const router = useRouter();
     const [value, setValue] = useState<string>('');
-    const [results, setResults] = useState<string[]>([]); // State to store search results
-    const [data, setData] = useState<{ title: string }[]>([]); // State for Supabase data
+    const [data, setData] = useState<{ title: string; author: string }[]>([]); // Include author in the data
     const debouncedValue = useDebounce<string>(value, 500);
-    const supabase = useSupabaseClient()
+    const supabase = useSupabaseClient();
 
     // Fetch data from Supabase table on component mount
     useEffect(() => {
         const fetchData = async () => {
             const { data, error } = await supabase
-                .from('Songs') // Replace 'songs' with your table name
-                .select('title'); // Adjust the column name if needed
+                .from('Songs') // Replace 'Songs' with your table name
+                .select('title, author'); // Fetch title and author
 
             if (error) {
                 console.error('Error fetching data:', error);
@@ -31,23 +30,25 @@ const SearchInput = () => {
         };
 
         fetchData();
-    }, []);
+    }, [supabase]);
 
     useEffect(() => {
         if (debouncedValue && data.length > 0) {
-            // Initialize Fuse.js with the fetched data
+            // Initialize Fuse.js with title and author keys
             const fuse = new Fuse(data, {
-                keys: ['title'],
+                keys: ['title', 'author'], // Search both title and author
                 threshold: 0.4,
                 includeScore: true,
             });
 
             // Perform fuzzy search
-            const searchResults = fuse.search(debouncedValue).map(result => result.item.title);
-            setResults(searchResults);
+            const searchResults = fuse.search(debouncedValue).map(result => result.item);
 
-            // Generate the query string for the first result (optional)
-            const query = searchResults.length > 0 ? { title: searchResults[0] } : { title: debouncedValue };
+            // Generate the query string based on the first match (optional)
+            const query =
+                searchResults.length > 0
+                    ? { title: searchResults[0].title, author: searchResults[0].author }
+                    : { title: debouncedValue };
 
             const url = qs.stringifyUrl({
                 url: '/search',
@@ -58,10 +59,6 @@ const SearchInput = () => {
         }
     }, [debouncedValue, data, router]);
 
-    if(!results){
-        return
-    }
-
     return (
         <div>
             <Input
@@ -69,7 +66,6 @@ const SearchInput = () => {
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
             />
-          
         </div>
     );
 };

@@ -14,6 +14,9 @@ import toast from "react-hot-toast";
 import usePlayer from "@/hooks/usePlayer";
 import { SlPlaylist } from "react-icons/sl";
 import { FcLike } from "react-icons/fc";
+import useUploadModal from "@/hooks/useUploadModal";
+import { AiOutlineFileAdd } from "react-icons/ai";
+
 
 interface HeaderProps{
     children: React.ReactNode;
@@ -29,6 +32,18 @@ const Header: React.FC <HeaderProps> = ({
     const player = usePlayer();
     const supabaseClient = useSupabaseClient();
     const { user } = useUser();
+    const uploadModal = useUploadModal()
+
+
+    const onClick = () => {
+
+      if(!user){
+        return authModal.onOpen()
+      }
+
+      return uploadModal.onOpen()
+      
+    }
 
 
     const handleLogout = async () => {
@@ -147,6 +162,23 @@ const Header: React.FC <HeaderProps> = ({
           hover:opacity-75transition
           ">
             <BiSearch className="text-black" size={20}/>
+          </button> 
+
+          
+
+          <button
+            // add songs
+          onClick={onClick}
+          className="
+          rounded-full
+          p-2
+        bg-white
+          flex
+          items-center
+          justify-center
+          hover:opacity-75transition
+          ">
+            <AiOutlineFileAdd className="text-black" size={20}/>
           </button> 
 
 

@@ -9,3 +9,27 @@ body,
   background-color: black;
   color-scheme: dark;
 }
+
+
+/* Add this in your global styles (or in a CSS module if using one) */
+
+.author-name-container {
+  width: 100%; /* Ensure it takes the full available space */
+  white-space: nowrap; /* Prevent text from wrapping */
+  overflow: hidden; /* Hide the overflowing text */
+}
+
+.marquee {
+  display: inline-block;
+  animation: marquee 10s linear infinite; /* Adjust speed with '10s' */
+}
+
+/* Keyframes for the scrolling effect */
+@keyframes marquee {
+  0% {
+    transform: translateX(100%); /* Start from the right */
+  }
+  100% {
+    transform: translateX(-100%); /* Scroll to the left */
+  }
+}

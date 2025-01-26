@@ -1,29 +1,32 @@
 import { Song } from "@/types";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import getSongs from "./getSongs";
 
-const getSongsByT = async (title: string): Promise<Song[]> => {
-    
-    await cookies()
-    const supabase = createServerComponentClient({        
+const getSongsByT = async (search: string): Promise<Song[]> => {
+    const supabase = createServerComponentClient({
         cookies: cookies
     });
 
-    if (!title) {
+    // If no search term is provided, return all songs
+    if (!search) {
         const allSongs = await getSongs();
-        return allSongs
+        return allSongs;
     }
 
-    const { data, error } = await supabase.from('Songs').select('*').ilike('title', `${title}`).order('created_at', { ascending: false});
-    
-    console.log(data)
-    if (error){
-        console.log(error)
+    // Query songs by title or author using Supabase's `or` operator
+    const { data, error } = await supabase
+        .from('Songs')
+        .select('*')
+        .or(`title.ilike.%${search}%,author.ilike.%${search}%`) // Search for matches in title or author
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching songs by title/author:', error);
+        return [];
     }
 
-    return (data as any) ?? [];
-}
-
+    return (data as Song[]) ?? [];
+};
 
 export default getSongsByT;
