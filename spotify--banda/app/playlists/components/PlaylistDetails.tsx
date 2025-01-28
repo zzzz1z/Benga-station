@@ -12,11 +12,9 @@ import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
 
-interface PlaylistDetailsProps {
-playlists: Playlist
-}
 
-const PlaylistDetails: React.FC<PlaylistDetailsProps> = () => {
+
+const PlaylistDetails: React.FC = () => {
   const { id } = useParams(); // Get 'id' from dynamic route
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
