@@ -100,7 +100,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
       const selectedSongsArray = Array.from(selectedSongs);
 
       const updates = selectedSongsArray.map((songId) => ({
-        user_id: user.id,
+        user_id: user?.id,
         playlist_id: playlistId,
         song_id: songId,
       }));
