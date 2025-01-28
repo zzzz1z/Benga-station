@@ -6,6 +6,9 @@ import Button from '@/components/Botão';
 import { Song } from '@/types';
 import ModalToAddNewSongs from './ModalToAddNewSongs';
 import MediaItem from '@/components/MediaItem';
+import { CiCirclePlus } from "react-icons/ci";
+
+
 
 interface AddNewSongsProps {
   playlistId: string;
@@ -118,7 +121,9 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
 
   return (
     <>
-      <Button onClick={() => setIsOpen(true)}>+</Button>
+      <button onClick={() => setIsOpen(true)}>
+        <CiCirclePlus size={40}/>
+      </button>
 
       <ModalToAddNewSongs 
         isOpen={isOpen} 
@@ -160,7 +165,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
           </div>
         </div>
         <Button onClick={handleAddSongs} className="mt-4">
-          Add to Playlist
+          Adicionar
         </Button>
       </ModalToAddNewSongs>
     </>

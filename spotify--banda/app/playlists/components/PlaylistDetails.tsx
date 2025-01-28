@@ -5,18 +5,18 @@ import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import Header from '@/components/Header';
 import Image from 'next/image';
-import { Song } from '@/types';
+import { Playlist, Song } from '@/types';
 import MediaItem from '@/components/MediaItem';
 import AddNewSongs from './AddNewSongs';
+import PlaySongsFromPlaylist from './playSongsFromPlaylist';
+import DeletePlaylist from './deletePlaylist';
+import ShuffleSongs from './ShuffleSongs';
 
-interface Playlist {
-  id: string;
-  title: string;
-  songs: Song[];
-  cover_image: string;
+interface PlaylistDetailsProps {
+playlists: Playlist
 }
 
-const PlaylistDetails: React.FC = () => {
+const PlaylistDetails: React.FC<PlaylistDetailsProps> = () => {
   const { id } = useParams(); // Get 'id' from dynamic route
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,12 +148,34 @@ const PlaylistDetails: React.FC = () => {
       </Header>
 
       {/* Add New Songs and Playlist Songs */}
-      <div>
+      <div className='
+      flex 
+       justify-center
+      items-center
+      gap-3
+      m-auto
+      mt-4
+      mb-4
+      h-10
+      '>
+
+
+        <PlaySongsFromPlaylist/> 
+
+        <ShuffleSongs/>
+        
         {/* Add New Songs Component */}
         <AddNewSongs
           playlistId={playlist.id}
           refreshPlaylist={fetchPlaylist} // Pass `fetchPlaylist` directly as `refreshPlaylist`
         />
+
+        <DeletePlaylist data={playlist}/>
+
+        </div>
+
+
+        <div>
 
         {/* List of Songs */}
         <ul>
