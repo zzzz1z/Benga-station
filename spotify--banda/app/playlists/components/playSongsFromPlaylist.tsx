@@ -3,6 +3,8 @@ import { CiPlay1 } from "react-icons/ci";
 import { Playlist, Song } from '@/types';
 
 import useOnPlaylist from '@/hooks/useOnPlaylist';
+import usePlayer from '@/hooks/usePlayer';
+import useOnPlay from '@/hooks/useOnPlay';
 
 interface PlaySongsFromPlaylistProps {
   songs: Playlist['songs']; // Accepts a list of songs from the parent
@@ -12,21 +14,23 @@ interface PlaySongsFromPlaylistProps {
 const PlaySongsFromPlaylist: React.FC<PlaySongsFromPlaylistProps> = ({ songs }) => {
 
 
-  const onPlay = useOnPlaylist(songs); // Hook to manage playback
+  const onPlay = useOnPlay(songs); // Hook to manage playback
+  const player = usePlayer()
   
   const handleClick = () => {
     if (songs.length === 0) {
       alert('No songs available in this playlist.');
       return;
     }
+  
+    // Start playing from index 0
+    onPlay(songs[0].id);
+  
+    // Set the playlist queue (assuming `setPlaylist` is available)
+    player.setQueue(songs);
 
-     // Select a random song
-     const randomIndex = Math.floor(Math.random() * songs.length);
-     const randomSong = songs[randomIndex];
- 
-     // Play the selected random song using useOnPlaylist
-     onPlay(randomSong.id);
   };
+  
 
  
 

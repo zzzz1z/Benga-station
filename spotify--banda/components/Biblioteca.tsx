@@ -6,7 +6,6 @@ import { useUser } from "@/hooks/useUser"
 import { Playlist, Song } from "@/types"
 import { AiOutlinePlus } from "react-icons/ai"
 import { TbPlaylist } from "react-icons/tb"
-import useOnPlay from "@/hooks/useOnPlay"
 import PlaylistItem from "@/app/playlists/components/PlaylistsItem"
 
 interface BibliotecaProps {
