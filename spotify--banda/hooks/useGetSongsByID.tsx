@@ -1,42 +1,50 @@
-import { Song } from "@/types"
-import { useSessionContext } from "@supabase/auth-helpers-react"
-import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
+import { Song } from "@/types";
+import { useSessionContext } from "@supabase/auth-helpers-react";
+import { useEffect, useState, useMemo } from "react";
+import toast from "react-hot-toast";
 
 const useGetSongById = (id?: string) => {
-    const [isLoading, setIsLoading] = useState(false)
-    const [song, setSong] = useState<Song | undefined>(undefined)
-    const {supabaseClient} = useSessionContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [song, setSong] = useState<Song | null>(null);
+  const { supabaseClient } = useSessionContext();
 
-    useEffect(()=> {
+  useEffect(() => {
+    if (!id) {
+      setSong(null); // Ensure song resets if no ID is provided
+      return;
+    }
 
-        if (!id){
-            return;
-        }
+    setIsLoading(true);
 
-        setIsLoading(true)
+    const fetchSong = async () => {
+      try {
+        const { data, error } = await supabaseClient
+          .from("Songs")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-        const fetchSong = async () => {
+        if (error) throw error;
 
-            const {data, error} = await supabaseClient.from('Songs').select('*').eq('id', id).single();
+        setSong(data as Song);
+      } catch (error: any) {
+        toast.error(error.message);
+        setSong(null); // Handle case where song isn't found
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-            if (error){
-                setIsLoading(false)
-                return toast.error(error.message)
-            }
+    fetchSong();
+  }, [id, supabaseClient]);
 
-            setSong(data as Song)
-        }
-
-        fetchSong();
-
-    }, [id, supabaseClient])
-
-    return useMemo(()=>({
-        isLoading,
-        song
-    }), [isLoading, song])
-
-}
+  return useMemo(
+    () => ({
+      isLoading,
+      song,
+    }),
+    [isLoading, song]
+  );
+};
 
 export default useGetSongById;

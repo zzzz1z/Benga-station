@@ -10,7 +10,7 @@ import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
 import Slider from "./Slider";
 import usePlayer from "@/hooks/usePlayer";
 import { useEffect, useState } from "react";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import ShuffleSongs from "@/app/playlists/components/ShuffleSongs";
 
 interface PlayerContentProps {
   song: Song;
@@ -18,114 +18,58 @@ interface PlayerContentProps {
 }
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
-  const supabaseClient = useSupabaseClient();
   const player = usePlayer();
   const [volume, setVolume] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentSong, setCurrentSong] = useState<Song>(song);
-  const [currentSongUrl, setCurrentSongUrl] = useState<string>(songUrl);
 
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  const fetchRandomSong = async () => {
-    try {
-      const { data, error } = await supabaseClient
-        .from("Songs")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) {
-        console.error("Failed to fetch songs:", error);
-        return null;
-      }
-
-      if (data && data.length > 0) {
-        const randomIndex = Math.floor(Math.random() * data.length);
-        return data[randomIndex];
-      }
-    } catch (error) {
-      console.error("Error fetching random song:", error);
-      return null;
-    }
+  // Define se a próxima música será aleatória ou em sequência
+  const handlePlayNextSong = () => {
+    player.playNext();
   };
 
-  const onPlayNext = async () => {
-    const randomSong = await fetchRandomSong();
-
-    if (randomSong) {
-      setCurrentSong(randomSong);
-      setCurrentSongUrl(randomSong.song_path); // Assuming `song_path` contains the URL
-      player.setId(randomSong.id); // Update the player state
-    }
-  };
-
-  const [play, { pause, sound }] = useSound(currentSongUrl, {
+  // Hook de uso de som, controla a reprodução e o volume
+  const [play, { pause, sound }] = useSound(songUrl, {
     volume: volume,
     onplay: () => setIsPlaying(true),
-    onended: () => {
-      setIsPlaying(false);
-      onPlayNext(); // Play a random song from the database when the current one ends
-    },
     onpause: () => setIsPlaying(false),
+    onend: handlePlayNextSong,
     format: ["mp3"],
   });
 
   useEffect(() => {
     sound?.play();
-
     return () => {
       sound?.unload();
     };
   }, [sound]);
 
+  // Alterna entre reproduzir e pausar a música
   const handlePlay = () => {
-    if (!isPlaying) {
-      play();
-    } else {
-      pause();
-    }
+    isPlaying ? pause() : play();
   };
 
+  // Alterna entre ativar e desativar o volume
   const toggleMute = () => {
-    if (volume === 0) {
-      setVolume(1);
-    } else {
-      setVolume(0);
-    }
+    setVolume(volume === 0 ? 1 : 0);
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 h-full">
-      <div className="flex w-full justify-start">
-        <div className="flex items-center gap-x-4">
-          <MediaItem data={currentSong} />
-          <LikedButton songId={currentSong.id} />
-        </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
+      {/* Informações da música */}
+      <div className="flex  items-center justify-center m-auto w-full">
+        <MediaItem data={song} />
+        <LikedButton songId={song.id} />
       </div>
 
-      <div className="flex md:hidden col-auto w-full justify-end items-center">
-        <AiFillStepBackward
-          onClick={() => console.log("Play previous song logic")}
-          size={30}
-          className="text-neutral-400 cursor-pointer hover:text-white transition"
-        />
-        <div
-          onClick={handlePlay}
-          className="h-10 w-10 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer"
-        >
-          <Icon size={30} className="text-red-500" />
-        </div>
-        <AiFillStepForward
-          onClick={onPlayNext}
-          size={30}
-          className="text-neutral-400 cursor-pointer hover:text-white transition"
-        />
-      </div>
+      
 
-      <div className="hidden h-full md:flex justify-center items-center w-full max-w-[722px] gap-x-6">
+      {/* Controles para desktop */}
+      <div className="hidden md:flex justify-center items-center w-full max-w-[700px] gap-2">
         <AiFillStepBackward
-          onClick={() => console.log("Play previous song logic")}
+          onClick={player.playPrevious}
           size={30}
           className="text-neutral-400 cursor-pointer hover:text-white transition"
         />
@@ -136,20 +80,42 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
           <Icon size={30} className="text-red-500" />
         </div>
         <AiFillStepForward
-          onClick={onPlayNext}
+          onClick={handlePlayNextSong}
+          size={30}
+          className="text-neutral-400 cursor-pointer hover:text-white transition"
+        />
+      </div>
+      
+      
+      {/* Controles para dispositivos móveis */}
+      <div className="flex md:hidden col-auto w-80 justify-center items-center gap-2">
+        <AiFillStepBackward
+          onClick={player.playPrevious}
+          size={30}
+          className="text-neutral-400 cursor-pointer hover:text-white transition"
+        />
+        <div
+          onClick={handlePlay}
+          className="h-10 w-10 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer"
+        >
+          <Icon size={30} className="text-red-500" />
+        </div>
+        <AiFillStepForward
+          onClick={handlePlayNextSong}
           size={30}
           className="text-neutral-400 cursor-pointer hover:text-white transition"
         />
       </div>
 
-      <div className="hidden md:flex w-full justify-end pr-2">
-        <div className="flex items-center gap-x-2 w-[120px]">
+      {/* Controles de volume */}
+      <div className="hidden md:flex w-full justify-end pr-4 min-w-0">
+        <div className="flex items-center gap-2 w-[120px]">
           <VolumeIcon
             onClick={toggleMute}
             className="cursor-pointer"
             size={34}
           />
-          <Slider value={volume} onChange={(value) => setVolume(value)} />
+          <Slider value={volume} onChange={setVolume} />
         </div>
       </div>
     </div>

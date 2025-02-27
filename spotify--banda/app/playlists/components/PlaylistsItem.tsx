@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FiDelete } from "react-icons/fi";
 import toast from "react-hot-toast"; // For user feedback
+import DeletePlaylist from "./deletePlaylist";
 
 interface PlaylistItemProps {
   data: Playlist;
@@ -98,20 +99,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
 
       {/* Delete Button */}
       <div className="ml-auto">
-        <button
-          onClick={deletePlaylist}
-          className="
-            text-red-500
-            hover:text-red-700
-            focus:outline-none
-            focus:ring-2
-            focus:ring-red-500
-            focus:ring-opacity-50
-          "
-          title="Delete Playlist"
-        >
-          <FiDelete size={50} />
-        </button>
+        <DeletePlaylist data={data}/>
       </div>
     </div>
   );

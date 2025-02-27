@@ -35,7 +35,7 @@ const SideBar: React.FC <SidebarProps> = ({
         {
             icon: HiHome,
             label: 'Casa',
-            active: pathname !== '/search',
+            active: pathname !== '/',
             href: '/',
         },
         {
@@ -52,7 +52,7 @@ const SideBar: React.FC <SidebarProps> = ({
         },
         {
             icon:FcLike,
-            label: 'Fav <3',
+            label: 'Músicas Favoritas',
             active: pathname === '/liked',
             href: '/liked'
         }

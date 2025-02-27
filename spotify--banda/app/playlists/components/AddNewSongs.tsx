@@ -122,7 +122,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
   return (
     <>
       <button onClick={() => setIsOpen(true)}>
-        <CiCirclePlus size={40}/>
+        <CiCirclePlus size={30}/>
       </button>
 
       <ModalToAddNewSongs 

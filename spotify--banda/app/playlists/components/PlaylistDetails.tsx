@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, SetStateAction } from 'react';
 import { useParams } from 'next/navigation';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import Header from '@/components/Header';
@@ -11,14 +11,21 @@ import AddNewSongs from './AddNewSongs';
 import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
+import useOnPlaylist from '@/hooks/useOnPlaylist';
+import useOnPlay from '@/hooks/useOnPlay';
 
+interface PlaylistDetailsProps {
+  data: Playlist['songs']
+}
 
-
-const PlaylistDetails: React.FC = () => {
+const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
   const { id } = useParams(); // Get 'id' from dynamic route
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
   const supabaseClient = useSupabaseClient();
+  
+
+  const onPlay = useOnPlaylist(data); // Assuming useOnPlay is a custom hook for global play functionality
 
   // Function to fetch the playlist and its songs
   const fetchPlaylist = async () => {
@@ -156,26 +163,23 @@ const PlaylistDetails: React.FC = () => {
       mb-4
       h-10
       '>
-
-
-        <PlaySongsFromPlaylist/> 
-
-        <ShuffleSongs/>
+        <PlaySongsFromPlaylist 
+          songs={playlist.songs}
         
-        {/* Add New Songs Component */}
+        />
+        <ShuffleSongs 
+          songs={playlist.songs}      
+
+         />
         <AddNewSongs
           playlistId={playlist.id}
           refreshPlaylist={fetchPlaylist} // Pass `fetchPlaylist` directly as `refreshPlaylist`
         />
+        <DeletePlaylist data={playlist} />
+      </div>
 
-        <DeletePlaylist data={playlist}/>
-
-        </div>
-
-
-        <div>
-
-        {/* List of Songs */}
+      {/* List of Songs */}
+      <div>
         <ul>
           {playlist.songs.map((song) => (
             <MediaItem key={song.id} data={song} />

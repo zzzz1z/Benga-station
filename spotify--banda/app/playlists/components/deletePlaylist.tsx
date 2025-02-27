@@ -37,7 +37,7 @@ const DeletePlaylist: React.FC<DeletePlaylistProps> = ({
       }
 
       toast.success('Playlist deleted successfully.');
-      router.refresh(); // Refresh to reflect the updated list
+      router.push('/playlists')
     } catch (error) {
       console.error('Error deleting playlist:', error);
       toast.error('Failed to delete playlist. Please try again.');
@@ -61,7 +61,7 @@ const DeletePlaylist: React.FC<DeletePlaylistProps> = ({
     items-center
     justify-center
     hover:opacity-75transition'>
-     <CiTrash size={40} 
+     <CiTrash size={30} 
      />
     </button>
   )

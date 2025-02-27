@@ -10,12 +10,9 @@ interface MediaItemProps {
   onClick?: (id: string) => void;
 }
 
-const MediaItem: React.FC<MediaItemProps> = ({
-  data,
-  onClick,
-}) => {
-  const player = usePlayer();
+const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {  
   const imageUrl = useLoadImage(data);
+  const player = usePlayer();
 
   const handleClick = () => {
     if (onClick) {
@@ -28,10 +25,10 @@ const MediaItem: React.FC<MediaItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      className="flex items-center gap-x-3 m-0 cursor-pointer hover:bg-neutral-800/50 w-80 p-2 rounded-md"
+      className="flex items-center gap-3 cursor-pointer hover:bg-neutral-800/50 p-2 rounded-md w-full"
     >
       {/* Image Container */}
-      <div className="relative rounded-md min-h-[48px] min-w-[48px] overflow-hidden">
+      <div className="relative rounded-md h-12 w-12 flex-shrink-0 overflow-hidden">
         <Image
           priority
           fill
@@ -43,10 +40,8 @@ const MediaItem: React.FC<MediaItemProps> = ({
       </div>
 
       {/* Text Info Section */}
-      <div className="flex items-start flex-col gap-y-1 w-full">
-        <p className="text-white text-ellipsis overflow-hidden whitespace-nowrap">{data.title}</p>
-        
-        {/* Scrolling author name */}
+      <div className="flex flex-col gap-y-1 min-w-0">
+        <p className="text-white truncate">{data.title}</p>
         <div className="author-name-container overflow-hidden">
           <p className="text-neutral-400 text-sm marquee">{data.author}</p>
         </div>

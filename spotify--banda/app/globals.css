@@ -14,7 +14,7 @@ body,
 /* Add this in your global styles (or in a CSS module if using one) */
 
 .author-name-container {
-  width: 100%; /* Ensure it takes the full available space */
+  width: 50%; /* Ensure it takes the full available space */
   white-space: nowrap; /* Prevent text from wrapping */
   overflow: hidden; /* Hide the overflowing text */
 }
