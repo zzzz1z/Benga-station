@@ -7,6 +7,33 @@ import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";
 
+// Function to sanitize file names (remove special characters)
+const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_]/g, "_");
+
+// Function to validate file format
+const isValidAudioFile = async (file: File) => {
+  const validMimeTypes = [
+    "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac"
+  ];
+
+  const arrayBuffer = await file.slice(0, 4).arrayBuffer();
+  const header = new Uint8Array(arrayBuffer).join(" ");
+
+  // Check for common audio file headers
+  const magicNumbers = {
+    mp3: "255 251", // MP3 file magic numbers
+    wav: "82 73 70 70", // WAV file magic numbers
+    ogg: "79 103 103 83", // OGG file magic numbers
+    flac: "102 76 97 67" // FLAC file magic numbers
+  };
+
+  const isValidFormat = Object.values(magicNumbers).some(signature =>
+    header.startsWith(signature)
+  );
+
+  return validMimeTypes.includes(file.type) || isValidFormat;
+};
+
 const FilesInfo: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [localFiles, setLocalFiles] = useState<any[]>([]); // Temporarily store files
@@ -23,12 +50,18 @@ const FilesInfo: React.FC = () => {
   });
 
   // Save file details locally
-  const saveFileLocally = (values: FieldValues) => {
+  const saveFileLocally = async (values: FieldValues) => {
     const songFile = values.song?.[0];
     const imageFile = values.image?.[0];
 
     if (!values.title || !values.author || !songFile || !imageFile) {
       toast.error("Todos os campos são obrigatórios.");
+      return;
+    }
+
+    // Check if the audio file format is valid
+    if (!(await isValidAudioFile(songFile))) {
+      toast.error("Formato de áudio não suportado.");
       return;
     }
 
@@ -58,28 +91,35 @@ const FilesInfo: React.FC = () => {
     try {
       for (const file of localFiles) {
         const uniqueID = uniqid();
+        const safeTitle = sanitizeFilename(file.title);
 
         // Upload song file
         const { data: songData, error: songError } = await supabaseClient
           .storage
           .from("musicas")
-          .upload(`musica-${file.title}-${uniqueID}`, file.song, {
+          .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, {
             cacheControl: "3600",
             upsert: false,
           });
 
-        if (songError) throw new Error("Erro ao enviar a música.");
+        if (songError) {
+          console.error("Erro ao enviar a música:", file.song.name, songError);
+          throw new Error(`Erro ao enviar a música: ${file.song.name}`);
+        }
 
         // Upload image file
         const { data: imageData, error: imageError } = await supabaseClient
           .storage
           .from("imagens")
-          .upload(`imagem-${file.title}-${uniqueID}`, file.image, {
+          .upload(`imagem-${safeTitle}-${uniqueID}`, file.image, {
             cacheControl: "3600",
             upsert: false,
           });
 
-        if (imageError) throw new Error("Erro ao enviar a imagem.");
+        if (imageError) {
+          console.error("Erro ao enviar a imagem:", file.image.name, imageError);
+          throw new Error(`Erro ao enviar a imagem: ${file.image.name}`);
+        }
 
         // Insert metadata into the database
         const { error: supabaseError } = await supabaseClient
@@ -92,14 +132,17 @@ const FilesInfo: React.FC = () => {
             song_path: songData?.path,
           });
 
-        if (supabaseError) throw new Error("Erro ao salvar os dados no banco.");
+        if (supabaseError) {
+          console.error("Erro ao salvar no banco:", file.title, supabaseError);
+          throw new Error(`Erro ao salvar no banco: ${file.title}`);
+        }
       }
 
       toast.success("Todos os arquivos foram enviados com sucesso!");
-      setLocalFiles([]); // Clear local storage after upload
+      setLocalFiles([]);
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Erro inesperado ao enviar arquivos.");
+      console.error("Operação falhada:", error.message);
+      toast.error("Operação falhada, não é possível fazer upload do seu ficheiro.");
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +170,7 @@ const FilesInfo: React.FC = () => {
         <Input
           id="song"
           type="file"
-          accept=".mp3"
+          accept="audio/*"
           disabled={isLoading}
           {...register("song", { required: true })}
         />

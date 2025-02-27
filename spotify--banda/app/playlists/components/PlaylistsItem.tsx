@@ -5,9 +5,7 @@ import { Playlist } from "@/types";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FiDelete } from "react-icons/fi";
 import toast from "react-hot-toast"; // For user feedback
-import DeletePlaylist from "./deletePlaylist";
 
 interface PlaylistItemProps {
   data: Playlist;
@@ -97,10 +95,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
         <p className="text-white truncate">{data.title}</p>
       </div>
 
-      {/* Delete Button */}
-      <div className="ml-auto">
-        <DeletePlaylist data={data}/>
-      </div>
+    
     </div>
   );
 };
