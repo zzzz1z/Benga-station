@@ -25,14 +25,14 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
   return (
     <div
       onClick={handleClick}
-      className="flex items-center gap-3 cursor-pointer hover:bg-neutral-800/50 p-2 rounded-md w-full"
+      className="flex items-center gap-4 cursor-pointer hover:bg-neutral-800/50 p-2 rounded-md w-full"
     >
       {/* Image Container */}
-      <div className="relative rounded-md h-12 w-12 flex-shrink-0 overflow-hidden">
+      <div className="relative rounded-md h-14 w-16 flex-shrink-0 overflow-hidden">
         <Image
           priority
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          sizes="(max-width: 968px) 100vw, (max-width: 1400px) 70vw, 53vw"
           src={imageUrl ?? '/images/likedit.png'}
           alt={data.title ?? 'Media Item'}
           className="object-cover"
@@ -40,10 +40,10 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
       </div>
 
       {/* Text Info Section */}
-      <div className="flex flex-col gap-y-1 min-w-0">
-        <p className="text-white truncate">{data.title}</p>
-        <div className="author-name-container overflow-hidden">
-          <p className="text-neutral-400 text-sm marquee">{data.author}</p>
+      <div className="flex flex-col w-full gap-y-1 min-w-0">
+        <p className="text-white truncate w-full overflow-visible">{data.title}</p>
+        <div className=" overflow-hidden ">
+          <p className="text-neutral-400 text-sm ">{data.author}</p>
         </div>
       </div>
     </div>

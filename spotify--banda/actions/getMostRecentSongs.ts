@@ -2,26 +2,29 @@ import { Song } from "@/types";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-const getSongs = async (): Promise<Song[]> => {
+const getRandomSongs = async (): Promise<Song[]> => {
     try {
         const supabase = createServerComponentClient({ cookies: cookies });
 
         const { data, error } = await supabase
             .from("Songs")
             .select("*")
-            .order("created_at", { ascending: false })
-            .limit(10); // ✅ Only fetch the first 6 songs
+            .limit(16) // Optional: Adjust the limit as needed
+            .order("created_at"); // Fetch normally first
 
         if (error) {
             console.error("Erro ao buscar músicas:", error.message);
             return [];
         }
 
-        return data || [];
+        // Shuffle the songs locally
+        const shuffledSongs = data.toSorted(() => Math.random() - 0.5);
+
+        return shuffledSongs;
     } catch (err) {
         console.error("Erro inesperado ao buscar músicas:", err);
         return [];
     }
 };
 
-export default getSongs;
+export default getRandomSongs;

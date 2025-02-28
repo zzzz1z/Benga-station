@@ -180,7 +180,7 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
 
       {/* List of Songs */}
       <div>
-        <ul>
+        <ul className='flex-col p-5 items center justify center'>
           {playlist.songs.map((song) => (
             <MediaItem key={song.id} data={song} />
           ))}
