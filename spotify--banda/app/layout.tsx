@@ -11,7 +11,14 @@ import getSongsByUserId from "@/actions/getSongsByUserId";
 import Player from "@/components/Player";
 import getActiveProductsWithPrices from "@/actions/getActiveProductsWithPrices";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
-
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs'
 const font = Figtree({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
@@ -32,8 +39,8 @@ export const metadata: Metadata = {
   const products = await getActiveProductsWithPrices();
 
   return (
-    <html lang="en">
-      <body className={font.className}>
+    <html>
+      <body >
         <ToasterProvider/>
         <SupabaseProvider>
 

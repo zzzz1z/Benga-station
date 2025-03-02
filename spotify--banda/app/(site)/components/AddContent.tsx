@@ -4,11 +4,11 @@ import SongItem from "@/components/SongItem";
 import useOnPlay from "@/hooks/useOnPlay";
 import { Song } from "@/types";
 
-interface PageContentProps {
+interface AddContentProps {
     songs: Song[];
 }
 
-const PageContent: React.FC<PageContentProps> = ({
+const AddContent: React.FC<AddContentProps> = ({
     songs
 }) => {
 
@@ -50,4 +50,4 @@ const PageContent: React.FC<PageContentProps> = ({
    )
 }
 
-export default PageContent
+export default AddContent

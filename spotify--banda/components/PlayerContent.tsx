@@ -88,7 +88,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       
       
       {/* Controles para dispositivos móveis */}
-      <div className="flex md:hidden col-auto w-80 justify-center items-center gap-2">
+      <div className="flex md:hidden col-auto w-100 justify-center items-center gap-2">
         <AiFillStepBackward
           onClick={player.playPrevious}
           size={30}
@@ -98,7 +98,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
           onClick={handlePlay}
           className="h-10 w-10 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer"
         >
-          <Icon size={30} className="text-red-500" />
+          <Icon size={40} className="text-red-500" />
         </div>
         <AiFillStepForward
           onClick={handlePlayNextSong}
