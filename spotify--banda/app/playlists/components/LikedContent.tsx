@@ -74,9 +74,8 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
 
            <div className="flex-1">
              <PlaylistItem 
-               onClick={onPlaylistClick}
-               data={playlist}
-            />
+             onClick={onPlaylistClick}
+             data={playlist}           />
         </div>
                     
       
