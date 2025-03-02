@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast"; // For user feedback
 
 interface PlaylistItemProps {
+  playlist: Playlist[]
   data: Playlist;
   onClick?: (id: string) => void;
 }
