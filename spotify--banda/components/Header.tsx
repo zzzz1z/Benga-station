@@ -38,7 +38,7 @@ const Header: React.FC <HeaderProps> = ({
     const onClick = () => {
 
       if(!user){
-        return authModal.isOpen
+        return authModal.isOpen === true
       }
 
       return uploadModal.onOpen()
