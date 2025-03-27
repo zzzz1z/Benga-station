@@ -42,7 +42,7 @@ const LikedPlaylists: React.FC<LikedPlaylistsProps> = ({
 
     const onClick = () => {
         if (!user) {
-          return authModal.onOpen();
+          return authModal.isOpen;
         }
     
         return playlistModal.onOpen();

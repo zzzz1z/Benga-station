@@ -38,7 +38,7 @@ const Header: React.FC <HeaderProps> = ({
     const onClick = () => {
 
       if(!user){
-        return authModal.onOpen()
+        return authModal.isOpen
       }
 
       return uploadModal.onOpen()
@@ -287,28 +287,21 @@ const Header: React.FC <HeaderProps> = ({
           <>
 
             <div>
-                <Button
-                 onClick={authModal.onOpen}
-                 className="
-                 bg-transparent
-                 text-neutral-300font-medium
-                  "
-                >
-                 Registar    
-                </Button>
+            <Button
+            onClick={() => authModal.onOpen("sign_up")} // 👈 Opens in sign-up mode
+            className="bg-transparent text-neutral-300 font-medium"
+            >
+              Criar conta    
+            </Button>
             </div>
 
             <div>
-                <Button
-                 onClick={authModal.onOpen}
-                 className="
-                 bg-red-700
-                 px-6
-                 py-2
-                  "
-                >
-                 Iniciar sessão    
-                </Button>
+            <Button
+            onClick={() => authModal.onOpen("sign_in")} // 👈 Opens in sign-in mode
+            className="bg-red-700 px-6 py-2"
+            >
+              Iniciar sessão    
+            </Button>
             </div>
 
             </>

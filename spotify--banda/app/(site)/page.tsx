@@ -12,6 +12,7 @@ export default async function Home() {
   // Fetch songs asynchronously using your helper function
   const songs = await getSongs();
   const otherSongs = await getMostRecentSongs();
+  
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto">

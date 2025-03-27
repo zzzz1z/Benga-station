@@ -1,7 +1,7 @@
 // pages/api/set-cookie.js
 import cookie from 'cookie';
 
-export default function handler(req: any, res: { setHeader: (arg0: string, arg1: string) => void; status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) {
+export default async function handler(req: any, res: { setHeader: (arg0: string, arg1: string) => void; status: (arg0: number) => { (): any; new(): any; json: { (arg0: { message: string; }): void; new(): any; }; }; }) {
   // Set the cookie with SameSite=None and Secure=true
   res.setHeader('Set-Cookie', cookie.serialize('myCookie', 'cookieValue', {
     httpOnly: true, // Optional: Makes the cookie inaccessible to JavaScript
