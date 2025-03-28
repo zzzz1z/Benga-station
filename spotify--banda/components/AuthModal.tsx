@@ -3,64 +3,100 @@
 import { useSessionContext, useSupabaseClient } from "@supabase/auth-helpers-react";
 import Modal from "./Modal";
 import { useRouter } from "next/navigation";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const AuthModal = () => {
+
     const supabase = useSupabaseClient();
     const router = useRouter();
     const { session } = useSessionContext();
     const authModal = useAuthModal();
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Function to check if email exists
+    
+    // Function to check if email exists in users table
     const checkIfEmailExists = async (email: string) => {
-        const { data, error } = await supabase.rpc("check_email_exists", { email_input: email });
+        const { data, error } = await supabase
+            .from("users")
+            .select("email") 
+            .ilike("email", email) // ✅ Fix: Case-insensitive search
+            .maybeSingle();
 
+        console.log(data)
+        console.log("🔍 Checking email:", email);
+        console.log("🔍 Query result:", data, error);
+    
         if (error) {
-            console.error("Error checking email:", error);
+            console.error("❌ Error checking email:", error);
             toast.error("Erro ao verificar o email. Tente novamente.");
             return false;
         }
-
-        return data; // Returns true if the email exists, false otherwise
+        return !!data; // Returns true if a row is found
     };
+    
+    
 
-    // Handle sign up
+    // Handle sign-up
     const handleSignUp = async () => {
         setLoading(true);
-
-        // Check if email already exists
-        const emailExists = await checkIfEmailExists(email);
-        if (emailExists) {
-            toast.error("Este email já está registrado. Tente outro.");
-            setLoading(false);
-            return;
-        }
-
+    
         try {
-            // Step 1: Insert user into the users table first
+            // ✅ Ensure checkIfEmailExists completes before proceeding
+            const emailExists = await checkIfEmailExists(email);
+            if (emailExists) {
+                toast.error("Este email já está registrado. Use outro.");
+                setLoading(false);
+                return;
+            }
 
-            // Step 2: If the users table insert succeeds, create the auth user
+            console.log(emailExists)
+    
+            // ✅ Sign up only if email does not exist
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
             });
-
+    
             if (signUpError) {
                 toast.error("Erro ao criar conta. Tente novamente.");
                 setLoading(false);
                 return;
             }
-
+    
             toast.success("Conta criada com sucesso! Verifique seu email.");
             authModal.onClose();
+        } catch (error) {
+            console.error("Erro no signup:", error);
+            toast.error("Ocorreu um erro. Tente novamente.");
+        }
+    
+        setLoading(false);
+    };
+    
+    // Handle login
+    const handleLogin = async () => {
+        setLoading(true);
+
+        try {
+            // Attempt login
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (signInError) {
+                toast.error("Por favor verifique o seu email para poder inicar sessão.");
+                setLoading(false);
+                return;
+            }
+
+            toast.success("Login bem-sucedido!");
+            authModal.onClose();
+            router.refresh();
         } catch (error) {
             toast.error("Ocorreu um erro. Tente novamente.");
             console.error(error);
@@ -84,11 +120,11 @@ const AuthModal = () => {
 
     return (
         <Modal
-            title={authModal.mode === "sign_up" ? "Criar Conta" : "Entrar"}
+            title={authModal.mode === "sign_up" ? "Criar Conta" : "Iniciar sessão"}
             description={
                 authModal.mode === "sign_up"
                     ? "Introduza os seus dados para criar uma conta! 🚀"
-                    : "Introduza os seus dados para iniciar sessão. Caso não tenha uma conta, crie uma! 👋🏿"
+                    : "Introduza os seus dados para iniciar sessão. Caso não tenha uma conta, crie uma primeiro! 👋🏿"
             }
             isOpen={authModal.isOpen}
             onChange={onChange}
@@ -119,35 +155,49 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Criar conta"}
                         </button>
+
+                        <button
+                            onClick={() => authModal.onOpen("sign_in")}
+                            disabled={loading}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
+                        >
+                            {loading ? "Aguarde..." : "Já tenho uma conta"}
+                        </button>
                     </>
                 ) : (
-                    <Auth
-                        providers={["github"]}
-                        theme="dark"
-                        supabaseClient={supabase}
-                        view={authModal.mode}
-                        localization={{
-                            variables: {
-                                sign_in: {
-                                    email_label: "Email",
-                                    password_label: "Palavra-passe",
-                                    button_label: "Entrar",
-                                    social_provider_text: "Entrar com {{provider}}",
-                                },
-                            },
-                        }}
-                        appearance={{
-                            theme: ThemeSupa,
-                            variables: {
-                                default: {
-                                    colors: {
-                                        brand: "#404040",
-                                        brandAccent: "#FF0000",
-                                    },
-                                },
-                            },
-                        }}
-                    />
+                    <>
+                        <input
+                            type="email"
+                            placeholder="Introduza o seu email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full p-2 border rounded-md"
+                        />
+
+                        <input
+                            type="password"
+                            placeholder="Introduza a sua palavra passe"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full p-2 border rounded-md"
+                        />
+
+                        <button
+                            onClick={handleLogin}
+                            disabled={loading}
+                            className="w-full p-2 text-white bg-blue-500 rounded-md"
+                        >
+                            {loading ? "Aguarde..." : "Entrar"}
+                        </button>
+
+                        <button
+                            onClick={() => authModal.onOpen("sign_up")}
+                            disabled={loading}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
+                        >
+                            {loading ? "Aguarde..." : "Criar uma conta"}
+                        </button>
+                    </>
                 )}
             </div>
         </Modal>

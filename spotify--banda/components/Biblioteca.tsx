@@ -26,7 +26,7 @@ const Biblioteca: React.FC< BibliotecaProps> = ({
 
   const onClick = () => {
     if (!user) {
-      return authModal.isOpen;
+      return authModal.onOpen('sign_up');
     }
 
     return uploadModal.onOpen();

@@ -12,7 +12,7 @@ const useOnPlay = (songs: Song[]) => {
 
     const onPlay = (id: string) => {
         if(!user) {
-            return authModal.isOpen === true;
+            return authModal.onOpen('sign_up')
         }
 
     

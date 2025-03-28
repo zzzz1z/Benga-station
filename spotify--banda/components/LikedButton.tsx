@@ -42,7 +42,7 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
 
     const handleClick = async () => {
         if (!user) {
-            return authModal.isOpen === true;
+            return authModal.onOpen('sign_up')
         }
 
         const action = isLiked ? "delete" : "insert";

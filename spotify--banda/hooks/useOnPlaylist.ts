@@ -12,7 +12,7 @@ const useOnPlaylist = (playlistSongs: Song[]) => {
 
     const onPlay = (id: string) => {
         if (!user) {
-            return authModal.isOpen === true;
+            return authModal.onOpen('sign_up')
         }
 
         // Ensure we only set the playlist if there are valid songs

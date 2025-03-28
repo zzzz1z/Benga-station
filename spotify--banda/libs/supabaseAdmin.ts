@@ -7,10 +7,15 @@ import { stripe } from "./stripe";
 import { Database } from "@/types_db";
 import { toDateTime } from "./helpers";
 
+
+
+
 export const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 )
+
+
 
 const upsertProductRecord = async (product: Stripe.Product) => {
     
@@ -20,13 +25,11 @@ const upsertProductRecord = async (product: Stripe.Product) => {
         name: product.name,
         description: product.description ?? undefined,
         image: product.images?.[0] ?? null,
-        metadata: product.metadata,
-       
+        metadata: product.metadata,   
     };
 
-  
-   
-    
+
+
 
     const { error } = await 
     supabaseAdmin.from('products').upsert([productData]);
@@ -143,7 +146,7 @@ const manageSubscriptionStatusChange = async (
 
     if (noCustomerError) throw noCustomerError;
 
-    const {id: uuid } = customerData! ;
+    const {id: uuid } = customerData ;
 
     const subscription = await stripe.subscriptions.retrieve(
     subscriptionId,{
@@ -197,5 +200,6 @@ export {
     upsertPriceRecord,
     upsertProductRecord,
     createOrRetrieveCustomer,
-    manageSubscriptionStatusChange
+    manageSubscriptionStatusChange,
+    
 }
