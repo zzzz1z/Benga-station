@@ -131,7 +131,7 @@ const AuthModal = () => {
         >
             <div>
                 {authModal.mode === "sign_up" ? (
-                    <>
+                    <div className="flex flex-col gap-4">
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -163,9 +163,9 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Já tenho uma conta"}
                         </button>
-                    </>
+                    </div>
                 ) : (
-                    <>
+                    <div className="flex flex-col gap-4">
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -197,7 +197,7 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Criar uma conta"}
                         </button>
-                    </>
+                    </div>
                 )}
             </div>
         </Modal>

@@ -8,13 +8,14 @@ import { useRouter } from 'next/navigation';
 
 import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast';
-import ProfilePic from './ProfilePic';
-import AccountView from './AccountView';
-import AccountButtons from './AccountButtons';
+import ProfilePic from '../../components/ProfilePic';
+import AccountView from '../../components/AccountView';
+import AccountButtons from '../../components/AccountButtons';
+import AccountDef from './accountDef';
 
 
 
-const AccountContent =  () => {
+const SettingsView =  () => {
 
     const router = useRouter();
     const subscribeModal = useSubscribeModal();
@@ -59,28 +60,17 @@ const AccountContent =  () => {
 
     return (
         <div className=' flex justify-between w-full p-1 h-full'>
-
-            <div className='flex flex-col w-96 m-0'>
-
-                <div className=''>
-                <ProfilePic/>
-                
-                </div>
-                <div className=''>
-                
-                <AccountButtons/>
-                </div>
-
-
-            </div>
         
-            
-
-
-            <div className='flex w-full'>
-                <AccountView/>
-
+            <div className='flex flex-col w-full'>
+                <ProfilePic/>
+                <AccountButtons/>
             </div>
+
+            <div className='flex w-fulls'>
+               <AccountDef/> 
+            </div>
+
+            
 
         
     
@@ -89,4 +79,4 @@ const AccountContent =  () => {
 }
 
 
-export default AccountContent
+export default SettingsView;

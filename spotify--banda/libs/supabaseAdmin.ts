@@ -13,7 +13,7 @@ import { toDateTime } from "./helpers";
 export const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-)
+);
 
 
 
@@ -70,7 +70,7 @@ const upsertPriceRecord = async (price: Stripe. Price) =>
     console.log(`Product inserted/updated: ${price.id}`)
 
 
-}
+};
 
 
 const createOrRetrieveCustomer = async ({
@@ -108,8 +108,7 @@ const createOrRetrieveCustomer = async ({
 
     return data.stripe_customer_id
 
-    
-}
+};
 
 const copyBillingDetailsToCustomer = async (
     uuid: string,
@@ -135,7 +134,7 @@ const copyBillingDetailsToCustomer = async (
     {
         throw error;
     }
-}
+};
 
 const manageSubscriptionStatusChange = async (
     subscriptionId: string,
@@ -194,7 +193,7 @@ const manageSubscriptionStatusChange = async (
 
 
 
-}
+};
 
 export {
     upsertPriceRecord,
@@ -202,4 +201,4 @@ export {
     createOrRetrieveCustomer,
     manageSubscriptionStatusChange,
     
-}
+};

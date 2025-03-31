@@ -154,19 +154,25 @@ const FilesInfo: React.FC = () => {
       <form
         onSubmit={handleSubmit(saveFileLocally)}
         className="flex flex-col gap-y-4"
-      >
+      > 
+        <h2>Título da música:</h2>
         <Input
           id="title"
           disabled={isLoading}
           {...register("title", { required: true })}
           placeholder="Título da música"
         />
+
+
+        <h1>Nome do artista:</h1>
         <Input
           id="author"
           disabled={isLoading}
           {...register("author", { required: true })}
           placeholder="Autor da música"
         />
+
+        <h1>Selecione um ficheiro:</h1>
         <Input
           id="song"
           type="file"
@@ -174,6 +180,8 @@ const FilesInfo: React.FC = () => {
           disabled={isLoading}
           {...register("song", { required: true })}
         />
+
+        <h1>Capa:</h1>
         <Input
           id="image"
           type="file"
