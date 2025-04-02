@@ -1,6 +1,5 @@
 import Header from "@/components/Header"
-import AccountContent from "../components/AccountContent";
-import SettingsView from "./components/Settingsview";
+import SettingsContent from "./components/SettingsContent";
 
 const AccountSettings = () => {
     return (
@@ -15,13 +14,9 @@ const AccountSettings = () => {
          "
         >
             <Header className="from-bg-neutral-900">
-                <div className="mb-2 flex flex-col gap-y-6">
-                    <h1 className="text-white text-3xl font-semibold">
-                        Definições da conta
-                    </h1>
-                </div>
+               <></>
             </Header>
-            <SettingsView/>
+            <SettingsContent/>
             
         </div>
     )
