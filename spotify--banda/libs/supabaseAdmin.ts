@@ -9,36 +9,8 @@ import { toDateTime } from "./helpers";
 // Public client for auth sign-up with service role key for server-side actions
 const supabaseAdmin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', // Supabase URL
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? '' // Service role key, for server-side only
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 );
-
-export async function signUpAndCreateUser(email: string, password: string) {
-    const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
-      email,
-      password
-    });
-  
-    if (signUpError || !signUpData.user) {
-      throw new Error(signUpError?.message ?? 'User signup failed');
-    }
-  
-    const user = signUpData.user;
-  
-    // Now insert into the `users` table manually with service_role access
-    const { error: insertError } = await supabaseAdmin.from('users').insert([
-      {
-        id: user.id,
-        email: user.email,
-        email_confirmed_at: user.email_confirmed_at ?? new Date().toISOString(),
-      },
-    ]);
-  
-    if (insertError) {
-      throw new Error(`Failed to insert user row: ${insertError.message}`);
-    }
-  
-    return user;
-}
 
 
 const upsertProductRecord = async (product: Stripe.Product) => {

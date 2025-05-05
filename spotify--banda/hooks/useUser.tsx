@@ -1,11 +1,11 @@
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState, createContext, useContext, useMemo } from 'react';
 import {
   useUser as useSupaUser,
   useSessionContext,
   User
 } from '@supabase/auth-helpers-react';
 
-import { UserDetails, Subscription } from '@/types';
+import { UserDetails } from '@/types';
 
 type UserContextType = {
   accessToken: string | null;
@@ -31,48 +31,46 @@ export const MyUserContextProvider = (props: Props) => {
   } = useSessionContext();
   const user = useSupaUser();
   const accessToken = session?.access_token ?? null;
-  const [isLoadingData, setIsloadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const getUserDetails = () => supabase.from('users').select('*').single();
-  const getSubscription = () =>
-    supabase
-      .from('subscriptions')
-      .select('*, prices(*, products(*))')
-      .in('status', ['trialing', 'active'])
-      .single();
+  const getUserDetails = () => {
+    if (!user) return null; // Make sure user is authenticated
+    return supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id) // Fetch user details for the logged-in user only
+      .single(); // Ensures that only one result is returned
+  };  
 
   useEffect(() => {
     if (user && !isLoadingData && !userDetails) {
-      setIsloadingData(true);
-      Promise.allSettled([getUserDetails(), getSubscription()]).then(
+      setIsLoadingData(true);
+      Promise.allSettled([getUserDetails()]).then(
         (results) => {
           const userDetailsPromise = results[0];
-          const subscriptionPromise = results[1];
 
           if (userDetailsPromise.status === 'fulfilled')
-            setUserDetails(userDetailsPromise.value.data as UserDetails);
+            setUserDetails(userDetailsPromise.value?.data as UserDetails);
 
-          if (subscriptionPromise.status === 'fulfilled')
-            setSubscription(subscriptionPromise.value.data as Subscription);
 
-          setIsloadingData(false);
+          setIsLoadingData(false);
         }
       );
     } else if (!user && !isLoadingUser && !isLoadingData) {
       setUserDetails(null);
-      setSubscription(null);
     }
   }, [user, isLoadingUser]);
 
-  const value = {
-    accessToken,
-    user,
-    userDetails,
-    isLoading: isLoadingUser || isLoadingData,
-    
-  };
+  const value = useMemo(
+    () => ({
+      accessToken,
+      user,
+      userDetails,
+      isLoading: isLoadingUser || isLoadingData,
+    }),
+    [accessToken, user, userDetails, isLoadingUser, isLoadingData]
+  );
 
   return <UserContext.Provider value={value} {...props} />;
 };

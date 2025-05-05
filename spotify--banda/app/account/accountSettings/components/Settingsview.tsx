@@ -10,25 +10,19 @@ const AccountView = () => {
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailUpdatePending, setEmailUpdatePending] = useState(false);
-  const [phoneUpdatePending, setPhoneUpdatePending] = useState(false);
 
   useEffect(() => {
     if (user?.userDetails) {
       setFirstName(user.userDetails.first_name || '');
       setLastName(user.userDetails.last_name || '');
       setPhone(user.user?.phone ?? '');
-      setEmail(user.user?.email ?? '');
     }
   }, [user]);
 
   const handleUpdate = async () => {
     setLoading(true);
-    setEmailUpdatePending(false);
-    setPhoneUpdatePending(false);
 
     // 1. Update the `users` table with first_name, last_name, and phone (without updating the email yet)
     const { error: userTableError } = await supabase
@@ -40,40 +34,12 @@ const AccountView = () => {
       })
       .eq('id', user.user?.id);
 
-    // 2. If email has changed, update `auth.users` to trigger email verification
-    let emailChangeError = null;
-    if (email !== user.user?.email) {
-      const { error: authError } = await supabase.auth.updateUser({
-        email: email,
-      });
+   
 
-      if (authError) {
-        emailChangeError = authError;
-        alert('Erro ao atualizar o email');
-      } else {
-        setEmailUpdatePending(true); // Email update is pending confirmation
-        alert('Email alterado. Verifique sua caixa de entrada para confirmar.');
-      }
-    }
+   
 
-    // 3. If phone has changed, update `auth.users` to trigger phone verification
-    let phoneChangeError = null;
-    if (phone !== user.user?.phone) {
-      const { error: phoneError } = await supabase.auth.updateUser({
-        phone: phone,
-      });
-
-      if (phoneError) {
-        phoneChangeError = phoneError;
-        alert('Erro ao atualizar o número de telefone');
-      } else {
-        setPhoneUpdatePending(true); // Phone update is pending confirmation
-        alert('Número de telefone alterado. Verifique sua caixa de entrada para confirmar.');
-      }
-    }
-
-    if (userTableError || emailChangeError || phoneChangeError) {
-      console.error('Erro ao atualizar perfil:', userTableError || emailChangeError || phoneChangeError);
+    if (userTableError ) {
+      console.error('Erro ao atualizar perfil:', userTableError);
       alert('Erro ao atualizar perfil');
     } else {
       alert('Perfil atualizado com sucesso!');
@@ -92,7 +58,7 @@ const AccountView = () => {
             <p className="text-lg ml-8 mb-4">Primeiro nome: {user.userDetails?.first_name ?? 'Não existe'}</p>
             <p className="text-lg ml-8 mb-4">Último nome: {user.userDetails?.last_name ?? 'Não existe'}</p>
             <p className="text-lg ml-8 mb-4">Telefone: {user.userDetails?.phone ?? 'Não existe'}</p>
-            <p className="text-lg ml-8 mb-4">Email: {user.userDetails?.email ?? 'Não existe'}</p>
+            <p className="text-lg ml-8 mb-4">Email: {user.userDetails?.email}</p>
           </div>
 
           <h1 className="text-2xl font-bold ml-6 mb-4">Atualizar informações da conta</h1>
@@ -105,7 +71,7 @@ const AccountView = () => {
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="border p-2 rounded text-black"
+                    className="border p-2 rounded text-white"
                   />
                 </div>
                 <div className="flex flex-col w-48">
@@ -114,30 +80,23 @@ const AccountView = () => {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="border p-2 rounded text-black"
+                    className="border p-2 rounded text-white"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col w-48">
                 <h1 className="text-lg font-semibold">Número de Telemóvel</h1>
+                <p className='text-sm text-red-500'>(Inclua o código do seu país)</p>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)} // Update the phone state
-                  className="border p-2 rounded text-black"
+                  className="border p-2 rounded text-white"
                 />
               </div>
 
-              <div className="flex flex-col w-48">
-                <h1 className="text-lg font-semibold">Email</h1>
-                <input
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)} // Update the email state
-                  className="border p-2 rounded text-black"
-                />
-              </div>
+            
 
               <button
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
@@ -148,17 +107,6 @@ const AccountView = () => {
               </button>
             </div>
 
-            {emailUpdatePending && (
-              <div className="mt-4 text-red-500">
-                <p>Verifique sua caixa de entrada para confirmar a alteração do email.</p>
-              </div>
-            )}
-
-            {phoneUpdatePending && (
-              <div className="mt-4 text-red-500">
-                <p>Verifique sua caixa de entrada para confirmar a alteração do número de telefone.</p>
-              </div>
-            )}
 
             <div>
               <h3 className="text-lg font-semibold mb-2">Membro desde</h3>
