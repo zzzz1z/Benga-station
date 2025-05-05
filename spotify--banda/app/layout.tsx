@@ -14,11 +14,15 @@ import getActiveProductsWithPrices from "@/actions/getActiveProductsWithPrices";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
 const font = Figtree({ subsets: ["latin"], display: "swap" });
 
-export const metadata: Metadata = {
-  title: "Benga station",
-  description: "Para ouvir música",
+export const metadata = {
+  title: 'Benga Station',
+  description: 'A Progressive Web App for Benga Station',
+  themeColor: '#000000',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
 };
-
 // Additional component or app logic goes here.
 
  async function RootLayout({
@@ -33,6 +37,11 @@ export const metadata: Metadata = {
 
   return (
     <html lang="pt">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body >
         <ToasterProvider/>
         <SupabaseProvider>
