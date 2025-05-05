@@ -14,7 +14,7 @@ const AccountSettings = () => {
          "
         >
             <Header className="from-bg-neutral-900">
-               <></>
+            <></>
             </Header>
             <SettingsContent/>
             

@@ -1,10 +1,8 @@
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from 'next/navigation';
 
 const AccountView = () => {
   const user = useUser();
-  const supabase = useSupabaseClient();
   const router = useRouter();
 
   return (
@@ -12,12 +10,12 @@ const AccountView = () => {
       <h1 className="text-2xl font-bold mb-2 ml-6">Painel do Utilizador</h1>
 
       {user ? (
-        <div className=" flex justify-between flex-wrap h-96 bg-grey-900 shadow-2xl p-6 rounded-lg">
+        <div className=" flex justify-between flex-wrap h-full bg-grey-900 shadow-2xl p-6 rounded-lg">
           {/* User Info Section */}
           <div className="flex items-start flex-col space-y-3">
             {/* Full Name */}
             <h2 className="text-xl font-semibold">
-              {user.userDetails?.full_name ?? (
+              {user.userDetails?.first_name  ?? (
                 <button
                   className="text-blue-500 hover:underline"
                   onClick={() => router.push('/account/accountSettings')}
@@ -42,7 +40,6 @@ const AccountView = () => {
           {/* Recently Played Songs */}
           <div className='h-52'>
             <h3 className="text-lg font-semibold mb-2 text-blue-500">Músicas Recentes</h3>
-            {/* TODO: Add logic to fetch & display recent songs */}
             <p className="text-gray-500 italic">Nenhuma música reproduzida recentemente.</p>
           </div> 
           
@@ -53,8 +50,7 @@ const AccountView = () => {
           {/* User Role */}
           <div>
             <h3 className="text-lg font-semibold mb-2 text-blue-500">Função do Utilizador</h3>
-            {/* TODO: Fetch user role from Supabase */}
-            <p className="text-gray-500 italic">{user.user?.role}.</p>
+            <p className="text-gray-500 italic">{user.userDetails?.role}.</p>
           </div>  
           
           

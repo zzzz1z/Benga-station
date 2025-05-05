@@ -5,12 +5,18 @@ import ButtonUploadOrChange from "./ButtonUploadOrChange";
 const ProfilePic = () => {
   const supabase = useSupabaseClient();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+
+ 
 
   // Fetch user's profile picture
   const fetchUserImage = async () => {
+
+    const user = await supabase.auth.getUser();
+  
     const { data, error } = await supabase
       .from("users")
-      .select("avatar_url")
+      .select("avatar_url").eq('id', user.data.user?.id)
       .single();
 
     if (error) {

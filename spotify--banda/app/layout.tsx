@@ -1,4 +1,5 @@
 
+
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
 import "./globals.css";
@@ -11,14 +12,6 @@ import getSongsByUserId from "@/actions/getSongsByUserId";
 import Player from "@/components/Player";
 import getActiveProductsWithPrices from "@/actions/getActiveProductsWithPrices";
 import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs'
 const font = Figtree({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
@@ -39,7 +32,7 @@ export const metadata: Metadata = {
   const products = await getActiveProductsWithPrices();
 
   return (
-    <html>
+    <html lang="pt">
       <body >
         <ToasterProvider/>
         <SupabaseProvider>

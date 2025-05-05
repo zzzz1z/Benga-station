@@ -37,15 +37,13 @@ const AuthModal = () => {
         }
         return !!data; // Returns true if a row is found
     };
-    
-    
 
     // Handle sign-up
     const handleSignUp = async () => {
         setLoading(true);
     
         try {
-            // ✅ Ensure checkIfEmailExists completes before proceeding
+
             const emailExists = await checkIfEmailExists(email);
             if (emailExists) {
                 toast.error("Este email já está registrado. Use outro.");
@@ -53,8 +51,6 @@ const AuthModal = () => {
                 return;
             }
 
-            console.log(emailExists)
-    
             // ✅ Sign up only if email does not exist
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
@@ -89,7 +85,7 @@ const AuthModal = () => {
             });
 
             if (signInError) {
-                toast.error("Por favor verifique o seu email para poder inicar sessão.");
+                toast.error("Por favor verifique o seu email para poder iniciar sessão.");
                 setLoading(false);
                 return;
             }
@@ -105,11 +101,36 @@ const AuthModal = () => {
         setLoading(false);
     };
 
+    // Insert user into 'users' table if missing
     useEffect(() => {
-        if (session) {
+        const insertUserIfMissing = async () => {
+            if (!session?.user) return;
+
+            const { data } = await supabase
+                .from("users")
+                .select("id")
+                .eq("id", session.user.id)
+                .single();
+
+            if (!data) {
+                const { error: insertError } = await supabase
+                    .from("users")
+                    .insert({
+                        id: session.user.id,
+                        email: session.user.email,
+                    });
+
+                if (insertError) {
+                    console.error("Erro ao inserir conta:", insertError);
+                    toast.error("Erro ao finalizar o registo. Tente novamente.");
+                }
+            }
+
             router.refresh();
             authModal.onClose();
-        }
+        };
+
+        insertUserIfMissing();
     }, [session]);
 
     const onChange = (open: boolean) => {

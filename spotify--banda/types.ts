@@ -1,10 +1,12 @@
-import { JSX } from "react";
 import Stripe from "stripe";
 
 export interface UserDetails {
     readonly id: string;
     first_name: string;
     last_name: string;
+    phone: string;
+    role: string;
+    email: string;
     full_name: string;
     avatar_url?: string; // Optional, users may not have an avatar
     billing_address?: Stripe.Address; // Optional, billing address may not be provided
