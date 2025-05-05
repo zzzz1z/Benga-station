@@ -1,5 +1,5 @@
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 interface ButtonUploadOrChangeProps {
   hasAvatar: boolean;
@@ -8,6 +8,7 @@ interface ButtonUploadOrChangeProps {
 
 const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, onImageUpdate }) => {
   const supabase = useSupabaseClient();
+  const [isMounted, setIsMounted] = useState(false);
 
   // Function to sanitize filenames (removes accents and spaces)
   const sanitizeFileName = (fileName: string) => {
@@ -80,6 +81,15 @@ const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, 
       console.error("onImageUpdate is not a function:", onImageUpdate);
     }
   };
+
+  // Ensure this is only run on the client-side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null; // Prevent hydration mismatch
+  }
 
   return (
     <div className="flex flex-col items-center space-y-2">

@@ -187,6 +187,9 @@ const AuthModal = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
+
+
+
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -195,9 +198,11 @@ const AuthModal = () => {
                             className="w-full p-2 border rounded-md"
                         />
 
+                        
+                        
                         <input
                             type="password"
-                            placeholder="Introduza a sua palavra passe"
+                            placeholder=""
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded-md"

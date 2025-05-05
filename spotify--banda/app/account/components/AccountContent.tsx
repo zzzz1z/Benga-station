@@ -1,13 +1,9 @@
 'use client'
 
-import Button from '@/components/Botão';
-import useSubscribeModal from '@/hooks/useSubscribeModal.ts';
 import { useUser } from '@/hooks/useUser';
-import { postData } from '@/libs/helpers';
 import { useRouter } from 'next/navigation';
 
-import React, { useEffect, useState } from 'react'
-import toast from 'react-hot-toast';
+import React, { useEffect } from 'react'
 import ProfilePic from './ProfilePic';
 import AccountView from './AccountView';
 import AccountButtons from './AccountButtons';
@@ -17,10 +13,8 @@ import AccountButtons from './AccountButtons';
 const AccountContent =  () => {
 
     const router = useRouter();
-    const subscribeModal = useSubscribeModal();
     const { isLoading, user} = useUser();
 
-    const [loading, setLoading] = useState(false);
 
     useEffect(()=>{
 
@@ -29,33 +23,7 @@ const AccountContent =  () => {
         }
     }, [isLoading, user, router]);
 
-    const redirectToCustomerPortal = async () => {
-        setLoading(true);
 
-        try {
-            const {url} = await postData({
-                url: ' /api/create-portal-link'
-            });
-
-
-            if(url){
-                
-                window.location.assign(url)
-
-            }
-
-            
-
-        } catch (error){
-            if(error){
-                toast.error( (error as Error).message);
-
-            }
-
-            setLoading(false)
-
-        }
-    }
 
     return (
         <div className=' flex justify-between w-full p-1 h-full'>

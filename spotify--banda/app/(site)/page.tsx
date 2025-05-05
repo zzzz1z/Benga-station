@@ -1,18 +1,13 @@
-import getSongs from "@/actions/getSongs"; // Assuming this fetches your songs
 import Header from "@/components/Header"; // Your header component
 import ListaItens from "@/components/ListaItens"; // A component for listing items
 import PageContent from "./components/PageContent"; // A component that handles page content
-import getMostRecentSongs from "@/actions/getMostRecentSongs";
 import AddContent from "./components/AddContent";
 
 // No need to revalidate at 0, unless you're using a particular caching mechanism
 // export const revalidate = 0; // Remove this if unnecessary
 
 export default async function Home() {
-  // Fetch songs asynchronously using your helper function
-  const songs = await getSongs();
-  const otherSongs = await getMostRecentSongs();
-  
+    
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto">
@@ -42,7 +37,7 @@ export default async function Home() {
         </div>
 
         {/* Passing the songs data to 'PageContent' */}
-        <AddContent songs={songs} />
+        <AddContent />
       </div>
 
       {/* Page Content Section */}
@@ -52,7 +47,7 @@ export default async function Home() {
         </div>
 
         {/* Passing the songs data to 'PageContent' */}
-        <PageContent songs={otherSongs} />
+        <PageContent/>
       </div>
     </div>
   );

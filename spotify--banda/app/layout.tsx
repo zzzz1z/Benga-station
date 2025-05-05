@@ -7,17 +7,15 @@ import SupabaseProvider from "@/providers/supabaseProviders";
 import UserProvider from "@/providers/userProvider";
 import ModalProvider from "@/providers/ModalProvider";
 import ToasterProvider from "@/hooks/ToasterProvider";
-import getSongsByUserId from "@/actions/getSongsByUserId";
 import Player from "@/components/Player";
-import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
 const font = Figtree({ subsets: ["latin"], display: "swap" });
 
 export const metadata = {
   title: 'bengaXtation',
   description: 'A Progressive Web App for Benga Station',
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
+    icon: '/icons/favicon-96x96.png',
+    apple: '/icons/apple-touch-icon.png',
   },
 };
 // Additional component or app logic goes here.
@@ -28,22 +26,29 @@ async function RootLayout({
   children: React.ReactNode;
 }>) {
 
-  const userSongs = await getSongsByUserId();
-  const userPlaylists = await getPlaylistsByUserId();
 
   return (
   <html lang="pt-PT">
     <head>
       <link rel="manifest" href="/manifest.json" />
       <meta name="theme-color" content="#000000" />
-      <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    </head>
+      <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-touch-icon.png" />
+      <link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96" />
+      <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+      <meta name="BengaXtation" content="MyWebSited" />
+      <link rel="manifest" href="/site.webmanifest" />
+
+
+
+      <link rel="shortcut icon" href="/icons/favicon.ico" />
+
+      </head>
       <body>
         <ToasterProvider/>
         <SupabaseProvider>
           <UserProvider>
             <ModalProvider/>
-            <SideBar playlist={userPlaylists} songs={userSongs}>
+            <SideBar>
             {children}
             </SideBar>
             <Player/>   

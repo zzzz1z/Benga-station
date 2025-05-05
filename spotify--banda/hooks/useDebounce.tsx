@@ -1,30 +1,30 @@
-import{ useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
+function useDebounce<T>(value: T, delay: number = 100): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const [isMounted, setIsMounted] = useState(false); // Track if the component is mounted
 
+  useEffect(() => {
+    // Set isMounted to true after the component has mounted
+    setIsMounted(true);
+  }, []);
 
-function useDebounce<T>(value: T, delay?: number) : T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value)
+  useEffect(() => {
+    // If the component hasn't mounted yet, don't debounce
+    if (!isMounted) return;
 
-    useEffect (() => {
+    const processedValue = typeof value === "string" ? (value.toLowerCase() as T) : value;
 
-        const processedValue = typeof value === "string" ? (value.toLowerCase() as T) : value;
+    const timer = setTimeout(() => {
+      setDebouncedValue(processedValue);
+    }, delay);
 
-        const timer = setTimeout(() => {
+    return () => {
+      clearTimeout(timer); // Clear timeout on cleanup
+    };
+  }, [value, delay, isMounted]);
 
-            setDebouncedValue (processedValue)
-
-        }, delay ?? 100);
-
-        return () => {
-
-            clearTimeout(timer);
-
-        }
-
-    }, [value, delay]);
-
-    return debouncedValue;
-
+  return debouncedValue;
 }
 
 export default useDebounce;

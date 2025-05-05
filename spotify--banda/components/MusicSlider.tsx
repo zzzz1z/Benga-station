@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface MusicSliderProps {
   value: number;
@@ -7,9 +7,17 @@ interface MusicSliderProps {
 }
 
 const MusicSlider: React.FC<MusicSliderProps> = ({ value, max, onChange }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(Number(e.target.value));
   };
+
+  if (!isMounted) return null; // Prevent hydration mismatch until the component is mounted
 
   return (
     <div className="w-full flex flex-col items-center px-4">

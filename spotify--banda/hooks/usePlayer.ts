@@ -35,7 +35,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     // Play the next song in the queue
     playNext: () => {
         const { ids, activeID } = get();
-        if (!ids.length) return;
+        if (!ids.length || activeID === undefined) return;
 
         const currentIndex = ids.findIndex(id => id === activeID);
         const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % ids.length;
@@ -46,7 +46,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     // Play the previous song in the queue
     playPrevious: () => {
         const { ids, activeID } = get();
-        if (!ids.length) return;
+        if (!ids.length || activeID === undefined) return;
 
         const currentIndex = ids.findIndex(id => id === activeID);
         const prevIndex = currentIndex === -1 ? ids.length - 1 : (currentIndex - 1 + ids.length) % ids.length;
@@ -57,12 +57,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     // Play a random song from the queue
     playRandom: () => {
         const { ids, activeID } = get();
-        if (!ids.length) return;
+        if (!ids.length || ids.length === 1) return; // No need to randomize if there's only one song
 
         let randomIndex;
         do {
             randomIndex = Math.floor(Math.random() * ids.length);
-        } while (ids[randomIndex] === activeID && ids.length > 1);
+        } while (ids[randomIndex] === activeID); // Avoid selecting the current song
 
         set({ activeID: ids[randomIndex] });
     }
