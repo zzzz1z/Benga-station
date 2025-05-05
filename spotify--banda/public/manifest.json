@@ -8,7 +8,7 @@
     "icons": [
       {
         "src": "/icons/icon-120x120.png",
-        "sizes": "192x192",
+        "sizes": "120x120", 
         "type": "image/png"
       },
       {
@@ -20,12 +20,12 @@
     "screenshots": [
       {
         "src": "/images/screenshot-desktop.png",
-        "sizes": "1280x800",
+        "sizes": "3360x2100",
         "type": "image/png"
       },
       {
         "src": "/images/screenshot-mobile.png",
-        "sizes": "1080x1920",
+        "sizes": "828x1792",
         "type": "image/png"
       }
     ]
