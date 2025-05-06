@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Song } from "@/types";
-import usePlayer from "@/hooks/usePlayer";  // Import the store
+import usePlayer from "@/hooks/usePlayer";
 import MediaItem from "./MediaItem";
 import LikedButton from "./LikedButton";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
@@ -16,7 +16,7 @@ interface PlayerContentProps {
 }
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
-  const player = usePlayer(); // Access the store
+  const player = usePlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -36,15 +36,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handlePlayNextSong = () => {
-    player.playNext();  // Use playNext from the store
+    if (player.ids.length > 1) {
+      player.playNext();
+    } else {
+      player.playRandom();
+    }
   };
 
   const handlePlayPreviousSong = () => {
-    if (!player.activeID || !player.ids.length) return;
-    const currentIndex = player.ids.findIndex(id => id === player.activeID);
-    if (currentIndex === -1) return;
-    const prevIndex = currentIndex === 0 ? player.ids.length - 1 : currentIndex - 1;
-    player.setId(player.ids[prevIndex]);  // Set the previous song from the store
+    player.playPrevious();
   };
 
   const handleSeek = (value: number) => {
@@ -55,17 +55,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const toggleMute = () => {
-    setVolume(prev => prev === 0 ? 1 : 0);
+    setVolume(prev => (prev === 0 ? 1 : 0));
   };
 
-  // Update volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
 
-  // Update playback state
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -75,36 +73,29 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    const onEnded = () => player.playNext(); // When the song ends, move to the next song
+    const onEnded = () => handlePlayNextSong();
 
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('ended', onEnded);
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
 
     return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
     };
   }, [songUrl]);
 
-  // MediaSession for system integration
+  // Corrected hook usage — no image_path argument
   useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
-      {/* Audio element */}
-      <audio
-        autoPlay
-        ref={audioRef}
-        src={songUrl}
-        preload="metadata"
-        hidden
-      />
+    <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full pb-24 md:pb-12 px-4">
+      <audio autoPlay ref={audioRef} src={songUrl} preload="metadata" hidden />
 
       {/* Song Info */}
       <div className="flex items-center justify-center m-auto w-full space-x-4">
@@ -114,7 +105,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
       {/* Controls (Desktop) */}
       <div className="hidden md:flex items-center justify-center w-full mb-2 flex-col">
-        <div className="hidden md:flex justify-center items-center w-full max-w-[700px] gap-4">
+        <div className="flex justify-center items-center w-full max-w-[700px] gap-4">
           <AiFillStepBackward
             onClick={handlePlayPreviousSong}
             size={30}
@@ -132,8 +123,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
         </div>
-
-        {/* Music Progress */}
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
         </div>
@@ -141,7 +130,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
       {/* Controls (Mobile) */}
       <div className="flex md:hidden justify-center items-center flex-col">
-        <div className="flex items-center justify-center w-full">
+        <div className="flex items-center justify-center w-full gap-4">
           <AiFillStepBackward
             onClick={handlePlayPreviousSong}
             size={30}
@@ -159,20 +148,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
         </div>
-
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
         </div>
       </div>
 
-      {/* Volume */}
+      {/* Volume (Desktop only) */}
       <div className="hidden md:flex w-full justify-end pr-4 min-w-0">
         <div className="flex items-center gap-4 w-[150px]">
-          <VolumeIcon
-            onClick={toggleMute}
-            className="cursor-pointer"
-            size={34}
-          />
+          <VolumeIcon onClick={toggleMute} className="cursor-pointer" size={34} />
           <Slider value={volume} onChange={setVolume} />
         </div>
       </div>
