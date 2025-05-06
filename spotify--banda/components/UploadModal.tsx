@@ -1,13 +1,19 @@
 import useUploadModal from "@/hooks/useUploadModal";
 import Modal from "./Modal";
 import FilesInfo from "./FilesInfo";
+import { useRouter } from "next/navigation";
 
 const UploadModal = () => {
   const uploadModal = useUploadModal();
+  const router = useRouter();  // initialize the router
 
   const onChange = (open: boolean) => {
     if (!open) {
       uploadModal.onClose();
+      // Refresh the page after modal closes
+      router.refresh();  // This will refresh the current page
+      // Alternatively, you can use window.location.reload() if needed
+      // window.location.reload();
     }
   };
 
