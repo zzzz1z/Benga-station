@@ -7,36 +7,45 @@ import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";
 
-// Function to sanitize file names (remove special characters)
+// Sanitize file names
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_]/g, "_");
 
-// Function to validate file format
+// Validate file format
 const isValidAudioFile = async (file: File) => {
   const validMimeTypes = [
     "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac"
   ];
+  const validExtensions = [".mp3", ".wav", ".ogg", ".flac"];
 
-  const arrayBuffer = await file.slice(0, 4).arrayBuffer();
-  const header = new Uint8Array(arrayBuffer).join(" ");
-
-  // Check for common audio file headers
-  const magicNumbers = {
-    mp3: "255 251", // MP3 file magic numbers
-    wav: "82 73 70 70", // WAV file magic numbers
-    ogg: "79 103 103 83", // OGG file magic numbers
-    flac: "102 76 97 67" // FLAC file magic numbers
-  };
-
-  const isValidFormat = Object.values(magicNumbers).some(signature =>
-    header.startsWith(signature)
+  const isValidMime = validMimeTypes.includes(file.type);
+  const hasValidExtension = validExtensions.some(ext =>
+    file.name.toLowerCase().endsWith(ext)
   );
 
-  return validMimeTypes.includes(file.type) || isValidFormat;
+  try {
+    const arrayBuffer = await file.slice(0, 4).arrayBuffer();
+    const header = new Uint8Array(arrayBuffer).join(" ");
+
+    const magicNumbers = {
+      mp3: "255 251",
+      wav: "82 73 70 70",
+      ogg: "79 103 103 83",
+      flac: "102 76 97 67"
+    };
+
+    const matchesHeader = Object.values(magicNumbers).some(signature =>
+      header.startsWith(signature)
+    );
+
+    return isValidMime || hasValidExtension || matchesHeader;
+  } catch {
+    return isValidMime || hasValidExtension;
+  }
 };
 
 const FilesInfo: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [localFiles, setLocalFiles] = useState<any[]>([]); // Temporarily store files
+  const [localFiles, setLocalFiles] = useState<any[]>([]);
   const { user } = useUser();
   const supabaseClient = useSupabaseClient();
 
@@ -49,7 +58,6 @@ const FilesInfo: React.FC = () => {
     },
   });
 
-  // Save file details locally
   const saveFileLocally = async (values: FieldValues) => {
     const songFile = values.song?.[0];
     const imageFile = values.image?.[0];
@@ -59,13 +67,12 @@ const FilesInfo: React.FC = () => {
       return;
     }
 
-    // Check if the audio file format is valid
     if (!(await isValidAudioFile(songFile))) {
       toast.error("Formato de áudio não suportado.");
       return;
     }
 
-    setLocalFiles((prev) => [
+    setLocalFiles(prev => [
       ...prev,
       {
         title: values.title,
@@ -76,10 +83,9 @@ const FilesInfo: React.FC = () => {
     ]);
 
     toast.success("Arquivo salvo localmente.");
-    reset(); // Reset form fields
+    reset();
   };
 
-  // Upload all files in localFiles to Supabase
   const uploadToDatabase = async () => {
     if (localFiles.length === 0) {
       toast.error("Nenhum arquivo para enviar.");
@@ -93,7 +99,6 @@ const FilesInfo: React.FC = () => {
         const uniqueID = uniqid();
         const safeTitle = sanitizeFilename(file.title);
 
-        // Upload song file
         const { data: songData, error: songError } = await supabaseClient
           .storage
           .from("musicas")
@@ -103,11 +108,10 @@ const FilesInfo: React.FC = () => {
           });
 
         if (songError) {
-          console.error("Erro ao enviar a música:", file.song.name, songError);
+          console.error("Erro ao enviar música:", songError);
           throw new Error(`Erro ao enviar a música: ${file.song.name}`);
         }
 
-        // Upload image file
         const { data: imageData, error: imageError } = await supabaseClient
           .storage
           .from("imagens")
@@ -117,12 +121,11 @@ const FilesInfo: React.FC = () => {
           });
 
         if (imageError) {
-          console.error("Erro ao enviar a imagem:", file.image.name, imageError);
+          console.error("Erro ao enviar imagem:", imageError);
           throw new Error(`Erro ao enviar a imagem: ${file.image.name}`);
         }
 
-        // Insert metadata into the database
-        const { error: supabaseError } = await supabaseClient
+        const { error: dbError } = await supabaseClient
           .from("Songs")
           .insert({
             user_id: user?.id,
@@ -132,8 +135,8 @@ const FilesInfo: React.FC = () => {
             song_path: songData?.path,
           });
 
-        if (supabaseError) {
-          console.error("Erro ao salvar no banco:", file.title, supabaseError);
+        if (dbError) {
+          console.error("Erro ao salvar no banco:", dbError);
           throw new Error(`Erro ao salvar no banco: ${file.title}`);
         }
       }
@@ -141,8 +144,8 @@ const FilesInfo: React.FC = () => {
       toast.success("Todos os arquivos foram enviados com sucesso!");
       setLocalFiles([]);
     } catch (error: any) {
-      console.error("Operação falhada:", error.message);
-      toast.error("Operação falhada, não é possível fazer upload do seu ficheiro.");
+      console.error("Erro geral:", error.message);
+      toast.error("Erro no upload dos ficheiros.");
     } finally {
       setIsLoading(false);
     }
@@ -150,11 +153,10 @@ const FilesInfo: React.FC = () => {
 
   return (
     <div>
-      {/* Form to save file details locally */}
       <form
         onSubmit={handleSubmit(saveFileLocally)}
         className="flex flex-col gap-y-4"
-      > 
+      >
         <h2>Título da música:</h2>
         <Input
           id="title"
@@ -163,8 +165,7 @@ const FilesInfo: React.FC = () => {
           placeholder="Título da música"
         />
 
-
-        <h1>Nome do artista:</h1>
+        <h2>Nome do artista:</h2>
         <Input
           id="author"
           disabled={isLoading}
@@ -172,16 +173,16 @@ const FilesInfo: React.FC = () => {
           placeholder="Autor da música"
         />
 
-        <h1>Selecione um ficheiro:</h1>
+        <h2>Selecione um ficheiro de música:</h2>
         <Input
           id="song"
           type="file"
-          accept="audio/*"
+          accept=".mp3,.wav,.ogg,.flac,audio/*"
           disabled={isLoading}
           {...register("song", { required: true })}
         />
 
-        <h1>Capa:</h1>
+        <h2>Capa:</h2>
         <Input
           id="image"
           type="file"
@@ -189,34 +190,32 @@ const FilesInfo: React.FC = () => {
           disabled={isLoading}
           {...register("image", { required: true })}
         />
+
         <Button disabled={isLoading} type="submit">
           Salvar Localmente
         </Button>
       </form>
 
-      {/* Display local files */}
-      <div className="mt-6">
-        {localFiles.length > 0 && (
-          <div>
-            <h3 className="font-bold mb-4">Arquivos salvos localmente:</h3>
-            <ul className="list-disc pl-6">
-              {localFiles.map((file, index) => (
-                <li key={index}>
-                  <p><strong>Título:</strong> {file.title}</p>
-                  <p><strong>Autor:</strong> {file.author}</p>
-                </li>
-              ))}
-            </ul>
-            <Button
-              onClick={uploadToDatabase}
-              disabled={isLoading}
-              className="mt-4"
-            >
-              Fazer Upload
-            </Button>
-          </div>
-        )}
-      </div>
+      {localFiles.length > 0 && (
+        <div className="mt-6">
+          <h3 className="font-bold mb-4">Arquivos salvos localmente:</h3>
+          <ul className="list-disc pl-6">
+            {localFiles.map((file, i) => (
+              <li key={i}>
+                <p><strong>Título:</strong> {file.title}</p>
+                <p><strong>Autor:</strong> {file.author}</p>
+              </li>
+            ))}
+          </ul>
+          <Button
+            onClick={uploadToDatabase}
+            disabled={isLoading}
+            className="mt-4"
+          >
+            Fazer Upload
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
