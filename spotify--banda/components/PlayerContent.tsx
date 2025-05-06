@@ -93,7 +93,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   }, [songUrl]);
 
   // MediaSession for system integration
-  useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause(), song.image_path);
+  useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
