@@ -19,7 +19,6 @@ interface PlayerContentProps {
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const player = usePlayer();
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -29,6 +28,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
+  // Handle play state and persistence across app switch
   const handlePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -60,16 +60,37 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     }
   }, [volume]);
 
-  // Update playback state
+  // Update playback state and store time/playing status when the app goes to the background
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setPosition(audio.currentTime);
+    // Load saved playback state on app launch
+    const savedTime = localStorage.getItem('audioTime');
+    const savedIsPlaying = localStorage.getItem('isPlaying') === 'true';
+
+    if (savedTime) {
+      audio.currentTime = parseFloat(savedTime);
+    }
+    if (savedIsPlaying) {
+      audio.play();
+      setIsPlaying(true);
+    }
+
+    const updateTime = () => {
+      setPosition(audio.currentTime);
+      localStorage.setItem('audioTime', audio.currentTime.toString());
+    };
     const updateDuration = () => setDuration(audio.duration);
 
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPlay = () => {
+      setIsPlaying(true);
+      localStorage.setItem('isPlaying', 'true');
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      localStorage.setItem('isPlaying', 'false');
+    };
     const onEnded = () => handlePlayNextSong();
 
     audio.addEventListener('timeupdate', updateTime);
