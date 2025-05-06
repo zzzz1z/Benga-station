@@ -19,6 +19,7 @@ interface PlayerContentProps {
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const player = usePlayer();
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -28,7 +29,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  // Handle play state and persistence across app switch
   const handlePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -40,6 +40,10 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const handlePlayNextSong = () => {
     player.playNext();
+  };
+
+  const handlePlayPreviousSong = () => {
+    player.playPrevious();
   };
 
   const handleSeek = (value: number) => {
@@ -60,37 +64,16 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     }
   }, [volume]);
 
-  // Update playback state and store time/playing status when the app goes to the background
+  // Update playback state
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Load saved playback state on app launch
-    const savedTime = localStorage.getItem('audioTime');
-    const savedIsPlaying = localStorage.getItem('isPlaying') === 'true';
-
-    if (savedTime) {
-      audio.currentTime = parseFloat(savedTime);
-    }
-    if (savedIsPlaying) {
-      audio.play();
-      setIsPlaying(true);
-    }
-
-    const updateTime = () => {
-      setPosition(audio.currentTime);
-      localStorage.setItem('audioTime', audio.currentTime.toString());
-    };
+    const updateTime = () => setPosition(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
 
-    const onPlay = () => {
-      setIsPlaying(true);
-      localStorage.setItem('isPlaying', 'true');
-    };
-    const onPause = () => {
-      setIsPlaying(false);
-      localStorage.setItem('isPlaying', 'false');
-    };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
     const onEnded = () => handlePlayNextSong();
 
     audio.addEventListener('timeupdate', updateTime);
@@ -132,7 +115,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       <div className="hidden md:flex items-center justify-center w-full mb-2 flex-col">
         <div className="hidden md:flex justify-center items-center w-full max-w-[700px] gap-4">
           <AiFillStepBackward
-            onClick={player.playPrevious}
+            onClick={handlePlayPreviousSong}
             size={30}
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
@@ -159,7 +142,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       <div className="flex md:hidden justify-center items-center flex-col">
         <div className="flex items-center justify-center w-full">
           <AiFillStepBackward
-            onClick={player.playPrevious}
+            onClick={handlePlayPreviousSong}
             size={30}
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
