@@ -3,10 +3,11 @@
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from 'next/navigation';
 
-import React, { useEffect,  } from 'react'
+import React, { useEffect } from 'react'
 import ProfilePic from '../../components/ProfilePic';
 import AccountButtons from '../../components/AccountButtons';
-import SettingsView from './Settingsview';
+import Settingsview from './Settingsview';
+
 
 
 const SettingsContent =  () => {
@@ -23,36 +24,29 @@ const SettingsContent =  () => {
     }, [isLoading, user, router]);
 
 
+
     return (
-        <div className=' flex justify-between w-full p-1 h-full'>
+        <div className='flex justify-center w-full p-1 h-full'>
 
-            <div className='flex flex-col w-96 m-0'>
-
-                <div className=''>
-                <ProfilePic/>
-                
-                </div>
-                <div className=''>
-                
-                <AccountButtons/>
-                </div>
-
-
+        <div className='flex flex-col w-56 ml-1'>
+            <div className=''>
+                <ProfilePic />
             </div>
-        
-            
-
-
-            <div className='flex w-full'>
-                <SettingsView/>
-
+            <div className=''>
+                <AccountButtons />
             </div>
-
-        
-    
         </div>
+
+        {/* Account View Section */}
+        <div className='flex w-full'>
+            <div className="flex-1">
+                <Settingsview />
+            </div>
+        </div>
+
+    </div>
     )
 }
 
 
-export default SettingsContent
+export default SettingsContent;

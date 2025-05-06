@@ -27,7 +27,7 @@ const AccountButtons = () => {
 
         } else {
 
-            return adminModal.onOpen // modal to send an application to change the current user role from authenticated to admin but only after i confirm it in supabase 
+            return adminModal.onOpen() // modal to send an application to change the current user role from authenticated to admin but only after i confirm it in supabase 
         }
 
     }

@@ -1,7 +1,7 @@
 import Header from "@/components/Header"
 import SettingsContent from "./components/SettingsContent";
 
-const AccountSettings = () => {
+const Account = () => {
     return (
         <div 
          className="
@@ -14,7 +14,7 @@ const AccountSettings = () => {
          "
         >
             <Header className="from-bg-neutral-900">
-            <></>
+               <></>
             </Header>
             <SettingsContent/>
             
@@ -22,4 +22,4 @@ const AccountSettings = () => {
     )
 }
 
-export default AccountSettings;
+export default Account;
