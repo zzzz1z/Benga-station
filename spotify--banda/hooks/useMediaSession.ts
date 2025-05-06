@@ -1,7 +1,7 @@
-import { Song } from "@/types";
 import { useEffect } from "react";
-import useLoadImage from "./useLoadImage"; // make sure this hook returns a public image URL
+import { Song } from "@/types";
 import usePlayer from "./usePlayer";
+import useLoadImage from "./useLoadImage";
 
 const useMediaSession = (
   isPlaying: boolean,
@@ -10,39 +10,46 @@ const useMediaSession = (
   pause: () => void
 ) => {
   const player = usePlayer();
-  const imageUrl = useLoadImage(song); // 🔥 returns actual image URL from storage
 
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
+    if (!("mediaSession" in navigator)) return;
 
-    const artwork = imageUrl
+    // Build artwork array if song has a cover image
+   
+
+
+    const artwork = song.image_path
       ? [
-          {
-            src: imageUrl,
-            sizes: '512x512',
-            type: 'image/jpeg',
-          },
+          { src: song.image_path, sizes: "96x96", type: "image/jpeg" },
+          { src: song.image_path, sizes: "128x128", type: "image/jpeg" },
+          { src: song.image_path, sizes: "192x192", type: "image/jpeg" },
+          { src: song.image_path, sizes: "256x256", type: "image/jpeg" },
+          { src: song.image_path, sizes: "512x512", type: "image/jpeg" }
         ]
       : [];
 
+    // Set media metadata
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.author,
-      album: "Your App Name",
+      album: "Your App Name", // optional
       artwork,
     });
 
+    // Action handlers
     navigator.mediaSession.setActionHandler("play", play);
     navigator.mediaSession.setActionHandler("pause", pause);
     navigator.mediaSession.setActionHandler("previoustrack", player.playPrevious);
     navigator.mediaSession.setActionHandler("nexttrack", player.playNext);
+
+    // Optional: update playback state
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 
     return () => {
       navigator.mediaSession.metadata = null;
     };
-  }, [isPlaying, song, imageUrl, play, pause, player]);
+  }, [isPlaying, song, play, pause, player]);
 };
 
-
 export default useMediaSession;
+
