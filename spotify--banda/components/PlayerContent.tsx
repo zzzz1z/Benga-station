@@ -94,6 +94,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
       {/* Audio element */}
       <audio
+        autoPlay
         ref={audioRef}
         src={songUrl}
         preload="metadata"
