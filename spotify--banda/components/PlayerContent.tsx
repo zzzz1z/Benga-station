@@ -1,8 +1,6 @@
-'use client';
-
 import { useEffect, useRef, useState } from "react";
 import { Song } from "@/types";
-import usePlayer from "@/hooks/usePlayer";
+import usePlayer from "@/hooks/usePlayer";  // Import the store
 import MediaItem from "./MediaItem";
 import LikedButton from "./LikedButton";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
@@ -18,8 +16,7 @@ interface PlayerContentProps {
 }
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
-  const player = usePlayer();
-
+  const player = usePlayer(); // Access the store
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -39,11 +36,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handlePlayNextSong = () => {
-    player.playNext();
+    player.playNext();  // Use playNext from the store
   };
 
   const handlePlayPreviousSong = () => {
-    player.playPrevious();
+    if (!player.activeID || !player.ids.length) return;
+    const currentIndex = player.ids.findIndex(id => id === player.activeID);
+    if (currentIndex === -1) return;
+    const prevIndex = currentIndex === 0 ? player.ids.length - 1 : currentIndex - 1;
+    player.setId(player.ids[prevIndex]);  // Set the previous song from the store
   };
 
   const handleSeek = (value: number) => {
@@ -74,7 +75,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    const onEnded = () => handlePlayNextSong();
+    const onEnded = () => player.playNext(); // When the song ends, move to the next song
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
@@ -92,7 +93,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   }, [songUrl]);
 
   // MediaSession for system integration
-  useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());
+  useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause(), song.image_path);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
