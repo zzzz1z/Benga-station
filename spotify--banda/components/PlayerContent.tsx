@@ -43,7 +43,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handlePlayPreviousSong = () => {
-    player.playPrevious();
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+    } else {
+      player.playPrevious();
+    }
   };
 
   const handleSeek = (value: number) => {
@@ -64,36 +71,23 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     }
   }, [volume]);
 
-  // Update playback state
+  // Playback & event handlers
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-  
+
     const updateTime = () => setPosition(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
-  
-    const onPlay = () => {
-      setIsPlaying(true);
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'playing';
-      }
-    };
-  
-    const onPause = () => {
-      setIsPlaying(false);
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'paused';
-      }
-    };
-  
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
     const onEnded = () => handlePlayNextSong();
-  
+
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
-  
+
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
@@ -102,9 +96,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.removeEventListener('ended', onEnded);
     };
   }, [songUrl]);
-  
 
-  // MediaSession for system integration
+  // MediaSession integration
   useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());
 
   return (
@@ -145,7 +138,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
           />
         </div>
 
-        {/* Music Progress */}
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
         </div>
