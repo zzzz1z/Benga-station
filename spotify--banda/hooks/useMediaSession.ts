@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Song } from "@/types";
 import usePlayer from "./usePlayer";
-import useLoadImage from "./useLoadImage";
 
 const useMediaSession = (
   isPlaying: boolean,
