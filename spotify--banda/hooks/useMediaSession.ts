@@ -19,10 +19,11 @@ const useMediaSession = (
           { src: song.image_path, sizes: "128x128", type: "image/jpeg" },
           { src: song.image_path, sizes: "192x192", type: "image/jpeg" },
           { src: song.image_path, sizes: "256x256", type: "image/jpeg" },
-          { src: song.image_path, sizes: "512x512", type: "image/jpeg" }
+          { src: song.image_path, sizes: "512x512", type: "image/jpeg" },
         ]
       : [];
 
+    // Set media metadata for playback controls
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.author,
@@ -30,6 +31,7 @@ const useMediaSession = (
       artwork,
     });
 
+    // Set media session action handlers
     navigator.mediaSession.setActionHandler("play", play);
     navigator.mediaSession.setActionHandler("pause", pause);
     navigator.mediaSession.setActionHandler("previoustrack", () => {
@@ -43,12 +45,30 @@ const useMediaSession = (
     });
     navigator.mediaSession.setActionHandler("nexttrack", player.playNext);
 
+    // Update the playback state to match the audio playback state
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 
+    // Optionally handle changes to the audio state directly in media session
+    const audio = document.querySelector("audio") as HTMLAudioElement | null;
+    if (audio) {
+      audio.onplay = () => {
+        if (!isPlaying) {
+          play();  // Synchronize the state if audio was played externally
+        }
+      };
+      audio.onpause = () => {
+        if (isPlaying) {
+          pause();  // Synchronize the state if audio was paused externally
+        }
+      };
+    }
+
+    // Cleanup media session metadata when component is unmounted or when the song changes
     return () => {
       navigator.mediaSession.metadata = null;
     };
   }, [isPlaying, song, play, pause, player]);
+
 };
 
 export default useMediaSession;
