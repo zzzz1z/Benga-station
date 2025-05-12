@@ -6,37 +6,40 @@ import Input from "./Input";
 import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";
+import imageCompression from "browser-image-compression";
 
 // Sanitize file names
-const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_]/g, "_");
+const sanitizeFilename = (name: string) =>
+  name.replace(/[^a-zA-Z0-9-_]/g, "_");
 
 // Validate file format
 const isValidAudioFile = async (file: File) => {
   const validMimeTypes = [
-    "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac"
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/ogg",
+    "audio/flac",
   ];
   const validExtensions = [".mp3", ".wav", ".ogg", ".flac"];
 
   const isValidMime = validMimeTypes.includes(file.type);
-  const hasValidExtension = validExtensions.some(ext =>
+  const hasValidExtension = validExtensions.some((ext) =>
     file.name.toLowerCase().endsWith(ext)
   );
 
   try {
     const arrayBuffer = await file.slice(0, 4).arrayBuffer();
     const header = new Uint8Array(arrayBuffer).join(" ");
-
-    const magicNumbers = {
+    const magicNumbers: Record<string, string> = {
       mp3: "255 251",
       wav: "82 73 70 70",
       ogg: "79 103 103 83",
-      flac: "102 76 97 67"
+      flac: "102 76 97 67",
     };
-
-    const matchesHeader = Object.values(magicNumbers).some(signature =>
+    const matchesHeader = Object.values(magicNumbers).some((signature) =>
       header.startsWith(signature)
     );
-
     return isValidMime || hasValidExtension || matchesHeader;
   } catch {
     return isValidMime || hasValidExtension;
@@ -59,10 +62,10 @@ const FilesInfo: React.FC = () => {
   });
 
   const saveFileLocally = async (values: FieldValues) => {
-    const songFile = values.song?.[0];
-    const imageFile = values.image?.[0];
+    const songFile = values.song?.[0] as File;
+    const originalImage = values.image?.[0] as File;
 
-    if (!values.title || !values.author || !songFile || !imageFile) {
+    if (!values.title || !values.author || !songFile || !originalImage) {
       toast.error("Todos os campos são obrigatórios.");
       return;
     }
@@ -72,13 +75,28 @@ const FilesInfo: React.FC = () => {
       return;
     }
 
-    setLocalFiles(prev => [
+    // Resize & convert image to JPEG, max 512×512
+    let compressedImage: File;
+    try {
+      compressedImage = await imageCompression(originalImage, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 512,
+        useWebWorker: true,
+        fileType: "image/jpeg",
+      });
+    } catch (err) {
+      console.error("Image compression error:", err);
+      toast.error("Erro ao processar a imagem.");
+      return;
+    }
+
+    setLocalFiles((prev) => [
       ...prev,
       {
         title: values.title,
         author: values.author,
         song: songFile,
-        image: imageFile,
+        image: compressedImage,
       },
     ]);
 
@@ -99,31 +117,27 @@ const FilesInfo: React.FC = () => {
         const uniqueID = uniqid();
         const safeTitle = sanitizeFilename(file.title);
 
-        const { data: songData, error: songError } = await supabaseClient
-          .storage
-          .from("musicas")
-          .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+        const { data: songData, error: songError } =
+          await supabaseClient.storage
+            .from("musicas")
+            .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+        if (songError) throw songError;
 
-        if (songError) {
-          console.error("Erro ao enviar música:", songError);
-          throw new Error(`Erro ao enviar a música: ${file.song.name}`);
-        }
-
-        const { data: imageData, error: imageError } = await supabaseClient
-          .storage
-          .from("imagens")
-          .upload(`imagem-${safeTitle}-${uniqueID}`, file.image, {
-            cacheControl: "3600",
-            upsert: false,
-          });
-
-        if (imageError) {
-          console.error("Erro ao enviar imagem:", imageError);
-          throw new Error(`Erro ao enviar a imagem: ${file.image.name}`);
-        }
+        const { data: imageData, error: imageError } =
+          await supabaseClient.storage
+            .from("imagens")
+            .upload(
+              `imagem-${safeTitle}-${uniqueID}.jpg`,
+              file.image,
+              {
+                cacheControl: "3600",
+                upsert: false,
+              }
+            );
+        if (imageError) throw imageError;
 
         const { error: dbError } = await supabaseClient
           .from("Songs")
@@ -134,11 +148,7 @@ const FilesInfo: React.FC = () => {
             image_path: imageData?.path,
             song_path: songData?.path,
           });
-
-        if (dbError) {
-          console.error("Erro ao salvar no banco:", dbError);
-          throw new Error(`Erro ao salvar no banco: ${file.title}`);
-        }
+        if (dbError) throw dbError;
       }
 
       toast.success("Todos os arquivos foram enviados com sucesso!");
@@ -202,8 +212,12 @@ const FilesInfo: React.FC = () => {
           <ul className="list-disc pl-6">
             {localFiles.map((file, i) => (
               <li key={i}>
-                <p><strong>Título:</strong> {file.title}</p>
-                <p><strong>Autor:</strong> {file.author}</p>
+                <p>
+                  <strong>Título:</strong> {file.title}
+                </p>
+                <p>
+                  <strong>Autor:</strong> {file.author}
+                </p>
               </li>
             ))}
           </ul>
