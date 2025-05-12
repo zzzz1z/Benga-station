@@ -43,15 +43,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handlePlayPreviousSong = () => {
-    const hasPrevious = player.hasPrevious?.(); // Optional chaining in case it's undefined
-    if (hasPrevious) {
-      player.playPrevious();
-    } else {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(err => console.error("Replay failed:", err));
-      }
-    }
+    player.playPrevious();
   };
 
   const handleSeek = (value: number) => {
@@ -76,20 +68,32 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
+  
     const updateTime = () => setPosition(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration);
-
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+  
+    const onPlay = () => {
+      setIsPlaying(true);
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+    };
+  
+    const onPause = () => {
+      setIsPlaying(false);
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    };
+  
     const onEnded = () => handlePlayNextSong();
-
+  
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
-
+  
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
@@ -98,6 +102,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.removeEventListener('ended', onEnded);
     };
   }, [songUrl]);
+  
 
   // MediaSession for system integration
   useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());

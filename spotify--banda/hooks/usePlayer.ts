@@ -47,14 +47,16 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     playPrevious: () => {
         const { ids, activeID } = get();
         if (!ids.length || activeID === undefined) return;
-
+      
         const currentIndex = ids.findIndex(id => id === activeID);
         if (currentIndex <= 0) {
-            set({ activeID }); // Repeat current song
+          // Repeat current song
+          set({ activeID });
         } else {
-            set({ activeID: ids[currentIndex - 1] });
+          set({ activeID: ids[currentIndex - 1] });
         }
-    },
+      },
+      
 
     playRandom: () => {
         const { ids, activeID } = get();

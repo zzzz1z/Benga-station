@@ -13,10 +13,6 @@ const useMediaSession = (
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
 
-    // Build artwork array if song has a cover image
-   
-
-
     const artwork = song.image_path
       ? [
           { src: song.image_path, sizes: "96x96", type: "image/jpeg" },
@@ -27,21 +23,26 @@ const useMediaSession = (
         ]
       : [];
 
-    // Set media metadata
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.author,
-      album: "Your App Name", // optional
+      album: "Your App Name",
       artwork,
     });
 
-    // Action handlers
     navigator.mediaSession.setActionHandler("play", play);
     navigator.mediaSession.setActionHandler("pause", pause);
-    navigator.mediaSession.setActionHandler("previoustrack", player.playPrevious);
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      const audio = document.querySelector("audio") as HTMLAudioElement | null;
+
+      if (audio && audio.currentTime > 3) {
+        audio.currentTime = 0; // Restart current track
+      } else {
+        player.playPrevious(); // Fallback to previous in queue or repeat
+      }
+    });
     navigator.mediaSession.setActionHandler("nexttrack", player.playNext);
 
-    // Optional: update playback state
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 
     return () => {
@@ -51,4 +52,3 @@ const useMediaSession = (
 };
 
 export default useMediaSession;
-
