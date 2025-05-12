@@ -11,6 +11,7 @@ interface PlayerStore {
     playNext: () => void;
     playPrevious: () => void;
     playRandom: () => void;
+    hasPrevious: () => boolean;
 }
 
 const usePlayer = create<PlayerStore>((set, get) => ({
@@ -65,6 +66,13 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         } while (ids.length > 1 && ids[randomIndex] === activeID);
 
         set({ activeID: ids[randomIndex] });
+    },
+
+    hasPrevious: () => {
+        const { ids, activeID } = get();
+        if (!ids.length || activeID === undefined) return false;
+        const currentIndex = ids.findIndex(id => id === activeID);
+        return currentIndex > 0;
     }
 }));
 

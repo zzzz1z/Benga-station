@@ -43,7 +43,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handlePlayPreviousSong = () => {
-    player.playPrevious();
+    const hasPrevious = player.hasPrevious?.(); // Optional chaining in case it's undefined
+    if (hasPrevious) {
+      player.playPrevious();
+    } else {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => console.error("Replay failed:", err));
+      }
+    }
   };
 
   const handleSeek = (value: number) => {
