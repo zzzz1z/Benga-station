@@ -16,6 +16,7 @@ const AuthModal = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
 
     
     // Function to check if email exists in users table
@@ -64,7 +65,7 @@ const AuthModal = () => {
             }
     
             toast.success("Conta criada com sucesso! Verifique seu email.");
-            authModal.onClose();
+            
         } catch (error) {
             console.error("Erro no signup:", error);
             toast.error("Ocorreu um erro. Tente novamente.");
@@ -101,6 +102,35 @@ const AuthModal = () => {
         setLoading(false);
     };
 
+    const resendMail = async () => {
+        if (!email) {
+          toast.error("Insira o email primeiro.");
+          return;
+        }
+      
+        setLoading(true);
+        try {
+          const { data, error } = await supabase.auth.resend({
+            type: "signup",
+            email: email,
+          });
+      
+          if (error) {
+            toast.error("Erro ao reenviar o email.");
+            console.error(error);
+          } else {
+            toast.success("Email de confirmação reenviado!");
+            setResendCooldown(60); // start 60-second cooldown
+          }
+        } catch (err) {
+          console.error(err);
+          toast.error("Erro inesperado.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+
     // Insert user into 'users' table if missing
     useEffect(() => {
         const insertUserIfMissing = async () => {
@@ -132,6 +162,19 @@ const AuthModal = () => {
         insertUserIfMissing();
     }, [session]);
 
+
+
+    // resend email conf
+
+    useEffect(() => {
+        if (resendCooldown > 0) {
+          const timer = setTimeout(() => {
+            setResendCooldown(resendCooldown - 1);
+          }, 1000);
+          return () => clearTimeout(timer);
+        }
+      }, [resendCooldown]);
+
     const onChange = (open: boolean) => {
         if (!open) {
             authModal.onClose();
@@ -152,6 +195,7 @@ const AuthModal = () => {
             <div>
                 {authModal.mode === "sign_up" ? (
                     <div className="flex flex-col gap-4">
+
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -166,7 +210,9 @@ const AuthModal = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded-md"
-                        />
+                        />                        
+                        <p className="text-sm">(a sua palavra-passe tem de ter no mínimo 6 caracteres) </p>
+
 
                         <button
                             onClick={handleSignUp}
@@ -183,6 +229,19 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Já tenho uma conta"}
                         </button>
+
+                        <button
+                            onClick={resendMail}
+                            disabled={loading || resendCooldown > 0}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
+                            >
+                                {resendCooldown > 0
+                                ? `Reenviar em ${resendCooldown}s`
+                                : loading
+                                ? "Aguarde..."
+                                : "Reenviar email de confirmação"}
+                        </button>
+
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">

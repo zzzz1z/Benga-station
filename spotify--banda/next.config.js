@@ -12,7 +12,7 @@ const withPWA = require("next-pwa")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+
   reactStrictMode: true,
   trailingSlash: true, // Good for static exports
   experimental: {
