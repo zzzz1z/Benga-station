@@ -98,7 +98,12 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   }, [songUrl]);
 
   // MediaSession integration
-  useMediaSession(isPlaying, song, handlePlay, () => audioRef.current?.pause());
+  useMediaSession(
+    isPlaying,
+    song,
+    () => audioRef.current?.play().catch(err => console.error("Play failed", err)),
+    () => audioRef.current?.pause()
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
