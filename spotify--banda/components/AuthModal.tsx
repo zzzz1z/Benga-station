@@ -122,7 +122,6 @@ const AuthModal = () => {
 
                 if (insertError) {
                     console.error("Erro ao inserir conta:", insertError);
-                    toast.error("Erro ao finalizar o registo. Tente novamente.");
                 }
             }
 
