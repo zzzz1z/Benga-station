@@ -15,9 +15,6 @@ const nextConfig = {
 
   reactStrictMode: true,
   trailingSlash: true, // Good for static exports
-  experimental: {
-    appDir: true,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
