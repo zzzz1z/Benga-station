@@ -40,8 +40,19 @@ const useMediaSession = (
 
     // Directly control the audio element — iOS lock screen play/pause
     // must hit the element itself, not go through React state callbacks
-    navigator.mediaSession.setActionHandler("play", () => {
-      audioRef.current?.play().catch(() => {});
+    navigator.mediaSession.setActionHandler("play", async () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      // iOS PWA suspends AudioContext after pause — must resume it first
+      try {
+        // @ts-ignore — webkitAudioContext exists on iOS Safari
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          if (ctx.state === 'suspended') await ctx.resume();
+        }
+      } catch {}
+      audio.play().catch(() => {});
     });
     navigator.mediaSession.setActionHandler("pause", () => {
       audioRef.current?.pause();

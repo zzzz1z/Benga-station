@@ -7,7 +7,7 @@ interface PlayerStore {
     activeID?: string;
     setId: (id: string) => void;
     setIds: (ids: string[]) => void;
-    setQueue: (songs: Song[]) => void;
+    setQueue: (songs: Song[], startId?: string) => void;
     reset: () => void;
     playNext: () => void;
     playPrevious: () => void;
@@ -25,7 +25,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     setIds: (ids: string[]) => set({ ids }),
 
     // Store the full song objects so Player.tsx never needs to fetch on skip
-    setQueue: (songs: Song[]) => {
+    setQueue: (songs: Song[], startId?: string) => {
         if (songs.length === 0) return;
         const songMap = songs.reduce<Record<string, Song>>((acc, song) => {
             acc[song.id] = song;
@@ -34,7 +34,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         set({
             ids: songs.map(song => song.id),
             songs: songMap,
-            activeID: songs[0].id,
+            activeID: startId ?? songs[0].id,
         });
     },
 
