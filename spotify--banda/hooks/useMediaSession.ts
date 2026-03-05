@@ -5,19 +5,12 @@ import usePlayer from "./usePlayer";
 const useMediaSession = (
   isPlaying: boolean,
   song: Song,
-  audioRef: React.RefObject<HTMLAudioElement>,
-  play: () => void,
-  pause: () => void
+  audioRef: React.RefObject<HTMLAudioElement>
 ) => {
   const player = usePlayer();
-  // Stable refs so handlers never go stale without re-registering
-  const playRef = useRef(play);
-  const pauseRef = useRef(pause);
   // playerRef fixes stale closure — playNext/playPrevious read Zustand state
   // at call time, so without this iOS gets the queue from the first render only
   const playerRef = useRef(player);
-  useEffect(() => { playRef.current = play; }, [play]);
-  useEffect(() => { pauseRef.current = pause; }, [pause]);
   useEffect(() => { playerRef.current = player; }, [player]);
 
   // Register handlers once per song change only
@@ -45,9 +38,14 @@ const useMediaSession = (
       artwork,
     });
 
-    // Use stable refs so iOS doesn't get stale closures
-    navigator.mediaSession.setActionHandler("play", () => playRef.current());
-    navigator.mediaSession.setActionHandler("pause", () => pauseRef.current());
+    // Directly control the audio element — iOS lock screen play/pause
+    // must hit the element itself, not go through React state callbacks
+    navigator.mediaSession.setActionHandler("play", () => {
+      audioRef.current?.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      audioRef.current?.pause();
+    });
 
     navigator.mediaSession.setActionHandler("previoustrack", () => {
       const audio = audioRef.current;
@@ -86,36 +84,6 @@ const useMediaSession = (
       }
     });
 
-    navigator.mediaSession.setActionHandler("seekforward", (details) => {
-      const audio = audioRef.current;
-      if (audio) {
-        const newTime = Math.min(audio.currentTime + (details.seekOffset ?? 10), audio.duration);
-        audio.currentTime = newTime;
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: audio.duration,
-            playbackRate: audio.playbackRate,
-            position: newTime,
-          });
-        } catch {}
-      }
-    });
-
-    navigator.mediaSession.setActionHandler("seekbackward", (details) => {
-      const audio = audioRef.current;
-      if (audio) {
-        const newTime = Math.max(audio.currentTime - (details.seekOffset ?? 10), 0);
-        audio.currentTime = newTime;
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: audio.duration,
-            playbackRate: audio.playbackRate,
-            position: newTime,
-          });
-        } catch {}
-      }
-    });
-
     return () => {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.setActionHandler("play", null);
@@ -123,8 +91,6 @@ const useMediaSession = (
       navigator.mediaSession.setActionHandler("previoustrack", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
-      navigator.mediaSession.setActionHandler("seekforward", null);
-      navigator.mediaSession.setActionHandler("seekbackward", null);
     };
   // Only re-run when the song itself changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps

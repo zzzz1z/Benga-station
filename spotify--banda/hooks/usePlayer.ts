@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 interface PlayerStore {
     ids: string[];
+    songs: Record<string, Song>; // cache — id → Song object
     activeID?: string;
     setId: (id: string) => void;
     setIds: (ids: string[]) => void;
@@ -16,18 +17,28 @@ interface PlayerStore {
 
 const usePlayer = create<PlayerStore>((set, get) => ({
     ids: [],
+    songs: {},
     activeID: undefined,
 
     setId: (id: string) => set({ activeID: id }),
 
     setIds: (ids: string[]) => set({ ids }),
 
+    // Store the full song objects so Player.tsx never needs to fetch on skip
     setQueue: (songs: Song[]) => {
         if (songs.length === 0) return;
-        set({ ids: songs.map(song => song.id), activeID: songs[0].id });
+        const songMap = songs.reduce<Record<string, Song>>((acc, song) => {
+            acc[song.id] = song;
+            return acc;
+        }, {});
+        set({
+            ids: songs.map(song => song.id),
+            songs: songMap,
+            activeID: songs[0].id,
+        });
     },
 
-    reset: () => set({ ids: [], activeID: undefined }),
+    reset: () => set({ ids: [], songs: {}, activeID: undefined }),
 
     playNext: () => {
         const { ids, activeID, playRandom } = get();
@@ -47,16 +58,14 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     playPrevious: () => {
         const { ids, activeID } = get();
         if (!ids.length || activeID === undefined) return;
-      
+
         const currentIndex = ids.findIndex(id => id === activeID);
         if (currentIndex <= 0) {
-          // Repeat current song
-          set({ activeID });
+            set({ activeID });
         } else {
-          set({ activeID: ids[currentIndex - 1] });
+            set({ activeID: ids[currentIndex - 1] });
         }
-      },
-      
+    },
 
     playRandom: () => {
         const { ids, activeID } = get();
