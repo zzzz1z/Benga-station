@@ -101,6 +101,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   useMediaSession(
     isPlaying,
     song,
+    audioRef,
     () => audioRef.current?.play().catch(err => console.error("Play failed", err)),
     () => audioRef.current?.pause()
   );
