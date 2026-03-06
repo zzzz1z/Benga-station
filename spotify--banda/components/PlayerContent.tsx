@@ -70,11 +70,22 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
     audio.ontimeupdate = () => {
-      // While muted/"paused", keep snapping position back so it doesn't drift
       if (isPausedRef.current) {
-        audio.currentTime = pausedAtRef.current;
+        // Only snap back if not near the end — snapping at end prevents onended firing
+        const timeLeft = audio.duration - pausedAtRef.current;
+        if (!isNaN(timeLeft) && timeLeft > 2) {
+          audio.currentTime = pausedAtRef.current;
+        }
       } else {
         setPosition(audio.currentTime);
+        // Fallback end detection — onended can silently fail on iOS PWA
+        if (
+          audio.duration > 0 &&
+          !isNaN(audio.duration) &&
+          audio.currentTime >= audio.duration - 0.3
+        ) {
+          player.playNext();
+        }
       }
     };
     audio.onloadedmetadata = () => setDuration(audio.duration);
