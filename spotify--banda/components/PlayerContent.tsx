@@ -56,13 +56,12 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     setIsPlaying(false);
   }, [getActive]);
 
-  // Restore volume + snap back to where user paused.
-  // Audio was drifting silently, so we seek it back first.
   const fakePlay = useCallback(() => {
     const audio = getActive();
     if (!audio) return;
     isPausedRef.current = false;
-    audio.currentTime = pausedAtRef.current;  // jump back to pause point
+    // Seek back to where user paused — audio drifted silently while muted
+    audio.currentTime = pausedAtRef.current;
     audio.volume = volume;
     setIsPlaying(true);
     setPosition(pausedAtRef.current);
@@ -70,30 +69,16 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
     audio.ontimeupdate = () => {
-      if (isPausedRef.current) {
-        // Only snap back if not near the end — snapping at end prevents onended firing
-        const timeLeft = audio.duration - pausedAtRef.current;
-        if (!isNaN(timeLeft) && timeLeft > 2) {
-          audio.currentTime = pausedAtRef.current;
-        }
-      } else {
+      // Never manipulate currentTime here — just report position
+      // The snap approach caused onended to never fire
+      if (!isPausedRef.current) {
         setPosition(audio.currentTime);
-        // Fallback end detection — onended can silently fail on iOS PWA
-        if (
-          audio.duration > 0 &&
-          !isNaN(audio.duration) &&
-          audio.currentTime >= audio.duration - 0.3
-        ) {
-          player.playNext();
-        }
       }
     };
     audio.onloadedmetadata = () => setDuration(audio.duration);
     audio.onplay = () => {};
     audio.onpause = () => {};
-    audio.onended = () => {
-      if (!isPausedRef.current) player.playNext();
-    };
+    audio.onended = () => player.playNext();
   }, [player]);
 
   // Mount: start first song
