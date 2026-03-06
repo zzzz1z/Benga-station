@@ -27,8 +27,7 @@ const Player = () => {
              px-4
             "
         >
-            <PlayerContent
-                key={songUrl}
+        <PlayerContent
                 song={song}
                 songUrl={songUrl}
             />
