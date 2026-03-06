@@ -5,13 +5,17 @@ import usePlayer from "./usePlayer";
 const useMediaSession = (
   isPlaying: boolean,
   song: Song,
-  audioRef: React.RefObject<HTMLAudioElement>
+  audioRef: React.RefObject<HTMLAudioElement>,
+  onPlay: () => void,
+  onPause: () => void
 ) => {
   const player = usePlayer();
-  // playerRef fixes stale closure — playNext/playPrevious read Zustand state
-  // at call time, so without this iOS gets the queue from the first render only
   const playerRef = useRef(player);
+  const onPlayRef = useRef(onPlay);
+  const onPauseRef = useRef(onPause);
   useEffect(() => { playerRef.current = player; }, [player]);
+  useEffect(() => { onPlayRef.current = onPlay; }, [onPlay]);
+  useEffect(() => { onPauseRef.current = onPause; }, [onPause]);
 
   // Register handlers once per song change only
   useEffect(() => {
@@ -38,31 +42,15 @@ const useMediaSession = (
       artwork,
     });
 
-    // Directly control the audio element — iOS lock screen play/pause
-    // must hit the element itself, not go through React state callbacks
-    navigator.mediaSession.setActionHandler("play", async () => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      // iOS PWA suspends AudioContext after pause — must resume it first
-      try {
-        // @ts-ignore — webkitAudioContext exists on iOS Safari
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) {
-          const ctx = new AudioContext();
-          if (ctx.state === 'suspended') await ctx.resume();
-        }
-      } catch {}
-      audio.play().catch(() => {});
-    });
-    navigator.mediaSession.setActionHandler("pause", () => {
-      audioRef.current?.pause();
-    });
+    // Use fakePlay/fakePause from PlayerContent — these mute/unmute instead of
+    // actually pausing, so iOS never sees the audio stop and keeps the session alive
+    navigator.mediaSession.setActionHandler("play", () => onPlayRef.current());
+    navigator.mediaSession.setActionHandler("pause", () => onPauseRef.current());
 
     navigator.mediaSession.setActionHandler("previoustrack", () => {
       const audio = audioRef.current;
       if (audio && audio.currentTime > 3) {
         audio.currentTime = 0;
-        // Tell iOS the position jumped immediately so scrubber doesn't snap back
         try {
           navigator.mediaSession.setPositionState({
             duration: audio.duration,
@@ -79,12 +67,10 @@ const useMediaSession = (
       playerRef.current.playNext();
     });
 
-    // iOS lock screen scrubber — without these it shows no seek bar
     navigator.mediaSession.setActionHandler("seekto", (details) => {
       const audio = audioRef.current;
       if (audio && details.seekTime !== undefined) {
         audio.currentTime = details.seekTime;
-        // Must confirm position back to iOS immediately or it snaps back
         try {
           navigator.mediaSession.setPositionState({
             duration: audio.duration,
@@ -103,11 +89,10 @@ const useMediaSession = (
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
     };
-  // Only re-run when the song itself changes, not on every render
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song]);
 
-  // Keep playbackState in sync separately (cheap, no handler re-registration)
+  // Keep playbackState in sync
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
@@ -127,9 +112,7 @@ const useMediaSession = (
           playbackRate: audio.playbackRate,
           position: audio.currentTime,
         });
-      } catch {
-        // setPositionState can throw on older iOS — swallow it
-      }
+      } catch {}
     };
 
     audio.addEventListener("timeupdate", updatePosition);

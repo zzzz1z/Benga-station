@@ -20,15 +20,16 @@ interface PlayerContentProps {
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const player = usePlayer();
 
-  // Two audio refs — the dual session trick.
-  // activeRef always points to whichever is currently the "main" playing element.
-  // When skipping, we start loading the next song in the inactive element while
-  // the active one keeps playing, then swap once the new one is ready.
-  // This ensures iOS never sees a gap in audio and never reclaims the media session.
   const audioRefA = useRef<HTMLAudioElement | null>(null);
   const audioRefB = useRef<HTMLAudioElement | null>(null);
   const activeRef = useRef<'A' | 'B'>('A');
 
+  // isPausedRef tracks user intent.
+  // We never call audio.pause() — instead we set playbackRate = 0 to freeze
+  // the position in place while keeping the audio element technically "playing".
+  // iOS sees continuous playback and never reclaims the media session.
+  // When resuming, playbackRate = 1 picks up from the exact same millisecond.
+  const isPausedRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
@@ -45,22 +46,44 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     return activeRef.current === 'A' ? audioRefB.current : audioRefA.current;
   }, []);
 
+  // Freeze playback in place — iOS still sees an active audio session
+  const fakePause = useCallback(() => {
+    const audio = getActive();
+    if (!audio) return;
+    isPausedRef.current = true;
+    audio.playbackRate = 0;
+    setIsPlaying(false);
+  }, [getActive]);
+
+  // Resume from exact position — no audio.play() needed, it never stopped
+  const fakePlay = useCallback(() => {
+    const audio = getActive();
+    if (!audio) return;
+    isPausedRef.current = false;
+    audio.playbackRate = 1;
+    setIsPlaying(true);
+  }, [getActive]);
+
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
     audio.ontimeupdate = () => setPosition(audio.currentTime);
     audio.onloadedmetadata = () => setDuration(audio.duration);
-    audio.onplay = () => setIsPlaying(true);
-    audio.onpause = () => setIsPlaying(false);
-    audio.onended = () => player.playNext();
+    audio.onplay = () => {};
+    audio.onpause = () => {};
+    audio.onended = () => {
+      if (!isPausedRef.current) player.playNext();
+    };
   }, [player]);
 
-  // Wire up listeners to initial active element on mount and start playing
+  // Mount: start playing first song
   useEffect(() => {
     const audio = getActive();
     if (!audio) return;
     audio.src = songUrl;
     audio.volume = volume;
     attachListeners(audio);
-    audio.play().catch(() => {});
+    audio.play().then(() => {
+      setIsPlaying(true);
+    }).catch(() => {});
 
     return () => {
       audio.ontimeupdate = null;
@@ -72,11 +95,9 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When songUrl changes (i.e. player.activeID changed), load into inactive
-  // element while active keeps playing, then swap — no audio gap for iOS
+  // Song change: load into inactive while active keeps playing, swap on ready
   const isFirstRender = useRef(true);
   useEffect(() => {
-    // Skip on first render — mount effect above handles it
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -91,13 +112,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     inactive.load();
 
     const onCanPlay = () => {
-      // Stop old active and strip its listeners
-      active.pause();
+      // Strip and stop old active
       active.ontimeupdate = null;
       active.onloadedmetadata = null;
       active.onplay = null;
       active.onpause = null;
       active.onended = null;
+      active.playbackRate = 0;
+      active.pause();
 
       // Swap
       activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
@@ -105,11 +127,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       if (!newActive) return;
 
       attachListeners(newActive);
-      newActive.play().catch(() => {});
+      newActive.volume = volume;
+      // Always start new song playing — skipping while paused still plays new song
+      isPausedRef.current = false;
+      newActive.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {});
       setPosition(0);
       setDuration(newActive.duration || 0);
-
-      // Update proxy so useMediaSession always talks to the right element
       proxyRef.current = newActive;
     };
 
@@ -118,19 +143,17 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 
-  // Keep volume in sync on both elements
+  // Keep volume in sync
   useEffect(() => {
-    if (audioRefA.current) audioRefA.current.volume = volume;
-    if (audioRefB.current) audioRefB.current.volume = volume;
-  }, [volume]);
+    const audio = getActive();
+    if (audio) audio.volume = volume;
+  }, [volume, getActive]);
 
   const handlePlay = () => {
-    const audio = getActive();
-    if (!audio) return;
     if (isPlaying) {
-      audio.pause();
+      fakePause();
     } else {
-      audio.play().catch(err => console.error("Audio play failed:", err));
+      fakePlay();
     }
   };
 
@@ -141,6 +164,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     if (!audio) return;
     if (audio.currentTime > 3) {
       audio.currentTime = 0;
+      setPosition(0);
     } else {
       player.playPrevious();
     }
@@ -156,18 +180,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 0);
 
-  // Proxy ref always points to whichever audio element is currently active
-  // useMediaSession reads this ref directly so it always controls the right one
   const proxyRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     proxyRef.current = getActive();
   });
 
-  useMediaSession(isPlaying, song, proxyRef);
+  useMediaSession(isPlaying, song, proxyRef, fakePlay, fakePause);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
-      {/* Two hidden audio elements — only one plays at a time */}
       <audio ref={audioRefA} preload="auto" hidden />
       <audio ref={audioRefB} preload="auto" hidden />
 
@@ -197,7 +218,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
         </div>
-
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
         </div>
@@ -223,7 +243,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
             className="text-neutral-400 cursor-pointer hover:text-white transition"
           />
         </div>
-
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
         </div>
