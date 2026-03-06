@@ -24,12 +24,11 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const audioRefB = useRef<HTMLAudioElement | null>(null);
   const activeRef = useRef<'A' | 'B'>('A');
 
-  // isPausedRef tracks user intent.
-  // We never call audio.pause() — instead we set playbackRate = 0 to freeze
-  // the position in place while keeping the audio element technically "playing".
-  // iOS sees continuous playback and never reclaims the media session.
-  // When resuming, playbackRate = 1 picks up from the exact same millisecond.
+  // isPausedRef = user intends to be paused
+  // pausedAtRef = the currentTime when user hit pause, so we can snap back to it
   const isPausedRef = useRef(false);
+  const pausedAtRef = useRef(0);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
@@ -46,26 +45,38 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     return activeRef.current === 'A' ? audioRefB.current : audioRefA.current;
   }, []);
 
-  // Freeze playback in place — iOS still sees an active audio session
+  // Mute + record position. Audio keeps playing silently so iOS never
+  // sees a gap and never reclaims the media session.
   const fakePause = useCallback(() => {
     const audio = getActive();
     if (!audio) return;
     isPausedRef.current = true;
-    audio.playbackRate = 0;
+    pausedAtRef.current = audio.currentTime;  // snapshot position
+    audio.volume = 0;
     setIsPlaying(false);
   }, [getActive]);
 
-  // Resume from exact position — no audio.play() needed, it never stopped
+  // Restore volume + snap back to where user paused.
+  // Audio was drifting silently, so we seek it back first.
   const fakePlay = useCallback(() => {
     const audio = getActive();
     if (!audio) return;
     isPausedRef.current = false;
-    audio.playbackRate = 1;
+    audio.currentTime = pausedAtRef.current;  // jump back to pause point
+    audio.volume = volume;
     setIsPlaying(true);
-  }, [getActive]);
+    setPosition(pausedAtRef.current);
+  }, [getActive, volume]);
 
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
-    audio.ontimeupdate = () => setPosition(audio.currentTime);
+    audio.ontimeupdate = () => {
+      // While muted/"paused", keep snapping position back so it doesn't drift
+      if (isPausedRef.current) {
+        audio.currentTime = pausedAtRef.current;
+      } else {
+        setPosition(audio.currentTime);
+      }
+    };
     audio.onloadedmetadata = () => setDuration(audio.duration);
     audio.onplay = () => {};
     audio.onpause = () => {};
@@ -74,16 +85,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     };
   }, [player]);
 
-  // Mount: start playing first song
+  // Mount: start first song
   useEffect(() => {
     const audio = getActive();
     if (!audio) return;
     audio.src = songUrl;
     audio.volume = volume;
     attachListeners(audio);
-    audio.play().then(() => {
-      setIsPlaying(true);
-    }).catch(() => {});
+    audio.play().then(() => setIsPlaying(true)).catch(() => {});
 
     return () => {
       audio.ontimeupdate = null;
@@ -108,31 +117,29 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     if (!inactive || !active) return;
 
     inactive.src = songUrl;
-    inactive.volume = volume;
+    inactive.volume = 0;
     inactive.load();
 
     const onCanPlay = () => {
-      // Strip and stop old active
       active.ontimeupdate = null;
       active.onloadedmetadata = null;
       active.onplay = null;
       active.onpause = null;
       active.onended = null;
-      active.playbackRate = 0;
+      active.volume = 0;
       active.pause();
 
-      // Swap
       activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
       const newActive = getActive();
       if (!newActive) return;
 
+      // Reset pause state — skipping always starts the new song playing
+      isPausedRef.current = false;
+      pausedAtRef.current = 0;
+
       attachListeners(newActive);
       newActive.volume = volume;
-      // Always start new song playing — skipping while paused still plays new song
-      isPausedRef.current = false;
-      newActive.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {});
+      newActive.play().then(() => setIsPlaying(true)).catch(() => {});
       setPosition(0);
       setDuration(newActive.duration || 0);
       proxyRef.current = newActive;
@@ -143,10 +150,10 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 
-  // Keep volume in sync
+  // Keep volume in sync (only when not fake-paused)
   useEffect(() => {
     const audio = getActive();
-    if (audio) audio.volume = volume;
+    if (audio && !isPausedRef.current) audio.volume = volume;
   }, [volume, getActive]);
 
   const handlePlay = () => {
@@ -164,6 +171,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     if (!audio) return;
     if (audio.currentTime > 3) {
       audio.currentTime = 0;
+      pausedAtRef.current = 0;
       setPosition(0);
     } else {
       player.playPrevious();
@@ -174,6 +182,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     const audio = getActive();
     if (audio) {
       audio.currentTime = value;
+      pausedAtRef.current = value;
       setPosition(value);
     }
   };
