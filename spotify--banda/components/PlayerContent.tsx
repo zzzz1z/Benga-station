@@ -28,18 +28,20 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const isPausedRef = useRef(false);
   const pausedAtRef = useRef(0);
   const preloadedUrlRef = useRef<string | null>(null);
-  // When true, the songUrl effect must skip its swap — audio already swapped internally
   const skipNextSwapRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  // Keep volume in a ref so callbacks always read the latest value
+  const volumeRef = useRef(1);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
 
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  // Next song info for pre-loading
   const nextSongId = (() => {
     const { ids, activeID } = player;
     if (!ids.length || !activeID) return undefined;
@@ -72,19 +74,19 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     if (!audio) return;
     isPausedRef.current = false;
     audio.currentTime = pausedAtRef.current;
-    audio.volume = volume;
+    audio.volume = volumeRef.current; // use ref, never stale
     setIsPlaying(true);
     setPosition(pausedAtRef.current);
-  }, [getActive, volume]);
+  }, [getActive]);
 
-  // Core swap: make inactive become active and start playing it
-  // Does NOT call player.playNext() — caller is responsible for that
+  // Forward-declared ref so swapToInactive can call attachListeners
+  const attachListenersRef = useRef<(audio: HTMLAudioElement) => void>(() => {});
+
   const swapToInactive = useCallback(() => {
     const active = getActive();
     const inactive = getInactive();
     if (!active || !inactive) return;
 
-    // Strip old active
     active.ontimeupdate = null;
     active.onloadedmetadata = null;
     active.onplay = null;
@@ -93,35 +95,38 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     active.volume = 0;
     active.pause();
 
-    // Swap
     activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
-    const newActive = inactive; // inactive is now active after swap
 
     isPausedRef.current = false;
     pausedAtRef.current = 0;
     preloadedUrlRef.current = null;
 
-    newActive.volume = volume;
-    newActive.play().then(() => setIsPlaying(true)).catch(() => {});
+    // inactive is now the new active after the ref swap above
+    const newActive = activeRef.current === 'A' ? audioRefA.current : audioRefB.current;
+    if (!newActive) return;
+
+    attachListenersRef.current(newActive);
+
+    newActive.volume = volumeRef.current; // use ref, never stale
+    newActive.play()
+      .then(() => {
+        setIsPlaying(true);
+      })
+      .catch(() => {});
+
     setPosition(0);
     if (newActive.duration && !isNaN(newActive.duration)) setDuration(newActive.duration);
     proxyRef.current = newActive;
-
-    attachListenersRef.current(newActive);
-  }, [getActive, getInactive, volume]);
+  }, [getActive, getInactive]);
 
   const swapRef = useRef(swapToInactive);
   useEffect(() => { swapRef.current = swapToInactive; }, [swapToInactive]);
-
-  // Forward-declared so attachListeners can reference it
-  const attachListenersRef = useRef<(audio: HTMLAudioElement) => void>(() => {});
 
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
     audio.ontimeupdate = () => {
       if (!isPausedRef.current) {
         setPosition(audio.currentTime);
 
-        // Pre-load next song 10s before end
         if (
           nextSongUrl &&
           audio.duration > 0 &&
@@ -143,8 +148,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     audio.onplay = () => {};
     audio.onpause = () => {};
     audio.onended = () => {
-      // Mark that we're handling the swap internally so the songUrl
-      // effect doesn't kick off a second swap when Zustand updates
       skipNextSwapRef.current = true;
       swapRef.current();
       player.playNext();
@@ -153,16 +156,11 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   useEffect(() => { attachListenersRef.current = attachListeners; }, [attachListeners]);
 
-  // Re-attach listeners when nextSongUrl changes so pre-load URL is fresh
+  // Refresh ontimeupdate when nextSongUrl changes so pre-load URL stays fresh
   useEffect(() => {
     const audio = getActive();
-    if (!audio) return;
-    // Keep all existing handlers, just refresh ontimeupdate with new nextSongUrl
-    const prev = audio.ontimeupdate;
-    if (prev !== null) {
-      // Only refresh if already attached (i.e. not first render)
-      attachListeners(audio);
-    }
+    if (!audio || !audio.ontimeupdate) return;
+    attachListeners(audio);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nextSongUrl]);
 
@@ -172,7 +170,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     const audio = getActive();
     if (!audio) return;
     audio.src = songUrl;
-    audio.volume = volume;
+    audio.volume = volumeRef.current;
     attachListeners(audio);
     audio.play().then(() => setIsPlaying(true)).catch(() => {});
 
@@ -186,14 +184,13 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // External song change (manual skip via UI or lock screen)
+  // External song change (manual skip)
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
 
-    // If onended already did the swap, skip — Zustand just caught up
     if (skipNextSwapRef.current) {
       skipNextSwapRef.current = false;
       return;
@@ -202,13 +199,11 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     const inactive = getInactive();
     if (!inactive) return;
 
-    // If we already pre-loaded this exact URL, swap immediately — no gap
     if (preloadedUrlRef.current === songUrl) {
       swapRef.current();
       return;
     }
 
-    // Otherwise load and swap on ready
     inactive.src = songUrl;
     inactive.volume = 0;
     inactive.load();
@@ -219,6 +214,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 
+  // Volume changes
   useEffect(() => {
     const audio = getActive();
     if (audio && !isPausedRef.current) audio.volume = volume;
@@ -272,22 +268,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       {/* Controls (Desktop) */}
       <div className="hidden md:flex items-center justify-center w-full mb-2 flex-col">
         <div className="hidden md:flex justify-center items-center w-full max-w-[700px] gap-4">
-          <AiFillStepBackward
-            onClick={handlePlayPreviousSong}
-            size={30}
-            className="text-neutral-400 cursor-pointer hover:text-white transition"
-          />
-          <div
-            onClick={handlePlay}
-            className="flex items-center justify-center h-10 w-10 rounded-full bg-white p-2 cursor-pointer"
-          >
+          <AiFillStepBackward onClick={handlePlayPreviousSong} size={30}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
+          <div onClick={handlePlay}
+            className="flex items-center justify-center h-10 w-10 rounded-full bg-white p-2 cursor-pointer">
             <Icon size={30} className="text-red-500" />
           </div>
-          <AiFillStepForward
-            onClick={handlePlayNextSong}
-            size={30}
-            className="text-neutral-400 cursor-pointer hover:text-white transition"
-          />
+          <AiFillStepForward onClick={handlePlayNextSong} size={30}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
@@ -297,22 +285,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       {/* Controls (Mobile) */}
       <div className="flex md:hidden justify-center items-center flex-col">
         <div className="flex items-center justify-center w-full">
-          <AiFillStepBackward
-            onClick={handlePlayPreviousSong}
-            size={30}
-            className="text-neutral-400 cursor-pointer hover:text-white transition"
-          />
-          <div
-            onClick={handlePlay}
-            className="h-8 w-8 flex items-center justify-center rounded-full bg-white p-2 cursor-pointer"
-          >
+          <AiFillStepBackward onClick={handlePlayPreviousSong} size={30}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
+          <div onClick={handlePlay}
+            className="h-8 w-8 flex items-center justify-center rounded-full bg-white p-2 cursor-pointer">
             <Icon size={20} className="text-red-500" />
           </div>
-          <AiFillStepForward
-            onClick={handlePlayNextSong}
-            size={30}
-            className="text-neutral-400 cursor-pointer hover:text-white transition"
-          />
+          <AiFillStepForward onClick={handlePlayNextSong} size={30}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
         <div className="w-full px-4">
           <MusicSlider value={position} onChange={handleSeek} max={duration} />
