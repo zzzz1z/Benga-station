@@ -1,50 +1,40 @@
 "use client";
 
-import { useSessionContext, useSupabaseClient } from "@supabase/auth-helpers-react";
+import { createClient } from "@/utils/supabase/client";
 import Modal from "./Modal";
 import { useRouter } from "next/navigation";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-const AuthModal = () => {
+const supabase = createClient();
 
-    const supabase = useSupabaseClient();
+const AuthModal = () => {
     const router = useRouter();
-    const { session } = useSessionContext();
     const authModal = useAuthModal();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(0);
 
-    
-    // Function to check if email exists in users table
     const checkIfEmailExists = async (email: string) => {
         const { data, error } = await supabase
             .from("users")
-            .select("email") 
-            .ilike("email", email) // ✅ Fix: Case-insensitive search
+            .select("email")
+            .ilike("email", email)
             .maybeSingle();
 
-        console.log(data)
-        console.log("🔍 Checking email:", email);
-        console.log("🔍 Query result:", data, error);
-    
         if (error) {
             console.error("❌ Error checking email:", error);
             toast.error("Erro ao verificar o email. Tente novamente.");
             return false;
         }
-        return !!data; // Returns true if a row is found
+        return !!data;
     };
 
-    // Handle sign-up
     const handleSignUp = async () => {
         setLoading(true);
-    
         try {
-
             const emailExists = await checkIfEmailExists(email);
             if (emailExists) {
                 toast.error("Este email já está registrado. Use outro.");
@@ -52,34 +42,28 @@ const AuthModal = () => {
                 return;
             }
 
-            // ✅ Sign up only if email does not exist
             const { error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
             });
-    
+
             if (signUpError) {
                 toast.error("Erro ao criar conta. Tente novamente.");
                 setLoading(false);
                 return;
             }
-    
+
             toast.success("Conta criada com sucesso! Verifique seu email.");
-            
         } catch (error) {
             console.error("Erro no signup:", error);
             toast.error("Ocorreu um erro. Tente novamente.");
         }
-    
         setLoading(false);
     };
-    
-    // Handle login
+
     const handleLogin = async () => {
         setLoading(true);
-
         try {
-            // Attempt login
             const { error: signInError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
@@ -98,82 +82,78 @@ const AuthModal = () => {
             toast.error("Ocorreu um erro. Tente novamente.");
             console.error(error);
         }
-
         setLoading(false);
     };
 
     const resendMail = async () => {
         if (!email) {
-          toast.error("Insira o email primeiro.");
-          return;
+            toast.error("Insira o email primeiro.");
+            return;
         }
-      
+
         setLoading(true);
         try {
-          const { data, error } = await supabase.auth.resend({
-            type: "signup",
-            email: email,
-          });
-      
-          if (error) {
-            toast.error("Erro ao reenviar o email.");
-            console.error(error);
-          } else {
-            toast.success("Email de confirmação reenviado!");
-            setResendCooldown(60); // start 60-second cooldown
-          }
-        } catch (err) {
-          console.error(err);
-          toast.error("Erro inesperado.");
-        } finally {
-          setLoading(false);
-        }
-      };
-      
+            const { error } = await supabase.auth.resend({
+                type: "signup",
+                email: email,
+            });
 
-    // Insert user into 'users' table if missing
-    useEffect(() => {
-        const insertUserIfMissing = async () => {
-            if (!session?.user) return;
-
-            const { data } = await supabase
-                .from("users")
-                .select("id")
-                .eq("id", session.user.id)
-                .single();
-
-            if (!data) {
-                const { error: insertError } = await supabase
-                    .from("users")
-                    .insert({
-                        id: session.user.id,
-                        email: session.user.email,
-                    });
-
-                if (insertError) {
-                    console.error("Erro ao inserir conta:", insertError);
-                }
+            if (error) {
+                toast.error("Erro ao reenviar o email.");
+                console.error(error);
+            } else {
+                toast.success("Email de confirmação reenviado!");
+                setResendCooldown(60);
             }
+        } catch (err) {
+            console.error(err);
+            toast.error("Erro inesperado.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            router.refresh();
-            authModal.onClose();
-        };
+    // Insert user into 'users' table if missing and handle post-login
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                if (!session?.user) return;
 
-        insertUserIfMissing();
-    }, [session]);
+                const { data } = await supabase
+                    .from("users")
+                    .select("id")
+                    .eq("id", session.user.id)
+                    .single();
 
+                if (!data) {
+                    const { error: insertError } = await supabase
+                        .from("users")
+                        .insert({
+                            id: session.user.id,
+                            email: session.user.email,
+                        });
 
+                    if (insertError) {
+                        console.error("Erro ao inserir conta:", insertError);
+                    }
+                }
 
-    // resend email conf
+                router.refresh();
+                authModal.onClose();
+            }
+        );
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     useEffect(() => {
         if (resendCooldown > 0) {
-          const timer = setTimeout(() => {
-            setResendCooldown(resendCooldown - 1);
-          }, 1000);
-          return () => clearTimeout(timer);
+            const timer = setTimeout(() => {
+                setResendCooldown(resendCooldown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
         }
-      }, [resendCooldown]);
+    }, [resendCooldown]);
 
     const onChange = (open: boolean) => {
         if (!open) {
@@ -195,7 +175,6 @@ const AuthModal = () => {
             <div>
                 {authModal.mode === "sign_up" ? (
                     <div className="flex flex-col gap-4">
-
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -203,17 +182,14 @@ const AuthModal = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2 border rounded-md"
                         />
-
                         <input
                             type="password"
                             placeholder="Introduza a sua palavra passe"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded-md"
-                        />                        
-                        <p className="text-sm">(a sua palavra-passe tem de ter no mínimo 6 caracteres) </p>
-
-
+                        />
+                        <p className="text-sm">(a sua palavra-passe tem de ter no mínimo 6 caracteres)</p>
                         <button
                             onClick={handleSignUp}
                             disabled={loading}
@@ -221,7 +197,6 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Criar conta"}
                         </button>
-
                         <button
                             onClick={() => authModal.onOpen("sign_in")}
                             disabled={loading}
@@ -229,25 +204,20 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Já tenho uma conta"}
                         </button>
-
                         <button
                             onClick={resendMail}
                             disabled={loading || resendCooldown > 0}
                             className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
-                            >
-                                {resendCooldown > 0
+                        >
+                            {resendCooldown > 0
                                 ? `Reenviar em ${resendCooldown}s`
                                 : loading
                                 ? "Aguarde..."
                                 : "Reenviar email de confirmação"}
                         </button>
-
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
-
-
-
                         <input
                             type="email"
                             placeholder="Introduza o seu email"
@@ -255,9 +225,6 @@ const AuthModal = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2 border rounded-md"
                         />
-
-                        
-                        
                         <input
                             type="password"
                             placeholder=""
@@ -265,7 +232,6 @@ const AuthModal = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded-md"
                         />
-
                         <button
                             onClick={handleLogin}
                             disabled={loading}
@@ -273,7 +239,6 @@ const AuthModal = () => {
                         >
                             {loading ? "Aguarde..." : "Entrar"}
                         </button>
-
                         <button
                             onClick={() => authModal.onOpen("sign_up")}
                             disabled={loading}

@@ -1,8 +1,7 @@
 import Header from "@/components/Header";
 import LikedContent from "./components/LikedContent";
 import Image from "next/image";
-import getPlaylistsByUserId from "@/actions/getPlaylistsByUserId";
-import Button from "@/components/Botão";
+import getPlaylists from "@/actions/getPlaylists";
 
 
 
@@ -11,7 +10,7 @@ export const revalidate = 0;
 const Liked = async () => {
 
  
-  const playlist = await getPlaylistsByUserId();
+  const playlist = await getPlaylists();
 
 
 

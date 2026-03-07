@@ -2,12 +2,14 @@ import Header from "@/components/Header"; // Your header component
 import ListaItens from "@/components/ListaItens"; // A component for listing items
 import PageContent from "./components/PageContent"; // A component that handles page content
 import AddContent from "./components/AddContent";
+import getSongs from "@/actions/getSongs";
 
 // No need to revalidate at 0, unless you're using a particular caching mechanism
 // export const revalidate = 0; // Remove this if unnecessary
 
 export default async function Home() {
-    
+      const songs = await getSongs();
+
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto">
@@ -37,7 +39,7 @@ export default async function Home() {
         </div>
 
         {/* Passing the songs data to 'PageContent' */}
-        <AddContent />
+        <AddContent songs={songs} />
       </div>
 
       {/* Page Content Section */}
@@ -47,7 +49,7 @@ export default async function Home() {
         </div>
 
         {/* Passing the songs data to 'PageContent' */}
-        <PageContent/>
+        <PageContent songs={songs}/>
       </div>
     </div>
   );

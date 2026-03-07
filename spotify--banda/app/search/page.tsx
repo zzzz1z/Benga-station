@@ -1,9 +1,8 @@
-import getSongsByT from "@/actions/getSongsByT";
-import getSongsByAuthor from "@/actions/getSongsByAuthor"; // New action
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
 import SearchContent from "./components/SearchContent";
 import { Song } from "@/types";
+import getSongs from "@/actions/getSongs";
 
 interface SearchProps {
   searchParams: Promise<{
@@ -18,13 +17,8 @@ const Search = async (props: SearchProps) => {
   const searchParams = await props.searchParams;
 
   // Fetch songs matching the search
-  const songs = await getSongsByT(searchParams.title);
+  const songs = await getSongs(searchParams.title);
 
-  // Fetch all songs by the searched author
-  let authorSongs: Song[] = [];
-  if (searchParams.author) {
-    authorSongs = await getSongsByAuthor(searchParams.author);
-  }
 
   return (
     <div
@@ -43,7 +37,7 @@ const Search = async (props: SearchProps) => {
           <SearchInput />
         </div>
       </Header>
-      <SearchContent songs={songs} authorSongs={authorSongs} />
+      <SearchContent songs={songs} />
     </div>
   );
 };

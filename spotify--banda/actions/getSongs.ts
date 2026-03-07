@@ -1,18 +1,37 @@
 import { Song } from "@/types";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const getSongs = async (): Promise<Song[]> => {
-
-    
+const getSongs = async (search?: string): Promise<Song[]> => {
     try {
-        const supabase = createServerComponentClient({ cookies: cookies });
+        const cookieStore = await cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    getAll: () => cookieStore.getAll(),
+                    setAll: (cookiesToSet: { name: string; value: string; options?: object }[]) => {
+                        try {
+                            cookiesToSet.forEach(({ name, value, options }) =>
+                                cookieStore.set(name, value, options)
+                            );
+                        } catch {}
+                    },
+                },
+            }
+        );
 
-        const { data, error } = await supabase
+        let query = supabase
             .from("Songs")
             .select("*")
-            .order("created_at", { ascending: false })
-            .limit(10); // ✅ Only fetch the first 6 songs
+            
+
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
+        }
+
+        const { data, error } = await query.order("created_at", { ascending: false });;
 
         if (error) {
             console.error("Erro ao buscar músicas:", error.message);

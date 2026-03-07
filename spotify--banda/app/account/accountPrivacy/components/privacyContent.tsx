@@ -1,19 +1,19 @@
 'use client';
 
 import { useUser } from '@/hooks/useUser';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
 
+const supabase = createClient();
+
 const PrivacyContent = () => {
-  const supabase = useSupabaseClient();
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const user = useUser()
+  const user = useUser();
 
-  // Update email
   const updateEmail = async () => {
     setLoading(true);
     try {
@@ -21,20 +21,15 @@ const PrivacyContent = () => {
       if (error) throw error;
       alert('Email atualizado com sucesso!');
     } catch (error) {
-
-     console.log(error)
+      console.log(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Update phone number
   const updatePhoneNumber = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.getUser();
-      if (error) throw error;
-
       const { error: userError } = await supabase
         .from('users')
         .update({ phone })
@@ -43,23 +38,18 @@ const PrivacyContent = () => {
       if (userError) throw userError;
       alert('Número de telefone atualizado com sucesso!');
     } catch (error) {
-      console.log(error)
-   
+      console.log(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Update password
   const updatePassword = async () => {
     setLoading(true);
     try {
       if (!oldPassword || !newPassword) {
         throw new Error('Por favor, forneça ambos os campos de senha');
       }
-
-      const {error } = await supabase.auth.getUser();
-      if (error) throw error;
 
       const { error: passwordError } = await supabase.auth.updateUser({
         password: newPassword,
@@ -68,7 +58,7 @@ const PrivacyContent = () => {
       if (passwordError) throw passwordError;
       alert('Senha atualizada com sucesso!');
     } catch (error) {
-      console.log(error)
+      console.log(error);
     } finally {
       setLoading(false);
     }
@@ -78,8 +68,6 @@ const PrivacyContent = () => {
     <div className="w-full p-6 bg-gray-800 text-white rounded-lg">
       <h1 className="text-2xl font-semibold mb-4">Atualizar Informações de Privacidade</h1>
 
-
-      {/* Update Email */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Atualizar Email</h2>
         <input
@@ -98,7 +86,6 @@ const PrivacyContent = () => {
         </button>
       </div>
 
-      {/* Update Phone Number */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Atualizar Número de Telefone</h2>
         <input
@@ -117,7 +104,6 @@ const PrivacyContent = () => {
         </button>
       </div>
 
-      {/* Update Password */}
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Atualizar Senha</h2>
         <input

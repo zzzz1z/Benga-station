@@ -1,20 +1,29 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { type CookieOptions, createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
-
 export async function middleware(req: NextRequest) {
+    const res = NextResponse.next({ request: req });
 
-
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL; 
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; 
-    const res = NextResponse.next();
-    
-    const supabase = createMiddlewareClient({
-        req,
-        res
-    }, {supabaseKey, supabaseUrl});
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll: () => req.cookies.getAll(),
+                setAll: (cookiesToSet:  { name: string; value: string; options: CookieOptions }[]) => {
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        req.cookies.set(name, value);
+                        res.cookies.set(name, value, options);
+                    });
+                },
+            },
+        }
+    );
 
     await supabase.auth.getUser();
     return res;
 }
+
+export const config = {
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};

@@ -1,5 +1,5 @@
 import { useUser } from "@/hooks/useUser";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { createClient } from "@/utils/supabase/client";
 import { useState } from "react";
 import { FieldValues, useForm } from "react-hook-form";
 import Input from "./Input";
@@ -8,38 +8,23 @@ import uniqid from "uniqid";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
 
-// Sanitize file names
-const sanitizeFilename = (name: string) =>
-  name.replace(/[^a-zA-Z0-9-_]/g, "_");
+const supabase = createClient();
 
-// Validate file format
+const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_]/g, "_");
+
 const isValidAudioFile = async (file: File) => {
-  const validMimeTypes = [
-    "audio/mpeg",
-    "audio/mp3",
-    "audio/wav",
-    "audio/ogg",
-    "audio/flac",
-  ];
+  const validMimeTypes = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac"];
   const validExtensions = [".mp3", ".wav", ".ogg", ".flac"];
-
   const isValidMime = validMimeTypes.includes(file.type);
-  const hasValidExtension = validExtensions.some((ext) =>
-    file.name.toLowerCase().endsWith(ext)
-  );
+  const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
 
   try {
     const arrayBuffer = await file.slice(0, 4).arrayBuffer();
     const header = new Uint8Array(arrayBuffer).join(" ");
     const magicNumbers: Record<string, string> = {
-      mp3: "255 251",
-      wav: "82 73 70 70",
-      ogg: "79 103 103 83",
-      flac: "102 76 97 67",
+      mp3: "255 251", wav: "82 73 70 70", ogg: "79 103 103 83", flac: "102 76 97 67",
     };
-    const matchesHeader = Object.values(magicNumbers).some((signature) =>
-      header.startsWith(signature)
-    );
+    const matchesHeader = Object.values(magicNumbers).some((sig) => header.startsWith(sig));
     return isValidMime || hasValidExtension || matchesHeader;
   } catch {
     return isValidMime || hasValidExtension;
@@ -50,15 +35,9 @@ const FilesInfo: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [localFiles, setLocalFiles] = useState<any[]>([]);
   const { user } = useUser();
-  const supabaseClient = useSupabaseClient();
 
   const { register, handleSubmit, reset } = useForm<FieldValues>({
-    defaultValues: {
-      author: "",
-      title: "",
-      song: null,
-      image: null,
-    },
+    defaultValues: { author: "", title: "", song: null, image: null },
   });
 
   const saveFileLocally = async (values: FieldValues) => {
@@ -75,14 +54,10 @@ const FilesInfo: React.FC = () => {
       return;
     }
 
-    // Resize & convert image to JPEG, max 512×512
     let compressedImage: File;
     try {
       compressedImage = await imageCompression(originalImage, {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 512,
-        useWebWorker: true,
-        fileType: "image/jpeg",
+        maxSizeMB: 1, maxWidthOrHeight: 512, useWebWorker: true, fileType: "image/jpeg",
       });
     } catch (err) {
       console.error("Image compression error:", err);
@@ -90,16 +65,7 @@ const FilesInfo: React.FC = () => {
       return;
     }
 
-    setLocalFiles((prev) => [
-      ...prev,
-      {
-        title: values.title,
-        author: values.author,
-        song: songFile,
-        image: compressedImage,
-      },
-    ]);
-
+    setLocalFiles((prev) => [...prev, { title: values.title, author: values.author, song: songFile, image: compressedImage }]);
     toast.success("Arquivo salvo localmente.");
     reset();
   };
@@ -117,37 +83,23 @@ const FilesInfo: React.FC = () => {
         const uniqueID = uniqid();
         const safeTitle = sanitizeFilename(file.title);
 
-        const { data: songData, error: songError } =
-          await supabaseClient.storage
-            .from("musicas")
-            .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, {
-              cacheControl: "3600",
-              upsert: false,
-            });
+        const { data: songData, error: songError } = await supabase.storage
+          .from("musicas")
+          .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, { cacheControl: "3600", upsert: false });
         if (songError) throw songError;
 
-        const { data: imageData, error: imageError } =
-          await supabaseClient.storage
-            .from("imagens")
-            .upload(
-              `imagem-${safeTitle}-${uniqueID}.jpg`,
-              file.image,
-              {
-                cacheControl: "3600",
-                upsert: false,
-              }
-            );
+        const { data: imageData, error: imageError } = await supabase.storage
+          .from("imagens")
+          .upload(`imagem-${safeTitle}-${uniqueID}.jpg`, file.image, { cacheControl: "3600", upsert: false });
         if (imageError) throw imageError;
 
-        const { error: dbError } = await supabaseClient
-          .from("Songs")
-          .insert({
-            user_id: user?.id,
-            title: file.title,
-            author: file.author,
-            image_path: imageData?.path,
-            song_path: songData?.path,
-          });
+        const { error: dbError } = await supabase.from("Songs").insert({
+          user_id: user?.id,
+          title: file.title,
+          author: file.author,
+          image_path: imageData?.path,
+          song_path: songData?.path,
+        });
         if (dbError) throw dbError;
       }
 
@@ -163,47 +115,16 @@ const FilesInfo: React.FC = () => {
 
   return (
     <div>
-      <form
-        onSubmit={handleSubmit(saveFileLocally)}
-        className="flex flex-col gap-y-4"
-      >
+      <form onSubmit={handleSubmit(saveFileLocally)} className="flex flex-col gap-y-4">
         <h2>Título da música:</h2>
-        <Input
-          id="title"
-          disabled={isLoading}
-          {...register("title", { required: true })}
-          placeholder="Título da música"
-        />
-
+        <Input id="title" disabled={isLoading} {...register("title", { required: true })} placeholder="Título da música" />
         <h2>Nome do artista:</h2>
-        <Input
-          id="author"
-          disabled={isLoading}
-          {...register("author", { required: true })}
-          placeholder="Autor da música"
-        />
-
+        <Input id="author" disabled={isLoading} {...register("author", { required: true })} placeholder="Autor da música" />
         <h2>Selecione um ficheiro de música:</h2>
-        <Input
-          id="song"
-          type="file"
-          accept=".mp3,.wav,.ogg,.flac,audio/*"
-          disabled={isLoading}
-          {...register("song", { required: true })}
-        />
-
+        <Input id="song" type="file" accept=".mp3,.wav,.ogg,.flac,audio/*" disabled={isLoading} {...register("song", { required: true })} />
         <h2>Capa:</h2>
-        <Input
-          id="image"
-          type="file"
-          accept="image/*"
-          disabled={isLoading}
-          {...register("image", { required: true })}
-        />
-
-        <Button disabled={isLoading} type="submit">
-          Salvar Localmente
-        </Button>
+        <Input id="image" type="file" accept="image/*" disabled={isLoading} {...register("image", { required: true })} />
+        <Button disabled={isLoading} type="submit">Salvar Localmente</Button>
       </form>
 
       {localFiles.length > 0 && (
@@ -212,22 +133,12 @@ const FilesInfo: React.FC = () => {
           <ul className="list-disc pl-6">
             {localFiles.map((file, i) => (
               <li key={i}>
-                <p>
-                  <strong>Título:</strong> {file.title}
-                </p>
-                <p>
-                  <strong>Autor:</strong> {file.author}
-                </p>
+                <p><strong>Título:</strong> {file.title}</p>
+                <p><strong>Autor:</strong> {file.author}</p>
               </li>
             ))}
           </ul>
-          <Button
-            onClick={uploadToDatabase}
-            disabled={isLoading}
-            className="mt-4"
-          >
-            Fazer Upload
-          </Button>
+          <Button onClick={uploadToDatabase} disabled={isLoading} className="mt-4">Fazer Upload</Button>
         </div>
       )}
     </div>

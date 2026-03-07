@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
+import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/hooks/useUser";
 import { usePathname } from "next/navigation";
 import { HiHome } from "react-icons/hi";
 import { BiSearch } from "react-icons/bi";
@@ -14,13 +15,14 @@ import SideBarItem from "./SideBarItem";
 import Biblioteca from "./Biblioteca";
 import { twMerge } from "tailwind-merge";
 
+const supabase = createClient();
+
 interface SidebarProps {
   children: React.ReactNode;
 }
 
 const SideBar: React.FC<SidebarProps> = ({ children }) => {
-  const supabase = useSupabaseClient();
-  const user = useUser();
+  const { user } = useUser();
   const pathname = usePathname();
   const player = usePlayer();
 
@@ -46,45 +48,20 @@ const SideBar: React.FC<SidebarProps> = ({ children }) => {
     };
 
     getSongsAndPlaylists();
-  }, [supabase, user]);
+  }, [user]);
 
   const routes = useMemo(
     () => [
-      {
-        icon: HiHome,
-        label: "Casa",
-        active: pathname !== "/",
-        href: "/",
-      },
-      {
-        icon: BiSearch,
-        label: "Pesquisar",
-        active: pathname === "/search",
-        href: "/search",
-      },
-      {
-        icon: SlPlaylist,
-        label: "Playlists",
-        active: pathname === "/playlists",
-        href: "/playlists",
-      },
-      {
-        icon: FcLike,
-        label: "Músicas Favoritas",
-        active: pathname === "/liked",
-        href: "/liked",
-      },
+      { icon: HiHome, label: "Casa", active: pathname !== "/", href: "/" },
+      { icon: BiSearch, label: "Pesquisar", active: pathname === "/search", href: "/search" },
+      { icon: SlPlaylist, label: "Playlists", active: pathname === "/playlists", href: "/playlists" },
+      { icon: FcLike, label: "Músicas Favoritas", active: pathname === "/liked", href: "/liked" },
     ],
     [pathname]
   );
 
   return (
-    <div
-      className={twMerge(
-        `flex h-full`,
-        player.activeID && "h-[calc(100%-80px)]"
-      )}
-    >
+    <div className={twMerge(`flex h-full`, player.activeID && "h-[calc(100%-80px)]")}>
       <div className="hidden md:flex flex-col gap-y-2 bg-black h-full w-[300px] p-2">
         <Box className="flex flex-col gap-y4 px-5 py-4">
           {routes.map((item) => (

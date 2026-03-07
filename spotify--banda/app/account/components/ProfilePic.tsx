@@ -1,22 +1,19 @@
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { createClient } from '@/utils/supabase/client';
 import React, { useEffect, useState } from "react";
 import ButtonUploadOrChange from "./ButtonUploadOrChange";
 
+const supabase = createClient();
+
 const ProfilePic = () => {
-  const supabase = useSupabaseClient();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  
 
- 
-
-  // Fetch user's profile picture
   const fetchUserImage = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const user = await supabase.auth.getUser();
-  
     const { data, error } = await supabase
       .from("users")
-      .select("avatar_url").eq('id', user.data.user?.id)
+      .select("avatar_url")
+      .eq('id', user?.id)
       .single();
 
     if (error) {
@@ -29,9 +26,7 @@ const ProfilePic = () => {
     }
   };
 
-  // Callback function to update the avatar after upload
   const handleImageUpdate = (newImageUrl: string) => {
-    console.log("Updating avatar to:", newImageUrl); // Debugging log
     setImageUrl(newImageUrl);
   };
 

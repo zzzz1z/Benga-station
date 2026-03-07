@@ -1,39 +1,36 @@
 'use client';
 
-import { useState, useEffect, SetStateAction } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { createClient } from '@/utils/supabase/client';
 import Header from '@/components/Header';
 import Image from 'next/image';
-import { Playlist, Song } from '@/types';
+import { Playlist } from '@/types';
 import MediaItem from '@/components/MediaItem';
 import AddNewSongs from './AddNewSongs';
 import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
 import useOnPlaylist from '@/hooks/useOnPlaylist';
-import useOnPlay from '@/hooks/useOnPlay';
+
+const supabase = createClient();
 
 interface PlaylistDetailsProps {
   data: Playlist['songs']
 }
 
-const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
-  const { id } = useParams(); // Get 'id' from dynamic route
+const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ data }) => {
+  const { id } = useParams();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabaseClient = useSupabaseClient();
-  
 
-  const onPlay = useOnPlaylist(data); // Assuming useOnPlay is a custom hook for global play functionality
+  const onPlay = useOnPlaylist(data);
 
-  // Function to fetch the playlist and its songs
   const fetchPlaylist = async () => {
     setLoading(true);
 
     try {
-      // Fetch playlist details
-      const { data: playlistData, error: playlistError } = await supabaseClient
+      const { data: playlistData, error: playlistError } = await supabase
         .from('Playlists')
         .select('*')
         .eq('id', id)
@@ -41,19 +38,17 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
 
       if (playlistError) throw playlistError;
 
-      // Fetch songs associated with the playlist
-      const { data: songData, error: songError } = await supabaseClient
+      const { data: songData, error: songError } = await supabase
         .from('playlist_songs')
-        .select('Songs(*)') // Ensure 'Songs' matches your actual relation name
+        .select('Songs(*)')
         .eq('playlist_id', id);
 
       if (songError) throw songError;
 
-      // Set playlist state with fetched data
       if (playlistData && songData) {
         setPlaylist({
           ...playlistData,
-          songs: songData.map((item: any) => item.Songs), // Adjust mapping as per actual structure
+          songs: songData.map((item: any) => item.Songs),
         });
       }
     } catch (error) {
@@ -63,14 +58,13 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
     }
   };
 
-  // Fetch the playlist when the component mounts or when the `id` changes
   useEffect(() => {
     if (!id) {
       setLoading(false);
       return;
     }
     fetchPlaylist();
-  }, [id, supabaseClient]);
+  }, [id]);
 
   if (loading) {
     return (
@@ -89,35 +83,11 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
   }
 
   return (
-    <div
-      className="
-      bg-neutral-900
-      rounded-lg
-      h-full
-      w-full
-      overflow-hidden
-      overflow-y-auto"
-    >
-      {/* Playlist Header */}
+    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto">
       <Header>
         <div className="mt-20">
-          <div
-            className="
-            flex
-            flex-col
-            md:flex-row
-            items-center
-            gap-x-5"
-          >
-            {/* Playlist Cover Image */}
-            <div
-              className="
-              relative
-              h-32
-              w-32
-              lg:h-44
-              lg:w-44"
-            >
+          <div className="flex flex-col md:flex-row items-center gap-x-5">
+            <div className="relative h-32 w-32 lg:h-44 lg:w-44">
               <Image
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -127,24 +97,8 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
                 priority
               />
             </div>
-
-            {/* Playlist Title */}
-            <div
-              className="
-              flex
-              flex-col
-              gap-y-2
-              mt-4
-              md:mt-0"
-            >
-              <h1
-                className="
-                text-white
-                text-4xl
-                sm:text-5xl
-                lg:text-7xl
-                font-bold"
-              >
+            <div className="flex flex-col gap-y-2 mt-4 md:mt-0">
+              <h1 className="text-white text-4xl sm:text-5xl lg:text-7xl font-bold">
                 {playlist.title}
               </h1>
             </div>
@@ -152,33 +106,13 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({data}) => {
         </div>
       </Header>
 
-      {/* Add New Songs and Playlist Songs */}
-      <div className='
-      flex 
-       justify-center
-      items-center
-      gap-3
-      m-auto
-      mt-4
-      mb-4
-      h-10
-      '>
-        <PlaySongsFromPlaylist 
-          songs={playlist.songs}
-        
-        />
-        <ShuffleSongs 
-          songs={playlist.songs}      
-
-         />
-        <AddNewSongs
-          playlistId={playlist.id}
-          refreshPlaylist={fetchPlaylist} // Pass `fetchPlaylist` directly as `refreshPlaylist`
-        />
+      <div className='flex justify-center items-center gap-3 m-auto mt-4 mb-4 h-10'>
+        <PlaySongsFromPlaylist songs={playlist.songs} />
+        <ShuffleSongs songs={playlist.songs} />
+        <AddNewSongs playlistId={playlist.id} refreshPlaylist={fetchPlaylist} />
         <DeletePlaylist data={playlist} />
       </div>
 
-      {/* List of Songs */}
       <div>
         <ul className='flex-col p-5 items center justify center'>
           {playlist.songs.map((song) => (

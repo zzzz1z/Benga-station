@@ -1,36 +1,34 @@
 import { Playlist } from "@/types";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 const getLikedPlaylists = async (): Promise<Playlist[]> => {
-    
-    await cookies();
-    const supabase = createServerComponentClient({        cookies: cookies
-    });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll: () => cookieStore.getAll(),
+                setAll: (cookiesToSet: { name: string; value: string; options: CookieOptions }[]) => {
+                    try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); } catch {}
+                },
+            },
+        }
+    );
 
-    const {
-        data: {
-            user
-        } 
-    }= await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
 
-    const { data , error } = await supabase.from('Playlists_Favoritas').select('*, Playlists(*)').eq('user_id', user?.id).order('created_at', { ascending: false});
+    const { data, error } = await supabase
+        .from('Playlists_Favoritas')
+        .select('*, Playlists(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (error){
-        console.log(error)
-        return [];
-    }
+    if (error || !data) return [];
 
-    if(!data){
-        return [];
-    }
-
-    return data.map((item) => ({
-        ...item.playlists 
-    }))
-
-
+    return data.map((item) => ({ ...item.Playlists }));
 };
-
 
 export default getLikedPlaylists;
