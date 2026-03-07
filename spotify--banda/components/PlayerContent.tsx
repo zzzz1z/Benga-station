@@ -55,7 +55,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     isPausedRef.current = true;
     pausedAtRef.current = audio.currentTime;
     audio.volume = 0;
+    audio.pause();
     setIsPlaying(false);
+  }, [getActive]);
+
+  const fakeResume = useCallback(() => {
+    const audio = getActive();
+    if (!audio) return;
+    audio.play().catch(() => {});
   }, [getActive]);
 
   const fakePlay = useCallback(() => {
@@ -64,6 +71,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     isPausedRef.current = false;
     audio.currentTime = pausedAtRef.current;
     audio.volume = volumeRef.current;
+    audio.play().catch(() => {});
     setIsPlaying(true);
     setPosition(pausedAtRef.current);
   }, [getActive]);
@@ -195,10 +203,13 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.currentTime = value;
       pausedAtRef.current = value;
       setPosition(value);
-       // iOS doesn't always fire onended when seeking to end — trigger manually
-    if (audio.duration && value >= audio.duration - 0.5) {
-      player.playNext();
-    }
+      // iOS doesn't always fire onended when seeking to end via seek bar
+      // Set skip flag so the songUrl effect doesn't do a second swap
+      if (audio.duration && value >= audio.duration - 0.5) {
+        skipNextSwapRef.current = true;
+        swapRef.current();
+        player.playNext();
+      }
     }
   };
 
