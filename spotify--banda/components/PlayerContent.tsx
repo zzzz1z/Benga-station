@@ -26,9 +26,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const isPausedRef = useRef(false);
   const pausedAtRef = useRef(0);
-  // Prevents the songUrl effect from doing a second swap when onended
-  // already handled it internally
-  const skipNextSwapRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -57,12 +54,6 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     audio.volume = 0;
     audio.pause();
     setIsPlaying(false);
-  }, [getActive]);
-
-  const fakeResume = useCallback(() => {
-    const audio = getActive();
-    if (!audio) return;
-    audio.play().catch(() => {});
   }, [getActive]);
 
   const fakePlay = useCallback(() => {
@@ -111,16 +102,12 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const attachListeners = useCallback((audio: HTMLAudioElement) => {
     audio.ontimeupdate = () => {
-      if (!isPausedRef.current) {
-        setPosition(audio.currentTime);
-      }
+      if (!isPausedRef.current) setPosition(audio.currentTime);
     };
     audio.onloadedmetadata = () => setDuration(audio.duration);
     audio.onplay = () => {};
     audio.onpause = () => {};
     audio.onended = () => {
-      skipNextSwapRef.current = true;
-      swapRef.current();
       player.playNext();
     };
   }, [player]);
@@ -147,16 +134,10 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // External song change (manual skip)
+  // External song change (skip or song end)
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      return;
-    }
-
-    // onended already swapped — just let Zustand catch up, don't swap again
-    if (skipNextSwapRef.current) {
-      skipNextSwapRef.current = false;
       return;
     }
 
@@ -203,11 +184,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.currentTime = value;
       pausedAtRef.current = value;
       setPosition(value);
-      // iOS doesn't always fire onended when seeking to end via seek bar
-      // Set skip flag so the songUrl effect doesn't do a second swap
       if (audio.duration && value >= audio.duration - 0.5) {
-        skipNextSwapRef.current = true;
-        swapRef.current();
         player.playNext();
       }
     }

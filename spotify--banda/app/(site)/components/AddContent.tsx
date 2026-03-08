@@ -3,6 +3,7 @@
 import { Song } from "@/types";
 import SongItem from "@/components/SongItem";
 import useOnPlay from "@/hooks/useOnPlay";
+import { useMemo } from "react";
 
 interface AddContentProps {
   songs: Song[];
@@ -11,11 +12,12 @@ interface AddContentProps {
 const AddContent: React.FC<AddContentProps> = ({ songs }) => {
   const onPlay = useOnPlay(songs);
 
-      // Pick 6 random songs from the full list for display
+    // Pick 6 random songs from the full list for display
   // but pass the full list to useOnPlay so the queue has all songs
-  const displayed = [...songs]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 6);
+const displayed = useMemo(() => 
+  [...songs].sort(() => Math.random() - 0.5).slice(0, 6),
+  [] // empty deps = only runs once on mount
+);
 
   if (songs.length === 0) {
     return (
