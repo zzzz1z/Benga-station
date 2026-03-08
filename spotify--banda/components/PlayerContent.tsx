@@ -15,7 +15,13 @@ import { createClient } from "@/utils/supabase/client";
 
 const supabase = createClient();
 
-const getNextSongUrl = (player: ReturnType<typeof usePlayer>): string | null => {
+interface PlayerSnapshot {
+  ids: string[];
+  songs: Record<string, Song>;
+  activeID?: string;
+}
+
+const getNextSongUrl = (player: PlayerSnapshot): string | null => {
   const { ids, activeID, songs } = player;
   if (!ids.length || !activeID) return null;
   const currentIndex = ids.findIndex(id => id === activeID);
