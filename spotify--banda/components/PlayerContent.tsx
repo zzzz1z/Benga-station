@@ -11,6 +11,20 @@ import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
 import Slider from "./Slider";
 import MusicSlider from "./MusicSlider";
 import useMediaSession from "@/hooks/useMediaSession";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
+
+const getNextSongUrl = (player: ReturnType<typeof usePlayer>): string | null => {
+  const { ids, activeID, songs } = player;
+  if (!ids.length || !activeID) return null;
+  const currentIndex = ids.findIndex(id => id === activeID);
+  if (currentIndex === -1 || currentIndex === ids.length - 1) return null;
+  const nextSong = songs[ids[currentIndex + 1]];
+  if (!nextSong) return null;
+  const { data } = supabase.storage.from('musicas').getPublicUrl(nextSong.song_path);
+  return data.publicUrl;
+};
 
 interface PlayerContentProps {
   song: Song;
@@ -26,6 +40,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   const isPausedRef = useRef(false);
   const pausedAtRef = useRef(0);
+  const skipNextSwapRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -45,6 +60,16 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const getInactive = useCallback(() =>
     activeRef.current === 'A' ? audioRefB.current : audioRefA.current
   , []);
+
+  // Preload the next song into the inactive element
+  const preloadNext = useCallback(() => {
+    const nextUrl = getNextSongUrl(player);
+    const inactive = activeRef.current === 'A' ? audioRefB.current : audioRefA.current;
+    if (!inactive || !nextUrl) return;
+    inactive.src = nextUrl;
+    inactive.volume = 0;
+    inactive.load();
+  }, [player]);
 
   const fakePause = useCallback(() => {
     const audio = getActive();
@@ -91,11 +116,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
     attachListenersRef.current(newActive);
     newActive.volume = volumeRef.current;
-    newActive.play().then(() => setIsPlaying(true)).catch(() => {});
+    newActive.play().then(() => {
+      setIsPlaying(true);
+      // Preload the song after next into the now-inactive element
+      preloadNext();
+    }).catch(() => {});
     setPosition(0);
     if (newActive.duration && !isNaN(newActive.duration)) setDuration(newActive.duration);
     proxyRef.current = newActive;
-  }, [getActive, getInactive]);
+  }, [getActive, getInactive, preloadNext]);
 
   const swapRef = useRef(swapToInactive);
   useEffect(() => { swapRef.current = swapToInactive; }, [swapToInactive]);
@@ -108,6 +137,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     audio.onplay = () => {};
     audio.onpause = () => {};
     audio.onended = () => {
+      skipNextSwapRef.current = true;
+      swapRef.current();
       player.playNext();
     };
   }, [player]);
@@ -122,7 +153,10 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     audio.src = songUrl;
     audio.volume = volumeRef.current;
     attachListeners(audio);
-    audio.play().then(() => setIsPlaying(true)).catch(() => {});
+    audio.play().then(() => {
+      setIsPlaying(true);
+      preloadNext(); // preload next song as soon as current starts
+    }).catch(() => {});
 
     return () => {
       audio.ontimeupdate = null;
@@ -134,10 +168,15 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // External song change (skip or song end)
+  // External song change (manual skip)
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      return;
+    }
+
+    if (skipNextSwapRef.current) {
+      skipNextSwapRef.current = false;
       return;
     }
 
@@ -185,6 +224,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       pausedAtRef.current = value;
       setPosition(value);
       if (audio.duration && value >= audio.duration - 0.5) {
+        skipNextSwapRef.current = true;
+        swapRef.current();
         player.playNext();
       }
     }
