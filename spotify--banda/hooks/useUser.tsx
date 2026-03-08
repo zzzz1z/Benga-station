@@ -34,13 +34,16 @@ export const MyUserContextProvider = (props: Props) => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setAccessToken(session?.access_token ?? null);
-        setIsLoadingUser(false);
-      }
-    );
+const { data: { subscription } } = supabase.auth.onAuthStateChange(
+  (event, session) => {
+    // Ignore token refreshes — they don't change the user
+    if (event === 'TOKEN_REFRESHED') return;
+    
+    setUser(session?.user ?? null);
+    setAccessToken(session?.access_token ?? null);
+    setIsLoadingUser(false);
+  }
+);
 
     return () => subscription.unsubscribe();
   }, []);
