@@ -82,7 +82,7 @@ const PlaylistModal: React.FC = () => {
       isOpen={playlistModal.isOpen}
       onChange={playlistModal.onClose}
     >
-      <form className="flex m-auto flex-col w-50 items-center gap-4">
+      <div className="flex m-auto flex-col w-50 items-center gap-4">
         {imageUrl && (
           <div className="mt-4">
             <img src={imageUrl} alt="Playlist Cover" className="w-32 h-32 object-cover rounded" />
@@ -118,7 +118,7 @@ const PlaylistModal: React.FC = () => {
             <p className="text-gray-700">esqueci</p>
           </>
         )}
-      </form>
+      </div>
     </Modal>
   );
 };
