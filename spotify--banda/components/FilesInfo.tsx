@@ -7,6 +7,7 @@ import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
+import { useRouter } from "next/navigation";
 
 const supabase = createClient();
 
@@ -31,10 +32,18 @@ const isValidAudioFile = async (file: File) => {
   }
 };
 
+interface LocalFile {
+  title: string;
+  author: string;
+  song: File;
+  image: File;
+}
+
 const FilesInfo: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [localFiles, setLocalFiles] = useState<any[]>([]);
+  const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const { user } = useUser();
+  const router = useRouter();
 
   const { register, handleSubmit, reset } = useForm<FieldValues>({
     defaultValues: { author: "", title: "", song: null, image: null },
@@ -70,6 +79,52 @@ const FilesInfo: React.FC = () => {
     reset();
   };
 
+  const uploadSingleFile = async (file: LocalFile): Promise<{ success: boolean; title: string }> => {
+    const uniqueID = uniqid();
+    const safeTitle = sanitizeFilename(file.title);
+
+    try {
+      // Upload song and image in parallel
+      const [songResult, imageResult] = await Promise.all([
+        supabase.storage
+          .from("musicas")
+          .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, { cacheControl: "3600", upsert: false }),
+        supabase.storage
+          .from("imagens")
+          .upload(`imagem-${safeTitle}-${uniqueID}.jpg`, file.image, { cacheControl: "3600", upsert: false }),
+      ]);
+
+      if (songResult.error) throw songResult.error;
+      if (imageResult.error) {
+        // Clean up song if image failed
+        await supabase.storage.from("musicas").remove([songResult.data.path]);
+        throw imageResult.error;
+      }
+
+      const { error: dbError } = await supabase.from("Songs").insert({
+        user_id: user?.id,
+        title: file.title,
+        author: file.author,
+        image_path: imageResult.data.path,
+        song_path: songResult.data.path,
+      });
+
+      if (dbError) {
+        // Clean up both if DB insert failed
+        await Promise.all([
+          supabase.storage.from("musicas").remove([songResult.data.path]),
+          supabase.storage.from("imagens").remove([imageResult.data.path]),
+        ]);
+        throw dbError;
+      }
+
+      return { success: true, title: file.title };
+    } catch (error: any) {
+      console.error(`Erro ao enviar "${file.title}":`, error.message);
+      return { success: false, title: file.title };
+    }
+  };
+
   const uploadToDatabase = async () => {
     if (localFiles.length === 0) {
       toast.error("Nenhum arquivo para enviar.");
@@ -77,39 +132,31 @@ const FilesInfo: React.FC = () => {
     }
 
     setIsLoading(true);
+    const total = localFiles.length;
 
-    try {
-      for (const file of localFiles) {
-        const uniqueID = uniqid();
-        const safeTitle = sanitizeFilename(file.title);
+    // Upload all files in parallel
+    const results = await Promise.allSettled(localFiles.map(uploadSingleFile));
 
-        const { data: songData, error: songError } = await supabase.storage
-          .from("musicas")
-          .upload(`musica-${safeTitle}-${uniqueID}.mp3`, file.song, { cacheControl: "3600", upsert: false });
-        if (songError) throw songError;
+    const failed = results
+      .map((r) => (r.status === 'fulfilled' ? r.value : { success: false, title: 'unknown' }))
+      .filter((r) => !r.success)
+      .map((r) => r.title);
 
-        const { data: imageData, error: imageError } = await supabase.storage
-          .from("imagens")
-          .upload(`imagem-${safeTitle}-${uniqueID}.jpg`, file.image, { cacheControl: "3600", upsert: false });
-        if (imageError) throw imageError;
+    const succeeded = total - failed.length;
 
-        const { error: dbError } = await supabase.from("Songs").insert({
-          user_id: user?.id,
-          title: file.title,
-          author: file.author,
-          image_path: imageData?.path,
-          song_path: songData?.path,
-        });
-        if (dbError) throw dbError;
-      }
+    setIsLoading(false);
 
-      toast.success("Todos os arquivos foram enviados com sucesso!");
+    if (failed.length === 0) {
+      toast.success(`${total} música${total > 1 ? 's' : ''} enviada${total > 1 ? 's' : ''} com sucesso!`);
       setLocalFiles([]);
-    } catch (error: any) {
-      console.error("Erro geral:", error.message);
-      toast.error("Erro no upload dos ficheiros.");
-    } finally {
-      setIsLoading(false);
+      router.refresh();
+    } else if (succeeded > 0) {
+      toast.success(`${succeeded} enviada${succeeded > 1 ? 's' : ''} com sucesso.`);
+      toast.error(`Falhou: ${failed.join(', ')}`);
+      setLocalFiles((prev) => prev.filter((f) => failed.includes(f.title)));
+      router.refresh();
+    } else {
+      toast.error("Todos os uploads falharam.");
     }
   };
 
@@ -138,7 +185,9 @@ const FilesInfo: React.FC = () => {
               </li>
             ))}
           </ul>
-          <Button onClick={uploadToDatabase} disabled={isLoading} className="mt-4">Fazer Upload</Button>
+          <Button onClick={uploadToDatabase} disabled={isLoading} className="mt-4">
+            {isLoading ? "Enviando..." : "Fazer Upload"}
+          </Button>
         </div>
       )}
     </div>

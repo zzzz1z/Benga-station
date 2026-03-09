@@ -6,11 +6,26 @@ import { useUser } from "@/hooks/useUser";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
 import AddSongToPlaylistModal from "@/app/playlists/components/AddSongsToPlaylist";
 import Button from "./Botão";
+import toast from "react-hot-toast";
+
 import { createClient } from "@/utils/supabase/client";
 
 const supabase = createClient();
 
 const PlaylistModal: React.FC = () => {
+
+
+  const handleClose = () => {
+  setTitle('');
+  setDescription('');
+  setPlaylistId('');
+  setIsCreating(false);
+  setImage(null);
+  setImageUrl(null);
+  playlistModal.onClose();
+};
+
+
   const playlistModal = usePlaylistModal();
   const { user } = useUser();
 
@@ -27,12 +42,12 @@ const PlaylistModal: React.FC = () => {
 
   const handleCreatePlaylist = async () => {
     if (!user?.id) {
-      alert("You must be logged in to create a playlist.");
+      toast("You must be logged in to create a playlist.");
       return;
     }
 
     if (!title.trim()) {
-      alert("Title is required.");
+      toast("Title is required.");
       return;
     }
 
@@ -66,10 +81,10 @@ const PlaylistModal: React.FC = () => {
       if (playlistError) throw new Error("Failed to create playlist.");
 
       setPlaylistId(playlistData.id);
-      alert("Playlist created successfully!");
+      toast("Playlist created successfully!");
     } catch (error) {
       console.error("Error creating playlist:", error);
-      alert(error instanceof Error ? error.message : "An unknown error occurred.");
+      toast(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setIsCreating(false);
     }
@@ -80,7 +95,7 @@ const PlaylistModal: React.FC = () => {
       description="Para adicionar músicas, primeiro crie uma playlist"
       title="Criar nova lista de reprodução"
       isOpen={playlistModal.isOpen}
-      onChange={playlistModal.onClose}
+      onChange={handleClose}
     >
       <div className="flex m-auto flex-col w-50 items-center gap-4">
         {imageUrl && (
@@ -109,10 +124,10 @@ const PlaylistModal: React.FC = () => {
         />
 
         {playlistId ? (
-          <AddSongToPlaylistModal playlistId={playlistId} />
+          <AddSongToPlaylistModal playlistId={playlistId} onClose={handleClose} />
         ) : (
           <>
-            <Button onClick={handleCreatePlaylist} disabled={isCreating ?? !!playlistId}>
+            <Button type="button" onClick={handleCreatePlaylist} disabled={isCreating ?? !!playlistId}>
               {isCreating ? "Criando" : "Feito!"}
             </Button>
             <p className="text-gray-700">esqueci</p>

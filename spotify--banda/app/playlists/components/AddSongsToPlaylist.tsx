@@ -7,20 +7,24 @@ import MediaItem from '@/components/MediaItem';
 import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
 import { Song } from '@/types';
+import { useRouter } from 'next/navigation';
+
 
 const supabase = createClient();
 
 interface AddSongToPlaylistProps {
   playlistId: string;
+  onClose?: () => void;
 }
 
-const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }) => {
+const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, onClose }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchSongs = async () => {
@@ -56,7 +60,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }
 
   const handleAddSongs = async () => {
     if (selectedSongIds.length === 0) {
-      alert('Select at least one song to add to the playlist.');
+      toast('Select at least one song to add to the playlist.');
       return;
     }
 
@@ -72,9 +76,11 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId }
 
       setSelectedSongIds([]);
       toast('Músicas adicionadas à playlist');
+      router.refresh();
+      onClose?.();
     } catch (error) {
       console.error('Error adding songs:', error);
-      alert('Houve um erro ao tentar adicionar as músicas, por favor tente outra vez.');
+      toast('Houve um erro ao tentar adicionar as músicas, por favor tente outra vez.');
     }
   };
 

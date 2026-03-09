@@ -65,7 +65,7 @@ const LikedContent: React.FC<LikedContentProps> = ({
                      />
                     </div>
                     
-                    <div><LikedButton songId={song.id}/></div>
+                    <LikedButton songId={song.id}/>
 
                 </div>
             ))}
