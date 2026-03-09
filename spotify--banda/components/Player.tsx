@@ -28,6 +28,7 @@ const Player = () => {
             "
         >
         <PlayerContent
+        key={songUrl}
                 song={song}
                 songUrl={songUrl}
             />
