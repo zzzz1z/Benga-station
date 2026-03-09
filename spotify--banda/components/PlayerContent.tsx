@@ -196,7 +196,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     const onCanPlay = () => swapRef.current();
     inactive.addEventListener('canplay', onCanPlay, { once: true });
     return () => inactive.removeEventListener('canplay', onCanPlay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [songUrl]);
 
   useEffect(() => {
