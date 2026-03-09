@@ -23,26 +23,26 @@ async function RootLayout({
   return (
     <html lang="pt-PT">
       <head>
-      <meta name="apple-mobile-web-app-capable" content="yes" />
-      <meta name="mobile-web-app-capable" content="yes" />        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#000000" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96" />
-        <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
-        <meta name="BengaXtation" content="MyWebSited" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <link rel="shortcut icon" href="/icons/favicon.ico" />
+      <meta name="apple-mobile-web-app-capable" content="yes"/>
+      <meta name="mobile-web-app-capable" content="yes"/>        
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="manifest" href="/manifest.json"/>
+        <meta name="theme-color" content="#000000"/>
+        <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-touch-icon.png"/>
+        <link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96"/>
+        <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg"/>
+        <meta name="BengaXtation" content="MyWebSited"/>
+        <link rel="shortcut icon" href="/icons/favicon.ico"/>
       </head>
       <body>
-        <ToasterProvider />
+        <ToasterProvider/>
         <UserProvider>
 
-        <ModalProvider />
+        <ModalProvider/>
         <SideBar>
           {children}
         </SideBar>
-        <Player />
+        <Player/>
         </UserProvider>
       </body>
     </html>
