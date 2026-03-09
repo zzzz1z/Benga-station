@@ -4,8 +4,9 @@ import PageContent from "./components/PageContent"; // A component that handles 
 import AddContent from "./components/AddContent";
 import getSongs from "@/actions/getSongs";
 
-// No need to revalidate at 0, unless you're using a particular caching mechanism
-// export const revalidate = 0; // Remove this if unnecessary
+
+export const dynamic = 'force-dynamic';
+
 
 export default async function Home() {
       const songs = await getSongs();

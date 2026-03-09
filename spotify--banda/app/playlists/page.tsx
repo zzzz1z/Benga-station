@@ -5,7 +5,7 @@ import getPlaylists from "@/actions/getPlaylists";
 
 
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 const Liked = async () => {
 
