@@ -118,7 +118,7 @@ const PlaylistModal: React.FC = () => {
         <input
           className="border p-2 rounded w-full"
           type="text"
-          placeholder="sinopse (opcional)"
+          placeholder="......"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -130,7 +130,6 @@ const PlaylistModal: React.FC = () => {
             <Button type="button" onClick={handleCreatePlaylist} disabled={isCreating ?? !!playlistId}>
               {isCreating ? "Criando" : "Feito!"}
             </Button>
-            <p className="text-gray-700">esqueci</p>
           </>
         )}
       </div>
