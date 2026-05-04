@@ -19,6 +19,9 @@ interface PlayerContentProps {
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const player = usePlayer();
+  const playerRef = useRef(player);
+  useEffect(() => { playerRef.current = player; }, [player]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,7 +39,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  // Mount — create single audio element
+  // Mount — create single audio element once, never recreate
   useEffect(() => {
     const audio = new Audio();
     audio.setAttribute('playsinline', 'true');
@@ -49,10 +52,9 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       setPosition(audio.currentTime);
     };
     audio.onloadedmetadata = () => setDuration(audio.duration);
-    audio.onended = () => player.playNext();
+    audio.onended = () => playerRef.current.playNext();
     audio.onplay = () => setIsPlaying(true);
     audio.onpause = () => {
-      // Only update state if truly paused (not a src swap)
       if (!audio.src) return;
       setIsPlaying(false);
     };
@@ -101,7 +103,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     }
   };
 
-  const handlePlayNextSong = () => player.playNext();
+  const handlePlayNextSong = () => playerRef.current.playNext();
 
   const handlePlayPreviousSong = () => {
     const audio = audioRef.current;
@@ -110,7 +112,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.currentTime = 0;
       setPosition(0);
     } else {
-      player.playPrevious();
+      playerRef.current.playPrevious();
     }
   };
 
