@@ -6,7 +6,6 @@ import PlayerContent from "./PlayerContent";
 const Player = () => {
     const player = usePlayer();
 
-    // Pull the active song directly from the cache — no async fetch, instant on skip
     const song = player.activeID ? player.songs[player.activeID] : null;
     const songUrl = useLoadSongUrl(song!);
 
@@ -27,8 +26,7 @@ const Player = () => {
              px-4
             "
         >
-        <PlayerContent
-        key={songUrl}
+            <PlayerContent
                 song={song}
                 songUrl={songUrl}
             />
