@@ -159,10 +159,39 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
     audio.src = songUrl;
     audio.volume = volumeRef.current;
     attachListeners(audio);
+
+    // iOS: audio element needs these attributes for background/lock screen audio
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
+
     audio.play().then(() => {
       setIsPlaying(true);
-      preloadNext(); // preload next song as soon as current starts
+      preloadNext();
     }).catch(() => {});
+
+    // Recovery: if iOS kills the audio due to a stall or network drop, reload and resume
+    const handleStalled = () => {
+      setTimeout(() => {
+        if (!isPausedRef.current && audio.paused) {
+          audio.load();
+          audio.currentTime = pausedAtRef.current;
+          audio.play().catch(() => {});
+        }
+      }, 1000);
+    };
+
+    const handleError = () => {
+      setTimeout(() => {
+        if (!isPausedRef.current) {
+          audio.load();
+          audio.currentTime = pausedAtRef.current;
+          audio.play().catch(() => {});
+        }
+      }, 1500);
+    };
+
+    audio.addEventListener('stalled', handleStalled);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.ontimeupdate = null;
@@ -170,6 +199,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       audio.onplay = null;
       audio.onpause = null;
       audio.onended = null;
+      audio.removeEventListener('stalled', handleStalled);
+      audio.removeEventListener('error', handleError);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -191,12 +222,17 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
     inactive.src = songUrl;
     inactive.volume = 0;
+
+    // iOS: ensure playsinline on the inactive element too
+    inactive.setAttribute('playsinline', 'true');
+    inactive.setAttribute('webkit-playsinline', 'true');
+
     inactive.load();
 
     const onCanPlay = () => swapRef.current();
     inactive.addEventListener('canplay', onCanPlay, { once: true });
     return () => inactive.removeEventListener('canplay', onCanPlay);
-   
+
   }, [songUrl]);
 
   useEffect(() => {
@@ -246,8 +282,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
-      <audio ref={audioRefA} preload="auto" hidden />
-      <audio ref={audioRefB} preload="auto" hidden />
+      <audio ref={audioRefA} preload="auto" playsInline hidden />
+      <audio ref={audioRefB} preload="auto" playsInline hidden />
 
       <div className="flex items-center justify-center m-auto w-full space-x-4">
         <MediaItem data={song} />

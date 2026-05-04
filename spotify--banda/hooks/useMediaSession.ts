@@ -13,11 +13,55 @@ const useMediaSession = (
   const playerRef = useRef(player);
   const onPlayRef = useRef(onPlay);
   const onPauseRef = useRef(onPause);
+  const isPlayingRef = useRef(isPlaying);
+
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { onPlayRef.current = onPlay; }, [onPlay]);
   useEffect(() => { onPauseRef.current = onPause; }, [onPause]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  // Register handlers once per song change only
+  // Re-assert all action handlers — called after iOS interruptions
+  const reassertHandlers = () => {
+    if (!("mediaSession" in navigator)) return;
+    const audio = audioRef.current;
+
+    navigator.mediaSession.setActionHandler("play", () => onPlayRef.current());
+    navigator.mediaSession.setActionHandler("pause", () => onPauseRef.current());
+
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      if (!audio) return;
+      if (audio.currentTime > 3) {
+        audio.currentTime = 0;
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate,
+            position: 0,
+          });
+        } catch {}
+      } else {
+        playerRef.current.playPrevious();
+      }
+    });
+
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      playerRef.current.playNext();
+    });
+
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (!audio || details.seekTime === undefined) return;
+      audio.currentTime = details.seekTime;
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: audio.playbackRate,
+          position: details.seekTime,
+        });
+      } catch {}
+    });
+  };
+
+  // Register metadata + handlers on every song change
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
 
@@ -42,44 +86,7 @@ const useMediaSession = (
       artwork,
     });
 
-    // Use fakePlay/fakePause from PlayerContent — these mute/unmute instead of
-    // actually pausing, so iOS never sees the audio stop and keeps the session alive
-    navigator.mediaSession.setActionHandler("play", () => onPlayRef.current());
-    navigator.mediaSession.setActionHandler("pause", () => onPauseRef.current());
-
-    navigator.mediaSession.setActionHandler("previoustrack", () => {
-      const audio = audioRef.current;
-      if (audio && audio.currentTime > 3) {
-        audio.currentTime = 0;
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: audio.duration,
-            playbackRate: audio.playbackRate,
-            position: 0,
-          });
-        } catch {}
-      } else {
-        playerRef.current.playPrevious();
-      }
-    });
-
-    navigator.mediaSession.setActionHandler("nexttrack", () => {
-      playerRef.current.playNext();
-    });
-
-    navigator.mediaSession.setActionHandler("seekto", (details) => {
-      const audio = audioRef.current;
-      if (audio && details.seekTime !== undefined) {
-        audio.currentTime = details.seekTime;
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: audio.duration,
-            playbackRate: audio.playbackRate,
-            position: details.seekTime,
-          });
-        } catch {}
-      }
-    });
+    reassertHandlers();
 
     return () => {
       navigator.mediaSession.metadata = null;
@@ -98,7 +105,7 @@ const useMediaSession = (
     navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }, [isPlaying]);
 
-  // Keep iOS lock screen position/duration bar in sync
+  // Lock screen position/duration bar + iOS interruption recovery
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     const audio = audioRef.current;
@@ -115,12 +122,66 @@ const useMediaSession = (
       } catch {}
     };
 
+    // iOS interrupted the audio session (lock screen, phone call, notification, etc.)
+    // When the user returns, re-assert handlers and attempt to resume playback.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+
+      // Re-assert handlers — iOS drops them after interruptions
+      reassertHandlers();
+
+      // If we were playing before the interruption, try to resume
+      if (isPlayingRef.current && audio.paused) {
+        audio.play().catch(() => {});
+      }
+    };
+
+    // Fires when user navigates back via browser history (iOS bfcache)
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (isPlayingRef.current && audio.paused) {
+        audio.play().catch(() => {});
+      }
+    };
+
+    // Fires when audio is interrupted by a phone call, notification, etc.
+    // On iOS this fires before the audio actually stops.
+    const handleAudioInterruption = () => {
+      // Small delay to let iOS fully interrupt, then reassert
+      setTimeout(() => {
+        reassertHandlers();
+        if (isPlayingRef.current && audio.paused) {
+          audio.play().catch(() => {});
+        }
+      }, 500);
+    };
+
+    // Fires when the audio stalls mid-playback (network issue or iOS background throttle)
+    const handleStalled = () => {
+      setTimeout(() => {
+        if (isPlayingRef.current && audio.paused) {
+          audio.load();
+          audio.play().catch(() => {});
+        }
+      }, 1000);
+    };
+
     audio.addEventListener("timeupdate", updatePosition);
     audio.addEventListener("loadedmetadata", updatePosition);
+    audio.addEventListener("stalled", handleStalled);
+    // The 'pause' event fires on interruption — we use it to schedule recovery
+    // We DON'T try to recover immediately here because it also fires on intentional pauses;
+    // the visibilitychange handler is the reliable recovery path.
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handlePageShow);
+
     return () => {
       audio.removeEventListener("timeupdate", updatePosition);
       audio.removeEventListener("loadedmetadata", updatePosition);
+      audio.removeEventListener("stalled", handleStalled);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handlePageShow);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioRef, song]);
 };
 
