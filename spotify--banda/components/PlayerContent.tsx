@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
 import MediaItem from "./MediaItem";
@@ -11,26 +11,6 @@ import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
 import Slider from "./Slider";
 import MusicSlider from "./MusicSlider";
 import useMediaSession from "@/hooks/useMediaSession";
-import { createClient } from "@/utils/supabase/client";
-
-const supabase = createClient();
-
-interface PlayerSnapshot {
-  ids: string[];
-  songs: Record<string, Song>;
-  activeID?: string;
-}
-
-const getNextSongUrl = (player: PlayerSnapshot): string | null => {
-  const { ids, activeID, songs } = player;
-  if (!ids.length || !activeID) return null;
-  const currentIndex = ids.findIndex(id => id === activeID);
-  if (currentIndex === -1 || currentIndex === ids.length - 1) return null;
-  const nextSong = songs[ids[currentIndex + 1]];
-  if (!nextSong) return null;
-  const { data } = supabase.storage.from('musicas').getPublicUrl(nextSong.song_path);
-  return data.publicUrl;
-};
 
 interface PlayerContentProps {
   song: Song;
@@ -39,246 +19,95 @@ interface PlayerContentProps {
 
 const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   const player = usePlayer();
-
-  const audioRefA = useRef<HTMLAudioElement | null>(null);
-  const audioRefB = useRef<HTMLAudioElement | null>(null);
-  const activeRef = useRef<'A' | 'B'>('A');
-
-  const isPausedRef = useRef(false);
-  const pausedAtRef = useRef(0);
-  const skipNextSwapRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
-  const volumeRef = useRef(1);
-  useEffect(() => { volumeRef.current = volume; }, [volume]);
-
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+
+  const volumeRef = useRef(1);
+  const isPlayingRef = useRef(false);
+  const positionRef = useRef(0);
+
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  const getActive = useCallback(() =>
-    activeRef.current === 'A' ? audioRefA.current : audioRefB.current
-  , []);
-
-  const getInactive = useCallback(() =>
-    activeRef.current === 'A' ? audioRefB.current : audioRefA.current
-  , []);
-
-  // Preload the next song into the inactive element
-  const preloadNext = useCallback(() => {
-    const nextUrl = getNextSongUrl(player);
-    const inactive = activeRef.current === 'A' ? audioRefB.current : audioRefA.current;
-    if (!inactive || !nextUrl) return;
-    inactive.src = nextUrl;
-    inactive.volume = 0;
-    inactive.load();
-  }, [player]);
-
-  const fakePause = useCallback(() => {
-    const audio = getActive();
-    if (!audio) return;
-    isPausedRef.current = true;
-    pausedAtRef.current = audio.currentTime;
-    audio.volume = 0;
-    audio.pause();
-    setIsPlaying(false);
-  }, [getActive]);
-
-  const fakePlay = useCallback(() => {
-    const audio = getActive();
-    if (!audio) return;
-    isPausedRef.current = false;
-    audio.currentTime = pausedAtRef.current;
-    audio.volume = volumeRef.current;
-    audio.play().catch(() => {});
-    setIsPlaying(true);
-    setPosition(pausedAtRef.current);
-  }, [getActive]);
-
-  const attachListenersRef = useRef<(audio: HTMLAudioElement) => void>(() => {});
-
-  const swapToInactive = useCallback(() => {
-    const active = getActive();
-    const inactive = getInactive();
-    if (!active || !inactive) return;
-
-    active.ontimeupdate = null;
-    active.onloadedmetadata = null;
-    active.onplay = null;
-    active.onpause = null;
-    active.onended = null;
-    active.volume = 0;
-    active.pause();
-
-    activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
-    const newActive = activeRef.current === 'A' ? audioRefA.current : audioRefB.current;
-    if (!newActive) return;
-
-    isPausedRef.current = false;
-    pausedAtRef.current = 0;
-
-    attachListenersRef.current(newActive);
-    newActive.volume = volumeRef.current;
-    newActive.play().then(() => {
-      setIsPlaying(true);
-      // Preload the song after next into the now-inactive element
-      preloadNext();
-    }).catch(() => {});
-    setPosition(0);
-    if (newActive.duration && !isNaN(newActive.duration)) setDuration(newActive.duration);
-    proxyRef.current = newActive;
-  }, [getActive, getInactive, preloadNext]);
-
-  const swapRef = useRef(swapToInactive);
-  useEffect(() => { swapRef.current = swapToInactive; }, [swapToInactive]);
-
-  const attachListeners = useCallback((audio: HTMLAudioElement) => {
-    audio.ontimeupdate = () => {
-      if (!isPausedRef.current) setPosition(audio.currentTime);
-    };
-    audio.onloadedmetadata = () => setDuration(audio.duration);
-    audio.onplay = () => {};
-    audio.onpause = () => {};
-    audio.onended = () => {
-      skipNextSwapRef.current = true;
-      swapRef.current();
-      player.playNext();
-    };
-  }, [player]);
-
-  useEffect(() => { attachListenersRef.current = attachListeners; }, [attachListeners]);
-
-  // Mount
-  const isFirstRender = useRef(true);
+  // Mount — create single audio element
   useEffect(() => {
-    const audio = getActive();
-    if (!audio) return;
-    audio.src = songUrl;
-    audio.volume = volumeRef.current;
-    attachListeners(audio);
-
-    // iOS: audio element needs these attributes for background/lock screen audio
+    const audio = new Audio();
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
+    audio.preload = 'auto';
+    audioRef.current = audio;
 
-    audio.play().then(() => {
-      setIsPlaying(true);
-      preloadNext();
-    }).catch(() => {});
-
-    // Recovery: if iOS kills the audio due to a stall or network drop, reload and resume
-    const handleStalled = () => {
-      setTimeout(() => {
-        if (!isPausedRef.current && audio.paused) {
-          audio.load();
-          audio.currentTime = pausedAtRef.current;
-          audio.play().catch(() => {});
-        }
-      }, 1000);
+    audio.ontimeupdate = () => {
+      positionRef.current = audio.currentTime;
+      setPosition(audio.currentTime);
     };
-
-    const handleError = () => {
-      setTimeout(() => {
-        if (!isPausedRef.current) {
-          audio.load();
-          audio.currentTime = pausedAtRef.current;
-          audio.play().catch(() => {});
-        }
-      }, 1500);
+    audio.onloadedmetadata = () => setDuration(audio.duration);
+    audio.onended = () => player.playNext();
+    audio.onplay = () => setIsPlaying(true);
+    audio.onpause = () => {
+      // Only update state if truly paused (not a src swap)
+      if (!audio.src) return;
+      setIsPlaying(false);
     };
-
-    audio.addEventListener('stalled', handleStalled);
-    audio.addEventListener('error', handleError);
 
     return () => {
       audio.ontimeupdate = null;
       audio.onloadedmetadata = null;
+      audio.onended = null;
       audio.onplay = null;
       audio.onpause = null;
-      audio.onended = null;
-      audio.removeEventListener('stalled', handleStalled);
-      audio.removeEventListener('error', handleError);
+      audio.pause();
+      audio.src = '';
+      audioRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // External song change (manual skip)
+  // Song URL change — swap src and play
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    const audio = audioRef.current;
+    if (!audio || !songUrl) return;
 
-    if (skipNextSwapRef.current) {
-      skipNextSwapRef.current = false;
-      return;
-    }
-
-    // On iOS, canplay often never fires when the page is backgrounded or the
-    // audio session is interrupted. Instead we swap immediately: set the new src
-    // on the inactive element, swap it to active, and play — letting it buffer
-    // while playing rather than waiting for a canplay event that may never come.
-    const active = getActive();
-    const inactive = getInactive();
-    if (!inactive || !active) return;
-
-    // Tear down the current active element
-    active.ontimeupdate = null;
-    active.onloadedmetadata = null;
-    active.onplay = null;
-    active.onpause = null;
-    active.onended = null;
-    active.volume = 0;
-    active.pause();
-
-    // Flip the active ref
-    activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
-    const newActive = activeRef.current === 'A' ? audioRefA.current : audioRefB.current;
-    if (!newActive) return;
-
-    newActive.src = songUrl;
-    newActive.setAttribute('playsinline', 'true');
-    newActive.setAttribute('webkit-playsinline', 'true');
-
-    isPausedRef.current = false;
-    pausedAtRef.current = 0;
-
-    attachListenersRef.current(newActive);
-    newActive.volume = volumeRef.current;
-
-    // load() + play() — iOS requires load() before play() on a new src
-    newActive.load();
-    newActive.play().then(() => {
+    audio.src = songUrl;
+    audio.volume = volumeRef.current;
+    audio.load();
+    audio.play().then(() => {
       setIsPlaying(true);
       setPosition(0);
-      if (newActive.duration && !isNaN(newActive.duration)) setDuration(newActive.duration);
-      proxyRef.current = newActive;
-      preloadNext();
+      positionRef.current = 0;
     }).catch(() => {});
-
   }, [songUrl]);
 
+  // Volume change
   useEffect(() => {
-    const audio = getActive();
-    if (audio && !isPausedRef.current) audio.volume = volume;
-  }, [volume, getActive]);
+    const audio = audioRef.current;
+    if (audio) audio.volume = volume;
+  }, [volume]);
 
   const handlePlay = () => {
-    if (isPlaying) fakePause();
-    else fakePlay();
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
   };
 
   const handlePlayNextSong = () => player.playNext();
 
   const handlePlayPreviousSong = () => {
-    const audio = getActive();
+    const audio = audioRef.current;
     if (!audio) return;
     if (audio.currentTime > 3) {
       audio.currentTime = 0;
-      pausedAtRef.current = 0;
       setPosition(0);
     } else {
       player.playPrevious();
@@ -286,31 +115,23 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
   };
 
   const handleSeek = (value: number) => {
-    const audio = getActive();
-    if (audio) {
-      audio.currentTime = value;
-      pausedAtRef.current = value;
-      setPosition(value);
-      if (audio.duration && value >= audio.duration - 0.5) {
-        skipNextSwapRef.current = true;
-        swapRef.current();
-        player.playNext();
-      }
-    }
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = value;
+    setPosition(value);
+    positionRef.current = value;
   };
 
   const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 0);
 
-  const proxyRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => { proxyRef.current = getActive(); });
-
-  useMediaSession(isPlaying, song, proxyRef, fakePlay, fakePause);
+  useMediaSession(isPlaying, song, audioRef, () => {
+    audioRef.current?.play().catch(() => {});
+  }, () => {
+    audioRef.current?.pause();
+  });
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 h-full items-center justify-between w-full">
-      <audio ref={audioRefA} preload="auto" playsInline hidden />
-      <audio ref={audioRefB} preload="auto" playsInline hidden />
-
       <div className="flex items-center justify-center m-auto w-full space-x-4">
         <MediaItem data={song} />
         <LikedButton songId={song.id} />
