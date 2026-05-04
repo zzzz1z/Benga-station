@@ -37,15 +37,13 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
-          mkdir -p build/output
-          cp -r build/App.xcarchive/Products/Applications/*.app build/output/
-          cd build/output
-          mkdir Payload
-          cp -r *.app Payload/
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build
           zip -r BengaStation.ipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: BengaStation
-          path: spotify--banda/ios/App/build/output/BengaStation.ipa
+          path: spotify--banda/ios/App/build/BengaStation.ipa
