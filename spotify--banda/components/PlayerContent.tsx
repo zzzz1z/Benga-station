@@ -217,21 +217,47 @@ const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
       return;
     }
 
+    // On iOS, canplay often never fires when the page is backgrounded or the
+    // audio session is interrupted. Instead we swap immediately: set the new src
+    // on the inactive element, swap it to active, and play — letting it buffer
+    // while playing rather than waiting for a canplay event that may never come.
+    const active = getActive();
     const inactive = getInactive();
-    if (!inactive) return;
+    if (!inactive || !active) return;
 
-    inactive.src = songUrl;
-    inactive.volume = 0;
+    // Tear down the current active element
+    active.ontimeupdate = null;
+    active.onloadedmetadata = null;
+    active.onplay = null;
+    active.onpause = null;
+    active.onended = null;
+    active.volume = 0;
+    active.pause();
 
-    // iOS: ensure playsinline on the inactive element too
-    inactive.setAttribute('playsinline', 'true');
-    inactive.setAttribute('webkit-playsinline', 'true');
+    // Flip the active ref
+    activeRef.current = activeRef.current === 'A' ? 'B' : 'A';
+    const newActive = activeRef.current === 'A' ? audioRefA.current : audioRefB.current;
+    if (!newActive) return;
 
-    inactive.load();
+    newActive.src = songUrl;
+    newActive.setAttribute('playsinline', 'true');
+    newActive.setAttribute('webkit-playsinline', 'true');
 
-    const onCanPlay = () => swapRef.current();
-    inactive.addEventListener('canplay', onCanPlay, { once: true });
-    return () => inactive.removeEventListener('canplay', onCanPlay);
+    isPausedRef.current = false;
+    pausedAtRef.current = 0;
+
+    attachListenersRef.current(newActive);
+    newActive.volume = volumeRef.current;
+
+    // load() + play() — iOS requires load() before play() on a new src
+    newActive.load();
+    newActive.play().then(() => {
+      setIsPlaying(true);
+      setPosition(0);
+      if (newActive.duration && !isNaN(newActive.duration)) setDuration(newActive.duration);
+      proxyRef.current = newActive;
+      preloadNext();
+    }).catch(() => {});
 
   }, [songUrl]);
 
