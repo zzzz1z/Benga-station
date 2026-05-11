@@ -1,0 +1,291 @@
+'use client';
+
+import { Song } from "@/types";
+import useLoadImage from "@/hooks/useLoadImage";
+import usePlayer from "@/hooks/usePlayer";
+import LikedButton from "./LikedButton";
+import MusicSlider from "./MusicSlider";
+import Slider from "./Slider";
+import { BsPauseFill, BsPlayFill } from "react-icons/bs";
+import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
+import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
+import { IoChevronDown } from "react-icons/io5";
+import { AiOutlineInfoCircle } from "react-icons/ai";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+
+interface ExpandedPlayerProps {
+  song: Song;
+  isPlaying: boolean;
+  isLoading: boolean;
+  position: number;
+  duration: number;
+  volume: number;
+  onPlay: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onSeek: (value: number) => void;
+  onVolumeChange: (value: number) => void;
+  onToggleMute: () => void;
+  onClose: () => void;
+}
+
+const formatTime = (seconds: number) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+// Mini row used in the queue panel
+const QueueRow = ({
+  song,
+  label,
+  isCurrent,
+  onClick,
+}: {
+  song: Song;
+  label?: string;
+  isCurrent?: boolean;
+  onClick?: () => void;
+}) => {
+  const imageUrl = useLoadImage(song);
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center gap-x-3 px-3 py-2 rounded-lg transition
+        ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5 cursor-pointer'}`}
+    >
+      <div className="relative w-9 h-9 rounded-md overflow-hidden flex-shrink-0">
+        <Image
+          fill
+          src={imageUrl ?? '/images/likedit.png'}
+          alt={song.title}
+          className="object-cover"
+          sizes="36px"
+          unoptimized
+        />
+      </div>
+      <div className="flex flex-col min-w-0 flex-1">
+        <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>
+          {song.title}
+        </p>
+        <p className="text-neutral-500 text-xs truncate">{song.author}</p>
+      </div>
+      {label && (
+        <span className={`text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium
+          ${isCurrent ? 'bg-white/20 text-white' : 'bg-white/10 text-neutral-400'}`}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+};
+
+const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
+  song, isPlaying, isLoading, position, duration, volume,
+  onPlay, onNext, onPrevious, onSeek, onVolumeChange, onToggleMute, onClose,
+}) => {
+  const imageUrl = useLoadImage(song);
+  const router = useRouter();
+  const player = usePlayer();
+  const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
+
+  const touchStartY = useRef<number | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
+
+  // Derive history and upcoming from the store
+  const { ids, songs, activeID } = player;
+  const currentIndex = ids.findIndex(id => id === activeID);
+  const history = currentIndex > 0
+    ? ids.slice(Math.max(0, currentIndex - 3), currentIndex).map(id => songs[id]).filter(Boolean)
+    : [];
+  const upcoming = currentIndex !== -1 && currentIndex < ids.length - 1
+    ? ids.slice(currentIndex + 1, currentIndex + 4).map(id => songs[id]).filter(Boolean)
+    : [];
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) setDragY(delta);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragY > 100) onClose();
+    setDragY(0);
+    setIsDragging(false);
+    touchStartY.current = null;
+  };
+
+  const renderPlayButton = () => {
+    if (isLoading) {
+      return <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />;
+    }
+    return isPlaying
+      ? <BsPauseFill size={32} className="text-black" />
+      : <BsPlayFill size={32} className="text-black" />;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-neutral-900 flex flex-col"
+      style={{
+        transform: `translateY(${dragY}px)`,
+        transition: isDragging ? 'none' : 'transform 0.3s ease',
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Drag pill */}
+      <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div className="w-10 h-1 rounded-full bg-neutral-600" />
+      </div>
+
+      {/* Scrollable inner content */}
+      <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between pt-[60px] flex-shrink-0">
+          <button onClick={onClose} className="text-white p-2 -ml-2">
+            <IoChevronDown size={26} />
+          </button>
+          <p className="text-white text-sm font-medium">A tocar agora</p>
+          <button
+            onClick={() => { router.push(`/songs/${song.id}`); onClose(); }}
+            className="text-neutral-400 hover:text-white transition p-2 -mr-2"
+          >
+            <AiOutlineInfoCircle size={22} />
+          </button>
+        </div>
+
+        {/* Cover */}
+        <div className="flex justify-center flex-shrink-0">
+          <div className="relative w-64 h-64 rounded-2xl overflow-hidden shadow-2xl">
+            <Image
+              fill
+              src={imageUrl ?? '/images/likedit.png'}
+              alt={song.title}
+              className="object-cover"
+              sizes="256px"
+              unoptimized
+              priority
+            />
+          </div>
+        </div>
+
+        {/* Title + like */}
+        <div className="flex items-center justify-between flex-shrink-0">
+          <div className="flex flex-col min-w-0 flex-1 pr-4">
+            <p className="text-white text-xl font-bold truncate">{song.title}</p>
+            <p className="text-neutral-400 text-sm truncate mt-0.5">{song.author}</p>
+          </div>
+          <LikedButton songId={String(song.id)} />
+        </div>
+
+        {/* Seek bar */}
+        <div className="flex-shrink-0">
+          <MusicSlider value={position} onChange={onSeek} max={duration} />
+          <div className="flex justify-between mt-1 px-1">
+            <span className="text-neutral-400 text-xs">{formatTime(position)}</span>
+            <span className="text-neutral-400 text-xs">{formatTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Playback controls */}
+        <div className="flex items-center justify-center gap-x-10 flex-shrink-0">
+          <AiFillStepBackward onClick={onPrevious} size={34}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
+          <div onClick={onPlay}
+            className="flex items-center justify-center h-16 w-16 rounded-full bg-white cursor-pointer shadow-lg">
+            {renderPlayButton()}
+          </div>
+          <AiFillStepForward onClick={onNext} size={34}
+            className="text-neutral-400 cursor-pointer hover:text-white transition" />
+        </div>
+
+        {/* Volume */}
+        <div className="flex items-center gap-x-3 flex-shrink-0">
+          <VolumeIcon onClick={onToggleMute} size={20}
+            className="text-neutral-400 cursor-pointer flex-shrink-0" />
+          <Slider value={volume} onChange={onVolumeChange} />
+        </div>
+
+        {/* Queue panel */}
+        {(history.length > 0 || upcoming.length > 0) && (
+          <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+            {/* Header toggle */}
+            <button
+              onClick={() => setQueueOpen(prev => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition"
+            >
+              <span className="text-xs font-semibold uppercase tracking-widest">Fila de reprodução</span>
+              <span className="text-xs text-neutral-500">
+                {queueOpen ? '▲' : '▼'}
+              </span>
+            </button>
+
+            {queueOpen && (
+              <div className="pb-2">
+                {/* History */}
+                {history.length > 0 && (
+                  <>
+                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-1 pb-1">
+                      Anteriores
+                    </p>
+                    {history.map((s, i) => (
+                      <QueueRow
+                        key={`hist-${i}`}
+                        song={s}
+                        onClick={() => {
+                          const pid = ids[currentIndex - (history.length - i)];
+                          player.setId(pid);
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {/* Current */}
+                <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
+                  A tocar
+                </p>
+                <QueueRow song={song} isCurrent label="▶" />
+
+                {/* Upcoming */}
+                {upcoming.length > 0 && (
+                  <>
+                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
+                      A seguir
+                    </p>
+                    {upcoming.map((s, i) => (
+                      <QueueRow
+                        key={`up-${i}`}
+                        song={s}
+                        onClick={() => {
+                          const pid = ids[currentIndex + 1 + i];
+                          player.setId(pid);
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+export default ExpandedPlayer;

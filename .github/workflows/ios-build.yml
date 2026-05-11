@@ -1,0 +1,58 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          cd spotify--banda
+          npm install
+
+      - name: Sync Capacitor
+        run: |
+          cd spotify--banda
+          npx cap sync ios
+
+      - name: Set App Icon
+        run: |
+          sips -z 1024 1024 \
+            spotify--banda/public/icons/apple-touch-icon.png \
+            --out spotify--banda/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+
+      - name: Build IPA
+        run: |
+          cd spotify--banda/ios/App
+          xcodebuild \
+            -scheme App \
+            -configuration Release \
+            -archivePath $PWD/build/App.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          ditto -c -k --sequesterRsrc --keepParent build/Payload BengaStation.ipa
+          mv BengaStation.ipa build/BengaStation.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: BengaStation
+          path: spotify--banda/ios/App/build/BengaStation.ipa

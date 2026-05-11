@@ -1,0 +1,26 @@
+{
+  "name": "Benga Station",
+  "identifier": "com.zzzz1z.bengastation",
+  "sourceURL": "https://raw.githubusercontent.com/zzzz1z/Benga-station/main/altstore-source.json",
+  "apps": [
+    {
+      "name": "Benga Station",
+      "bundleIdentifier": "com.zzzz1z.bengastation",
+      "developerName": "zzzz1z",
+      "subtitle": "Music streaming app",
+      "localizedDescription": "Benga Station — stream your music.",
+      "iconURL": "https://benga-station.vercel.app/icons/icon-512x512.png",
+      "tintColor": "000000",
+      "screenshots": [],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "date": "2026-05-04",
+          "localizedDescription": "Initial release.",
+          "downloadURL": "https://github.com/zzzz1z/Benga-station/releases/download/v1.0.0/BengaStation.ipa",
+          "size": 0
+        }
+      ]
+    }
+  ]
+}
