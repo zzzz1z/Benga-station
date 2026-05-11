@@ -158,7 +158,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
       const newResults: YTResult[] = data.results.slice(0, 8);
 
-      // pre-extract all new results in parallel
       const extractResults = await Promise.all(
         newResults.map(async r => {
           const ok = await preExtract(r.videoId);
@@ -169,14 +168,12 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
       const available = extractResults.filter(x => x.ok).map(x => x.r);
       if (!available.length) return;
 
-      // update availableIdsRef and readyIds
       available.forEach(r => {
         availableIdsRef.current.add(r.videoId);
       });
       setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
       setResults(prev => [...prev, ...newResults]);
 
-      // append to the player store
       const newSongs = available.map(r => ({
         id: `yt_${r.videoId}`,
         user_id: 'youtube',
@@ -188,10 +185,15 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         youtube_video_id: r.videoId,
       }));
 
-      const { ids, songs, activeID: currentActive } = usePlayer.getState();
+      // Get current state and filter out duplicates
+      const { ids, songs } = usePlayer.getState();
+      const existingIdSet = new Set(ids);
+      const trulyNew = newSongs.filter(s => !existingIdSet.has(s.id));
+      if (!trulyNew.length) return;
+
       const updatedSongs = { ...songs };
-      newSongs.forEach(s => { updatedSongs[s.id] = s as any; });
-      const updatedIds = [...ids, ...newSongs.map(s => s.id)];
+      trulyNew.forEach(s => { updatedSongs[s.id] = s as any; });
+      const updatedIds = [...ids, ...trulyNew.map(s => s.id)];
 
       usePlayer.setState({ ids: updatedIds, songs: updatedSongs });
 

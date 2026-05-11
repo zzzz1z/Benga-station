@@ -26,10 +26,7 @@ export async function POST(request: Request) {
             .select()
             .single();
 
-        if (upsertError) {
-            console.error('UPSERT ERROR', upsertError);
-            return NextResponse.json({ error: upsertError.message, detail: upsertError }, { status: 500 });
-        }
+        if (upsertError) return NextResponse.json({ error: 'Failed to upsert song' }, { status: 500 });
         songId = upserted.id;
     } else {
         songId = song.id;
@@ -41,10 +38,7 @@ export async function POST(request: Request) {
         user_id: user.id,
     });
 
-    if (error) {
-        console.error('INSERT ERROR', error);
-        return NextResponse.json({ error: error.message, detail: error }, { status: 409 });
-    }
+    if (error) return NextResponse.json({ error: 'Song already in playlist' }, { status: 409 });
 
     return NextResponse.json({ ok: true });
 }

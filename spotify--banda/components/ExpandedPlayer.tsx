@@ -9,7 +9,7 @@ import Slider from "./Slider";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
-import { IoChevronDown } from "react-icons/io5";
+import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -38,16 +38,17 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// Mini row used in the queue panel
 const QueueRow = ({
   song,
   label,
   isCurrent,
+  dimmed,
   onClick,
 }: {
   song: Song;
   label?: string;
   isCurrent?: boolean;
+  dimmed?: boolean;
   onClick?: () => void;
 }) => {
   const imageUrl = useLoadImage(song);
@@ -55,15 +56,15 @@ const QueueRow = ({
     <div
       onClick={onClick}
       className={`flex items-center gap-x-3 px-3 py-2 rounded-lg transition
-        ${isCurrent ? 'bg-white/10' : 'hover:bg-white/5 cursor-pointer'}`}
+        ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50 hover:opacity-75 cursor-pointer' : 'hover:bg-white/5 cursor-pointer'}`}
     >
-      <div className="relative w-9 h-9 rounded-md overflow-hidden flex-shrink-0">
+      <div className="relative w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
         <Image
           fill
           src={imageUrl ?? '/images/likedit.png'}
           alt={song.title}
           className="object-cover"
-          sizes="36px"
+          sizes="32px"
           unoptimized
         />
       </div>
@@ -71,7 +72,7 @@ const QueueRow = ({
         <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>
           {song.title}
         </p>
-        <p className="text-neutral-500 text-xs truncate">{song.author}</p>
+        <p className="text-neutral-500 text-[10px] truncate">{song.author}</p>
       </div>
       {label && (
         <span className={`text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium
@@ -95,17 +96,22 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [queueOpen, setQueueOpen] = useState(false);
+  const [queueExpanded, setQueueExpanded] = useState(false);
 
-  // Derive history and upcoming from the store
   const { ids, songs, activeID } = player;
   const currentIndex = ids.findIndex(id => id === activeID);
+
+  // All history and upcoming
   const history = currentIndex > 0
-    ? ids.slice(Math.max(0, currentIndex - 3), currentIndex).map(id => songs[id]).filter(Boolean)
+    ? ids.slice(0, currentIndex).map(id => songs[id]).filter(Boolean)
     : [];
   const upcoming = currentIndex !== -1 && currentIndex < ids.length - 1
-    ? ids.slice(currentIndex + 1, currentIndex + 4).map(id => songs[id]).filter(Boolean)
+    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter(Boolean)
     : [];
+
+  // Preview: 1 before + current + 1 after
+  const previewHistory = history.slice(-1);
+  const previewUpcoming = upcoming.slice(0, 1);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -133,6 +139,8 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       ? <BsPauseFill size={32} className="text-black" />
       : <BsPlayFill size={32} className="text-black" />;
   };
+
+  const hasQueue = history.length > 0 || upcoming.length > 0;
 
   return (
     <div
@@ -220,59 +228,93 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         </div>
 
         {/* Queue panel */}
-        {(history.length > 0 || upcoming.length > 0) && (
+        {hasQueue && (
           <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-            {/* Header toggle */}
+
+            {/* Header */}
             <button
-              onClick={() => setQueueOpen(prev => !prev)}
+              onClick={() => setQueueExpanded(prev => !prev)}
               className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition"
             >
-              <span className="text-xs font-semibold uppercase tracking-widest">Fila de reprodução</span>
-              <span className="text-xs text-neutral-500">
-                {queueOpen ? '▲' : '▼'}
+              <span className="text-xs font-semibold uppercase tracking-widest">
+                Fila de reprodução
               </span>
+              <div className="flex items-center gap-x-2">
+                <span className="text-[10px] text-neutral-600">
+                  {history.length + 1 + upcoming.length} músicas
+                </span>
+                {queueExpanded
+                  ? <IoChevronUp size={14} />
+                  : <IoChevronDown size={14} />
+                }
+              </div>
             </button>
 
-            {queueOpen && (
+            {/* Preview (collapsed) */}
+            {!queueExpanded && (
               <div className="pb-2">
-                {/* History */}
+                {previewHistory.map((s, i) => (
+                  <QueueRow
+                    key={`prev-hist-${i}`}
+                    song={s}
+                    dimmed
+                    onClick={() => {
+                      const pid = ids[currentIndex - (previewHistory.length - i)];
+                      player.setId(pid);
+                    }}
+                  />
+                ))}
+                <QueueRow song={song} isCurrent label="▶" />
+                {previewUpcoming.map((s, i) => (
+                  <QueueRow
+                    key={`prev-up-${i}`}
+                    song={s}
+                    onClick={() => {
+                      const pid = ids[currentIndex + 1 + i];
+                      player.setId(pid);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Expanded full list */}
+            {queueExpanded && (
+              <div className="pb-2 max-h-72 overflow-y-auto">
                 {history.length > 0 && (
                   <>
                     <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-1 pb-1">
-                      Anteriores
+                      Anteriores ({history.length})
                     </p>
                     {history.map((s, i) => (
                       <QueueRow
                         key={`hist-${i}`}
                         song={s}
+                        dimmed
                         onClick={() => {
-                          const pid = ids[currentIndex - (history.length - i)];
-                          player.setId(pid);
+                          player.setId(ids[i]);
                         }}
                       />
                     ))}
                   </>
                 )}
 
-                {/* Current */}
                 <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
                   A tocar
                 </p>
                 <QueueRow song={song} isCurrent label="▶" />
 
-                {/* Upcoming */}
                 {upcoming.length > 0 && (
                   <>
                     <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
-                      A seguir
+                      A seguir ({upcoming.length})
                     </p>
                     {upcoming.map((s, i) => (
                       <QueueRow
                         key={`up-${i}`}
                         song={s}
                         onClick={() => {
-                          const pid = ids[currentIndex + 1 + i];
-                          player.setId(pid);
+                          player.setId(ids[currentIndex + 1 + i]);
                         }}
                       />
                     ))}
