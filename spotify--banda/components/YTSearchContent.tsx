@@ -63,10 +63,8 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
   const availableIdsRef = useRef<Set<string>>(new Set());
   const stuckTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const scheduledIdsRef = useRef<Set<string>>(new Set());
-
-  // for infinite queue
-  const nextPageTokenRef = useRef<string | null>(null);
   const isFetchingMoreRef = useRef(false);
+  const nextPageTokenRef = useRef<string | null>(null);
   const currentQueryRef = useRef<string>('');
 
   const startPhraseCycle = () => {
@@ -143,7 +141,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     stuckTimersRef.current.set(videoId, t);
   }, [markUnavailable]);
 
-  // Fetch more results and append to the player queue
   const fetchMoreAndAppend = useCallback(async () => {
     if (isFetchingMoreRef.current) return;
     if (!nextPageTokenRef.current) return;
@@ -210,6 +207,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
   // Watch queue position — when 2 songs from end, fetch more
   useEffect(() => {
     if (!activeID || !playerIds.length) return;
+    if (isFetchingMoreRef.current) return;
     const currentIndex = playerIds.findIndex(id => id === activeID);
     if (currentIndex === -1) return;
     const songsLeft = playerIds.length - 1 - currentIndex;
@@ -229,6 +227,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
       scheduledIdsRef.current = new Set();
       nextPageTokenRef.current = null;
       currentQueryRef.current = '';
+      isFetchingMoreRef.current = false;
       stopPhraseCycle();
       clearStuckTimers();
       return;
@@ -246,6 +245,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     scheduledIdsRef.current = new Set();
     nextPageTokenRef.current = null;
     currentQueryRef.current = query;
+    isFetchingMoreRef.current = false;
     stopPhraseCycle();
     clearStuckTimers();
 
