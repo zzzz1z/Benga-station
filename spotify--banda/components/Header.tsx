@@ -17,7 +17,6 @@ import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { AiOutlineFileAdd } from "react-icons/ai";
 
-const supabase = createClient();
 
 interface HeaderProps {
   children: React.ReactNode;
