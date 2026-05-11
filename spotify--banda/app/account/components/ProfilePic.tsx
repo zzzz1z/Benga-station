@@ -1,19 +1,22 @@
+'use client';
+
 import { createClient } from '@/utils/supabase/client';
 import React, { useEffect, useState } from "react";
 import ButtonUploadOrChange from "./ButtonUploadOrChange";
-
-const supabase = createClient();
+import Image from "next/image";
 
 const ProfilePic = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const fetchUserImage = async () => {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
     const { data, error } = await supabase
       .from("users")
       .select("avatar_url")
-      .eq('id', user?.id)
+      .eq('id', user.id)
       .single();
 
     if (error) {
@@ -35,20 +38,25 @@ const ProfilePic = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      {imageUrl ? (
-        <>
-          <img src={imageUrl} alt="Profile" className="w-28 h-28" />
-          <ButtonUploadOrChange hasAvatar={true} onImageUpdate={handleImageUpdate} />
-        </>
-      ) : (
-        <>
-          <div className="w-34 h-34 bg-gray-300 rounded-full flex items-center justify-center">
-            <span>Sem Foto</span>
-          </div>
-          <ButtonUploadOrChange hasAvatar={false} onImageUpdate={handleImageUpdate} />
-        </>
-      )}
+    <div className="flex flex-col items-center gap-y-4">
+      <div className="relative w-40 h-40 rounded-full overflow-hidden bg-neutral-700 flex items-center justify-center flex-shrink-0">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt="Profile"
+            fill
+            className="object-cover"
+            sizes="160px"
+            unoptimized
+          />
+        ) : (
+          <span className="text-neutral-400 text-sm">Sem Foto</span>
+        )}
+      </div>
+      <ButtonUploadOrChange
+        hasAvatar={!!imageUrl}
+        onImageUpdate={handleImageUpdate}
+      />
     </div>
   );
 };
