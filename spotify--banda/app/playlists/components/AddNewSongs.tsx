@@ -8,7 +8,6 @@ import ModalToAddNewSongs from './ModalToAddNewSongs';
 import MediaItem from '@/components/MediaItem';
 import { CiCirclePlus } from 'react-icons/ci';
 import { MdOutlineNotInterested } from 'react-icons/md';
-import { FaPlay } from 'react-icons/fa';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 
@@ -41,10 +40,11 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
   const [ytQuery, setYtQuery] = useState('');
   const [ytResults, setYtResults] = useState<YTResult[]>([]);
   const [ytSearching, setYtSearching] = useState(false);
-  const [ytLoadingId, setYtLoadingId] = useState<string | null>(null);
   const [ytReadyIds, setYtReadyIds] = useState<Set<string>>(new Set());
   const [ytUnavailableIds, setYtUnavailableIds] = useState<Set<string>>(new Set());
-  const [ytAddingId, setYtAddingId] = useState<string | null>(null);
+  const [ytLoadingIds, setYtLoadingIds] = useState<Set<string>>(new Set());
+  const [ytSelectedIds, setYtSelectedIds] = useState<Set<string>>(new Set());
+  const [ytAdding, setYtAdding] = useState(false);
   const ytAbortRef = useRef<AbortController | null>(null);
 
   const fetchSongs = async () => {
@@ -116,6 +116,9 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
     setYtResults([]);
     setYtReadyIds(new Set());
     setYtUnavailableIds(new Set());
+    setYtLoadingIds(new Set());
+    setYtSelectedIds(new Set());
+
     try {
       const res = await fetch(
         `/api/youtube/search?q=${encodeURIComponent(ytQuery)}`,
@@ -124,10 +127,10 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
       const data = await res.json();
       const results: YTResult[] = (data.results || []).slice(0, 8);
       setYtResults(results);
+      setYtLoadingIds(new Set(results.map(r => r.videoId)));
 
       // preextract all in parallel
       results.forEach(async r => {
-        setYtLoadingId(r.videoId);
         try {
           const res = await fetch('/api/preextract', {
             method: 'POST',
@@ -142,7 +145,11 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
         } catch {
           setYtUnavailableIds(prev => new Set([...prev, r.videoId]));
         } finally {
-          setYtLoadingId(null);
+          setYtLoadingIds(prev => {
+            const next = new Set(prev);
+            next.delete(r.videoId);
+            return next;
+          });
         }
       });
     } catch (err: any) {
@@ -152,33 +159,62 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
     }
   }, [ytQuery]);
 
-  const handleAddYtSong = async (r: YTResult) => {
+  const toggleYtSelect = (r: YTResult) => {
     if (ytUnavailableIds.has(r.videoId)) return;
-    setYtAddingId(r.videoId);
-    try {
-      const res = await fetch('/api/playlist/add-song', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playlistId,
-          song: {
-            title: r.title,
-            author: r.artist,
-            source: 'youtube',
-            youtube_video_id: r.videoId,
-            image_path: r.thumbnail,
-          },
-        }),
-      });
-      if (res.status === 409) toast.error('Música já está na playlist');
-      else if (!res.ok) toast.error('Erro ao adicionar música');
-      else {
-        toast.success('Adicionado à playlist!');
-        refreshPlaylist();
-      }
-    } finally {
-      setYtAddingId(null);
-    }
+    setYtSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(r.videoId) ? next.delete(r.videoId) : next.add(r.videoId);
+      return next;
+    });
+  };
+
+  const handleAddYtSongs = async () => {
+    if (ytSelectedIds.size === 0) return;
+    setYtAdding(true);
+
+    const selected = ytResults.filter(r => ytSelectedIds.has(r.videoId));
+    const results = await Promise.allSettled(
+      selected.map(r =>
+        fetch('/api/playlist/add-song', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            playlistId,
+            song: {
+              title: r.title,
+              author: r.artist,
+              source: 'youtube',
+              youtube_video_id: r.videoId,
+              image_path: r.thumbnail,
+            },
+          }),
+        }).then(res => ({ res, r }))
+      )
+    );
+
+    const failed = results.filter(
+      r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.res.ok && r.value.res.status !== 409)
+    ).length;
+    const duplicates = results.filter(
+      r => r.status === 'fulfilled' && r.value.res.status === 409
+    ).length;
+    const succeeded = results.length - failed - duplicates;
+
+    if (succeeded > 0) toast.success(`${succeeded} música${succeeded > 1 ? 's' : ''} adicionada${succeeded > 1 ? 's' : ''}!`);
+    if (duplicates > 0) toast.error(`${duplicates} já estava${duplicates > 1 ? 'm' : ''} na playlist`);
+    if (failed > 0) toast.error(`${failed} falhara${failed > 1 ? 'm' : ''}`);
+
+    setYtSelectedIds(new Set());
+    setYtAdding(false);
+    refreshPlaylist();
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTab('db');
+    setYtQuery('');
+    setYtResults([]);
+    setYtSelectedIds(new Set());
   };
 
   return (
@@ -189,7 +225,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
 
       <ModalToAddNewSongs
         isOpen={isOpen}
-        onClose={() => { setIsOpen(false); setTab('db'); setYtQuery(''); setYtResults([]); }}
+        onClose={handleClose}
         title="Adicionar músicas à Playlist"
       >
         {/* Tab switcher */}
@@ -261,18 +297,18 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto flex flex-col gap-y-1 mt-1">
+            <div className="max-h-64 overflow-y-auto flex flex-col gap-y-1 mt-1">
               {ytResults.map(r => {
                 const isUnavailable = ytUnavailableIds.has(r.videoId);
-                const isReady = ytReadyIds.has(r.videoId);
-                const isLoading = ytLoadingId === r.videoId || (!isReady && !isUnavailable);
-                const isAdding = ytAddingId === r.videoId;
+                const isLoading = ytLoadingIds.has(r.videoId);
+                const isSelected = ytSelectedIds.has(r.videoId);
 
                 return (
                   <div
                     key={r.videoId}
-                    className={`flex items-center gap-x-3 p-2 rounded-lg transition
-                      ${isUnavailable ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800 cursor-pointer'}`}
+                    onClick={() => !isUnavailable && !isLoading && toggleYtSelect(r)}
+                    className={`flex items-center gap-x-3 p-2 rounded-lg transition cursor-pointer
+                      ${isUnavailable ? 'opacity-40 cursor-not-allowed' : isSelected ? 'bg-white/10 ring-1 ring-red-500' : 'hover:bg-neutral-800'}`}
                   >
                     <div className="relative w-10 h-10 rounded-md overflow-hidden flex-shrink-0 bg-neutral-700">
                       <Image src={r.thumbnail} alt={r.title} fill className="object-cover" unoptimized />
@@ -281,24 +317,35 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
                       <p className="text-white text-sm font-medium truncate">{r.title}</p>
                       <p className="text-neutral-400 text-xs truncate">{r.artist}</p>
                     </div>
-                    <button
-                      onClick={() => !isUnavailable && !isAdding && handleAddYtSong(r)}
-                      disabled={isUnavailable || isAdding}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs rounded-lg bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-40"
-                    >
-                      {isAdding
-                        ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                        : isUnavailable
-                        ? <MdOutlineNotInterested size={14} />
-                        : isLoading
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                      {isLoading
                         ? <div className="w-3 h-3 border border-neutral-400 border-t-transparent rounded-full animate-spin" />
-                        : '+ Adicionar'
+                        : isUnavailable
+                        ? <MdOutlineNotInterested size={14} className="text-neutral-600" />
+                        : isSelected
+                        ? <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+                            <span className="text-white text-[8px] font-bold">✓</span>
+                          </div>
+                        : <div className="w-4 h-4 rounded-full border border-neutral-600" />
                       }
-                    </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {ytSelectedIds.size > 0 && (
+              <Button
+                onClick={handleAddYtSongs}
+                disabled={ytAdding}
+                className="mt-2"
+              >
+                {ytAdding
+                  ? 'A adicionar...'
+                  : `Adicionar ${ytSelectedIds.size} música${ytSelectedIds.size > 1 ? 's' : ''}`
+                }
+              </Button>
+            )}
           </div>
         )}
       </ModalToAddNewSongs>
