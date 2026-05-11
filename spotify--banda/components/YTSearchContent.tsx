@@ -62,6 +62,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
   const phraseIndexRef = useRef(0);
   const availableIdsRef = useRef<Set<string>>(new Set());
   const stuckTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const scheduledIdsRef = useRef<Set<string>>(new Set());
 
   // for infinite queue
   const nextPageTokenRef = useRef<string | null>(null);
@@ -108,8 +109,11 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
   }, []);
 
   const scheduleStuckCheck = useCallback((videoId: string, completedCountRef: { value: number }, total: number) => {
+    if (scheduledIdsRef.current.has(videoId)) return;
+    scheduledIdsRef.current.add(videoId);
+
     const t = setTimeout(async () => {
-      if (!readyIds.has(videoId) && !unavailableIds.has(videoId)) {
+      if (!availableIdsRef.current.has(videoId)) {
         const retryAbort = new AbortController();
         const retryTimeout = setTimeout(() => retryAbort.abort(), EXTRACT_RETRY_TIMEOUT_MS);
         const success = await preExtract(videoId, retryAbort.signal);
@@ -137,7 +141,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     }, EXTRACT_TIMEOUT_MS);
 
     stuckTimersRef.current.set(videoId, t);
-  }, [markUnavailable, readyIds, unavailableIds]);
+  }, [markUnavailable]);
 
   // Fetch more results and append to the player queue
   const fetchMoreAndAppend = useCallback(async () => {
@@ -185,7 +189,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         youtube_video_id: r.videoId,
       }));
 
-      // Get current state and filter out duplicates
       const { ids, songs } = usePlayer.getState();
       const existingIdSet = new Set(ids);
       const trulyNew = newSongs.filter(s => !existingIdSet.has(s.id));
@@ -223,6 +226,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
       setUnavailableIds(new Set());
       setAllReady(false);
       availableIdsRef.current = new Set();
+      scheduledIdsRef.current = new Set();
       nextPageTokenRef.current = null;
       currentQueryRef.current = '';
       stopPhraseCycle();
@@ -239,6 +243,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     setUnavailableIds(new Set());
     setAllReady(false);
     availableIdsRef.current = new Set();
+    scheduledIdsRef.current = new Set();
     nextPageTokenRef.current = null;
     currentQueryRef.current = query;
     stopPhraseCycle();
