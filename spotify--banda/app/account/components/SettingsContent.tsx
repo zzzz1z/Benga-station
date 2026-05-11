@@ -36,7 +36,7 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
         <div className="flex flex-col w-full h-full">
 
             {/* Instagram-style profile header */}
-            <div className="flex flex-col px-6 pt-8 pb-4 gap-y-4">
+            <div className="flex flex-col px-6 pt-3 pb-4 gap-y-4">
                 <div className="flex items-center gap-x-6">
                     <ProfilePic />
                     <div className="flex flex-1 justify-around">

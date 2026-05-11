@@ -8,7 +8,7 @@ const PlaylistPage = () => {
  
 
   return (
-    <PlaylistDetails data={[]}/>
+    <PlaylistDetails />
   );
 };
 
