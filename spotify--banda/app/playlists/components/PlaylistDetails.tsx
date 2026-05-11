@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Header from '@/components/Header';
@@ -12,23 +12,22 @@ import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
 import useOnPlaylist from '@/hooks/useOnPlaylist';
+import toast from 'react-hot-toast';
+import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 
 const supabase = createClient();
-
-interface PlaylistDetailsProps {
-  data: Playlist['songs'];
-}
 
 const getSongPlayerId = (song: any): string =>
     song.source === 'youtube' && song.youtube_video_id
         ? `yt_${song.youtube_video_id}`
         : String(song.id);
 
-const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ data }) => {
+const PlaylistDetails: React.FC = () => {
   const { id } = useParams();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlaylist();
 
   const fetchPlaylist = async () => {
@@ -67,6 +66,42 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ data }) => {
     fetchPlaylist();
   }, [id]);
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !playlist) return;
+
+    setUploadingCover(true);
+    try {
+      const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('playlist-covers')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('playlist-covers')
+        .getPublicUrl(uploadData.path);
+
+      const { error: updateError } = await supabase
+        .from('Playlists')
+        .update({ cover_image: urlData.publicUrl })
+        .eq('id', playlist.id);
+
+      if (updateError) throw updateError;
+
+      setPlaylist(prev => prev ? { ...prev, cover_image: urlData.publicUrl } : prev);
+      toast.success('Capa atualizada!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao atualizar capa.');
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -88,20 +123,44 @@ const PlaylistDetails: React.FC<PlaylistDetailsProps> = ({ data }) => {
       <Header>
         <div className="mt-20">
           <div className="flex flex-col md:flex-row items-center gap-x-5">
-            <div className="relative h-32 w-32 lg:h-44 lg:w-44">
+
+            {/* Cover — click to change */}
+            <div
+              className="relative h-32 w-32 lg:h-44 lg:w-44 group cursor-pointer flex-shrink-0"
+              onClick={() => coverInputRef.current?.click()}
+            >
               <Image
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                alt="Lista de Músicas"
-                className="object-cover"
-                src={playlist.cover_image}
+                alt="Capa da playlist"
+                className="object-cover rounded-md"
+                src={playlist.cover_image || '/images/likedit.png'}
                 priority
               />
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-md flex flex-col items-center justify-center gap-y-1">
+                {uploadingCover
+                  ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <>
+                      <MdOutlineAddPhotoAlternate size={24} className="text-white" />
+                      <span className="text-white text-xs font-medium">Alterar capa</span>
+                    </>
+                }
+              </div>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverUpload}
+              />
             </div>
+
             <div className="flex flex-col gap-y-2 mt-4 md:mt-0">
               <h1 className="text-white text-4xl sm:text-5xl lg:text-7xl font-bold">
                 {playlist.title}
               </h1>
+              <p className="text-neutral-400 text-sm">{playlist.songs.length} músicas</p>
             </div>
           </div>
         </div>
