@@ -4,11 +4,11 @@
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
-import ProfilePic from '../../components/ProfilePic';
 
 import useAdminModal from '@/hooks/useAdminModal';
-import DefinicoesTab from '../../components/DefinicoesTab';
-import CasaTab from '../../components/CasaTab';
+import CasaTab from './CasaTab';
+import DefinicoesTab from './DefinicoesTab';
+import ProfilePic from './ProfilePic';
 
 const SettingsContent = () => {
     const router = useRouter();
