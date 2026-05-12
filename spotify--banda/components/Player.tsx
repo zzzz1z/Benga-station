@@ -236,8 +236,7 @@ const Player = () => {
     onNext: handleNext,
     onPrevious: handlePrevious,
     onSeek: handleSeek,
-    onVolumeChange: setVolume,
-    onToggleMute: toggleMute,
+onVolumeChange: (v: number) => { console.log('volume:', v); setVolume(v); },    onToggleMute: toggleMute,
   };
 
   return (
