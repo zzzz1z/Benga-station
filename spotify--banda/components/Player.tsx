@@ -177,10 +177,11 @@ const Player = () => {
     return () => clearTimeout(timer);
   }, [songUrl]);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) audio.volume = volume;
-  }, [volume]);
+useEffect(() => {
+  const audio = audioRef.current;
+  console.log('audio ref:', audio, 'volume to set:', volume);
+  if (audio) audio.volume = volume;
+}, [volume]);
 
   const handlePlay = () => {
     const audio = audioRef.current;
