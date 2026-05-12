@@ -5,12 +5,11 @@ import useLoadImage from "@/hooks/useLoadImage";
 import usePlayer from "@/hooks/usePlayer";
 import LikedButton from "./LikedButton";
 import MusicSlider from "./MusicSlider";
-import Slider from "./Slider";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
-import { HiSpeakerWave, HiSpeakerXMark } from "react-icons/hi2";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
+import { TbRepeat, TbRepeatOnce, TbArrowsShuffle } from "react-icons/tb";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -84,24 +83,26 @@ const QueueRow = ({
   );
 };
 
+type RepeatMode = 'off' | 'all' | 'one';
+
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
-  song, isPlaying, isLoading, position, duration, volume,
-  onPlay, onNext, onPrevious, onSeek, onVolumeChange, onToggleMute, onClose,
+  song, isPlaying, isLoading, position, duration,
+  onPlay, onNext, onPrevious, onSeek, onClose,
 }) => {
   const imageUrl = useLoadImage(song);
   const router = useRouter();
   const player = usePlayer();
-  const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [queueExpanded, setQueueExpanded] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [shuffleOn, setShuffleOn] = useState(false);
 
   const { ids, songs, activeID } = player;
   const currentIndex = ids.findIndex(id => id === activeID);
 
-  // All history and upcoming
   const history = currentIndex > 0
     ? ids.slice(0, currentIndex).map(id => songs[id]).filter(Boolean)
     : [];
@@ -109,7 +110,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     ? ids.slice(currentIndex + 1).map(id => songs[id]).filter(Boolean)
     : [];
 
-  // Preview: 1 before + current + 1 after
   const previewHistory = history.slice(-1);
   const previewUpcoming = upcoming.slice(0, 1);
 
@@ -130,6 +130,26 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIsDragging(false);
     touchStartY.current = null;
   };
+
+  const handleNext = () => {
+    if (repeatMode === 'one') {
+      onSeek(0);
+      return;
+    }
+    if (shuffleOn) {
+      player.playRandom();
+      return;
+    }
+    onNext();
+  };
+
+  const cycleRepeat = () => {
+    setRepeatMode(prev =>
+      prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'
+    );
+  };
+
+  const RepeatIcon = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
 
   const renderPlayButton = () => {
     if (isLoading) {
@@ -216,22 +236,34 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             className="flex items-center justify-center h-16 w-16 rounded-full bg-white cursor-pointer shadow-lg">
             {renderPlayButton()}
           </div>
-          <AiFillStepForward onClick={onNext} size={34}
+          <AiFillStepForward onClick={handleNext} size={34}
             className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
 
-        {/* Volume */}
-        <div className="flex items-center gap-x-3 flex-shrink-0">
-          <VolumeIcon onClick={onToggleMute} size={20}
-            className="text-neutral-400 cursor-pointer flex-shrink-0" />
-          <Slider value={volume} onChange={onVolumeChange} />
+        {/* Shuffle + Repeat */}
+        <div className="flex items-center justify-center gap-x-12 flex-shrink-0">
+          <button
+            onClick={() => setShuffleOn(prev => !prev)}
+            className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
+          >
+            <TbArrowsShuffle size={24} />
+            <span className="text-[10px]">Aleatório</span>
+          </button>
+
+          <button
+            onClick={cycleRepeat}
+            className={`flex flex-col items-center gap-y-1 transition ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
+          >
+            <RepeatIcon size={24} />
+            <span className="text-[10px]">
+              {repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir tudo' : 'Repetir uma'}
+            </span>
+          </button>
         </div>
 
         {/* Queue panel */}
         {hasQueue && (
           <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-
-            {/* Header */}
             <button
               onClick={() => setQueueExpanded(prev => !prev)}
               className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition"
@@ -250,7 +282,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               </div>
             </button>
 
-            {/* Preview (collapsed) */}
             {!queueExpanded && (
               <div className="pb-2">
                 {previewHistory.map((s, i) => (
@@ -278,7 +309,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               </div>
             )}
 
-            {/* Expanded full list */}
             {queueExpanded && (
               <div className="pb-2 max-h-72 overflow-y-auto">
                 {history.length > 0 && (
@@ -291,9 +321,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                         key={`hist-${i}`}
                         song={s}
                         dimmed
-                        onClick={() => {
-                          player.setId(ids[i]);
-                        }}
+                        onClick={() => player.setId(ids[i])}
                       />
                     ))}
                   </>
@@ -313,9 +341,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                       <QueueRow
                         key={`up-${i}`}
                         song={s}
-                        onClick={() => {
-                          player.setId(ids[currentIndex + 1 + i]);
-                        }}
+                        onClick={() => player.setId(ids[currentIndex + 1 + i])}
                       />
                     ))}
                   </>
