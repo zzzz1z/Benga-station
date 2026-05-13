@@ -124,11 +124,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = null;
   };
 
-  const handleNext = () => {
-    if (repeatMode === 'one') { onSeek(0); return; }
-    if (shuffleOn) { player.playRandom(); return; }
-    onNext();
-  };
+const handleNext = () => {
+  if (repeatMode === 'one') { onSeek(0); return; } // manual skip = seek to 0
+  onNext(); // playNext handles shuffle + repeat:all internally now
+};
 
   const cycleRepeat = () =>
     setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');

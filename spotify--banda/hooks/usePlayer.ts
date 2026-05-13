@@ -85,19 +85,43 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         }));
     },
 
-    playNext: () => {
-        const { ids, activeID, playRandom } = get();
-        if (!ids.length || activeID === undefined) {
-            playRandom();
-            return;
-        }
-        const currentIndex = ids.findIndex(id => id === activeID);
-        if (currentIndex === -1 || currentIndex === ids.length - 1) {
-            playRandom();
-        } else {
-            set({ activeID: ids[currentIndex + 1] });
-        }
-    },
+playNext: () => {
+    const { ids, activeID, repeatMode, shuffleOn, playRandom } = get();
+
+    if (repeatMode === 'one') {
+        // re-trigger the same song by setting activeID to itself
+        // Player.tsx watches activeID change — force re-render by briefly unsetting
+        set({ activeID: undefined });
+        setTimeout(() => set({ activeID }), 0);
+        return;
+    }
+
+    if (!ids.length || activeID === undefined) {
+        playRandom();
+        return;
+    }
+
+    if (shuffleOn) {
+        playRandom();
+        return;
+    }
+
+    const currentIndex = ids.findIndex(id => id === activeID);
+
+    if (repeatMode === 'all') {
+        // wrap around to beginning
+        const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
+        set({ activeID: ids[nextIndex] });
+        return;
+    }
+
+    // repeatMode === 'off', no shuffle
+    if (currentIndex === -1 || currentIndex === ids.length - 1) {
+        // end of queue, stop
+        return;
+    }
+    set({ activeID: ids[currentIndex + 1] });
+},
 
     playPrevious: () => {
         const { ids, activeID } = get();
