@@ -21,7 +21,7 @@ const Liked = async () => {
     h-full
     w-full
     overflow-hidden
-    pt-[55px]
+    pt-[30px]
     overflow-y-auto"
     >
      <Header>

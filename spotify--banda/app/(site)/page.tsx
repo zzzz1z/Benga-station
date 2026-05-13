@@ -10,7 +10,7 @@ export default async function Home() {
   const songs = await getSongs();
 
   return (
-    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto safe-top pt-[55px] pb-24">
+    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto safe-top pt-[30px] pb-24">
       <Header>
         <div className="mb-2">
           <h1 className="text-white text-3xl font-semibold">

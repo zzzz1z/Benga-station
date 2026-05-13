@@ -1,7 +1,6 @@
 'use client';
 
 import { Song } from "@/types";
-import useLoadImage from "@/hooks/useLoadImage";
 import usePlayer from "@/hooks/usePlayer";
 import LikedButton from "./LikedButton";
 import MusicSlider from "./MusicSlider";
@@ -10,9 +9,11 @@ import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
 import { TbRepeat, TbRepeatOnce, TbArrowsShuffle } from "react-icons/tb";
+import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import LyricsFlipCard from "./LyricsFlipCard";
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -89,7 +90,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
 }) => {
-  const imageUrl = useLoadImage(song);
   const router = useRouter();
   const player = usePlayer();
 
@@ -104,12 +104,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const currentIndex = ids.findIndex(id => id === activeID);
 
   const history = currentIndex > 0
-    ? ids.slice(0, currentIndex).map(id => songs[id]).filter(Boolean)
-    : [];
+    ? ids.slice(0, currentIndex).map(id => songs[id]).filter(Boolean) : [];
   const upcoming = currentIndex !== -1 && currentIndex < ids.length - 1
-    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter(Boolean)
-    : [];
-
+    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter(Boolean) : [];
   const previewHistory = history.slice(-1);
   const previewUpcoming = upcoming.slice(0, 1);
 
@@ -117,13 +114,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
   };
-
   const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return;
     const delta = e.touches[0].clientY - touchStartY.current;
     if (delta > 0) setDragY(delta);
   };
-
   const handleTouchEnd = () => {
     if (dragY > 100) onClose();
     setDragY(0);
@@ -132,29 +127,16 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   };
 
   const handleNext = () => {
-    if (repeatMode === 'one') {
-      onSeek(0);
-      return;
-    }
-    if (shuffleOn) {
-      player.playRandom();
-      return;
-    }
+    if (repeatMode === 'one') { onSeek(0); return; }
+    if (shuffleOn) { player.playRandom(); return; }
     onNext();
   };
-
-  const cycleRepeat = () => {
-    setRepeatMode(prev =>
-      prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'
-    );
-  };
-
+  const cycleRepeat = () =>
+    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
   const RepeatIcon = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
 
   const renderPlayButton = () => {
-    if (isLoading) {
-      return <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />;
-    }
+    if (isLoading) return <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />;
     return isPlaying
       ? <BsPauseFill size={32} className="text-black" />
       : <BsPlayFill size={32} className="text-black" />;
@@ -178,11 +160,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         <div className="w-10 h-1 rounded-full bg-neutral-600" />
       </div>
 
-      {/* Scrollable inner content */}
+      {/* Scrollable content */}
       <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
 
         {/* Top bar */}
-        <div className="flex items-center justify-between pt-[55px] flex-shrink-0">
+        <div className="flex items-center justify-between pt-[30px] flex-shrink-0">
           <button onClick={onClose} className="text-white p-2 -ml-2">
             <IoChevronDown size={26} />
           </button>
@@ -195,19 +177,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </button>
         </div>
 
-        {/* Cover */}
+        {/* Flip card */}
         <div className="flex justify-center flex-shrink-0">
-          <div className="relative w-64 h-64 rounded-2xl overflow-hidden shadow-2xl">
-            <Image
-              fill
-              src={imageUrl ?? '/images/likedit.png'}
-              alt={song.title}
-              className="object-cover"
-              sizes="256px"
-              unoptimized
-              priority
-            />
-          </div>
+          <LyricsFlipCard song={song} position={position} />
         </div>
 
         {/* Title + like */}
@@ -275,10 +247,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                 <span className="text-[10px] text-neutral-600">
                   {history.length + 1 + upcoming.length} músicas
                 </span>
-                {queueExpanded
-                  ? <IoChevronUp size={14} />
-                  : <IoChevronDown size={14} />
-                }
+                {queueExpanded ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
               </div>
             </button>
 
@@ -326,12 +295,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                     ))}
                   </>
                 )}
-
                 <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
                   A tocar
                 </p>
                 <QueueRow song={song} isCurrent label="▶" />
-
                 {upcoming.length > 0 && (
                   <>
                     <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
