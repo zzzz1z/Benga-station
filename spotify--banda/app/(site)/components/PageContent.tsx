@@ -1,199 +1,111 @@
 'use client';
 
-import useLoadImage from "@/hooks/useLoadImage";
-import { Song, Playlist } from "@/types";
-import Image from "next/image";
-import { AiFillHeart, AiOutlineHeart, AiOutlineInfoCircle } from "react-icons/ai";
-import { MdPlaylistAdd } from "react-icons/md";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import { useState, useEffect, useRef } from "react";
-import { useUser } from "@/hooks/useUser";
-import useAuthModal from "@/hooks/useAuthModal";
-import Modal from "@/components/Modal";
-import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import PlayButton from "@/components/PlayButton";
+import { Song } from "@/types";
+import SongItem from "@/components/SongItem";
+import useOnPlay from "@/hooks/useOnPlay";
+import { useMemo } from "react";
+import { HiFire } from "react-icons/hi";
 
-interface SongItemProps {
-    data: Song;
-    onClick: (id: string) => void;
+interface PageContentProps {
+  songs: Song[];
 }
 
-const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
-    const imagePath = useLoadImage(data);
-    const { user } = useUser();
-    const authModal = useAuthModal();
-    const router = useRouter();
+// Geometric cut for the section header
+const SECTION_CUT = "polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%)";
 
-    const [isLiked, setIsLiked] = useState(false);
-    const [showModal, setShowModal] = useState(false);
-    const [showMenu, setShowMenu] = useState(false);
-    const [playlists, setPlaylists] = useState<Playlist[]>([]);
-    const menuRef = useRef<HTMLDivElement>(null);
+const getSongPlayerId = (song: Song): string =>
+  song.source === 'youtube' && song.youtube_video_id
+    ? `yt_${song.youtube_video_id}`
+    : String(song.id);
 
-    const songId = String(data.id);
+const PageContent: React.FC<PageContentProps> = ({ songs }) => {
+  const onPlay = useOnPlay(songs);
 
-    useEffect(() => {
-        if (!user?.id) return;
-        fetch(`/api/likes?songId=${songId}`)
-            .then(res => res.json())
-            .then(json => { if (json.liked) setIsLiked(true); });
-    }, [user?.id, songId]);
+  // Randomize for that "Fresh discovery" feel every reload
+  const displayed = useMemo(() =>
+    [...songs].sort(() => Math.random() - 0.5).slice(0, 8),
+    [songs]
+  );
 
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setShowMenu(false);
-            }
-        };
-        if (showMenu) document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [showMenu]);
-
-    const handleLike = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        const method = isLiked ? 'DELETE' : 'POST';
-        const res = await fetch('/api/likes', {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ songId }),
-        });
-        if (res.ok) {
-            setIsLiked(!isLiked);
-            toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado!');
-        }
-        setShowMenu(false);
-    };
-
-    const handlePlaylistClick = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        const res = await fetch('/api/playlist/user-playlists');
-        const json = await res.json();
-        setPlaylists(json.playlists ?? []);
-        setShowMenu(false);
-        setShowModal(true);
-    };
-
-    const handleAddToPlaylist = async (playlistId: string) => {
-        const res = await fetch('/api/playlist/add-song', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playlistId, song: data }),
-        });
-        if (res.status === 409) toast.error('Música já existe na playlist');
-        else if (res.ok) toast.success('Adicionado!');
-        setShowModal(false);
-    };
-
-    const handleInfo = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setShowMenu(false);
-        router.push(`/songs/${data.id}`);
-    };
-
+  if (songs.length === 0) {
     return (
-        <>
-            <div
-                onClick={() => onClick(data.id)}
-                className="relative group flex flex-col cursor-pointer transition p-0"
-            >
-                {/* Image Wrapper */}
-                <div className="relative aspect-square w-full overflow-hidden rounded-sm">
-                    {/* Hover Target Accents - No box, just corners appearing on the image */}
-                    <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
-
-                    <Image
-                        priority
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        src={imagePath ?? '/images/likedit.png'}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        alt={data.title}
-                    />
-                    
-                    {/* Dark gradient overlay that appears on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                    {/* Play Button - Floating centered or bottom right */}
-                    <div className="absolute bottom-3 right-3 translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        <PlayButton />
-                    </div>
-
-                    {/* Desktop Overlay Actions (Now cleaner without the background box) */}
-                    <div
-                        className="absolute top-2 right-2 hidden md:flex flex-col gap-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <button onClick={handleLike} className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm text-white hover:text-red-500 transition">
-                            {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
-                        </button>
-                        <button onClick={handlePlaylistClick} className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm text-white hover:text-red-600 transition">
-                            <MdPlaylistAdd size={20} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Text Section - Outside the "Box" */}
-                <div className="flex flex-col items-start w-full pt-3 gap-y-0.5">
-                    <p className="font-black truncate w-full text-white uppercase text-sm tracking-tight group-hover:text-red-500 transition-colors">
-                        {data.title}
-                    </p>
-                    <div className="flex items-center gap-x-2 w-full">
-                        <span className="h-px w-3 bg-red-600/50" />
-                        <p className="text-neutral-500 text-[10px] truncate font-bold tracking-[0.15em] uppercase">
-                            {data.author}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Mobile three-dot menu */}
-                <div
-                    className="absolute top-2 right-2 md:hidden z-30"
-                    ref={menuRef}
-                    onClick={e => e.stopPropagation()}
-                >
-                    <button
-                        onClick={() => setShowMenu(prev => !prev)}
-                        className="p-1 bg-black/60 rounded-sm text-white border border-red-600/30"
-                    >
-                        <BsThreeDotsVertical size={16} />
-                    </button>
-
-                    {showMenu && (
-                        <div className="absolute right-0 top-full mt-2 w-40 bg-neutral-900 shadow-2xl z-[100] border border-red-600/30">
-                            <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
-                                {isLiked ? <AiFillHeart className="text-red-600" /> : <AiOutlineHeart />} {isLiked ? 'Remover' : 'Favoritar'}
-                            </button>
-                            <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
-                                <MdPlaylistAdd /> Playlist
-                            </button>
-                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
-                                <AiOutlineInfoCircle /> Info
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Modal remains the same but with terminal styling */}
-            <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="> ADD_TO_PLAYLIST" description="Selecione o diretório:">
-                <div className="flex flex-col gap-y-1">
-                    {playlists.length === 0
-                        ? <p className="text-neutral-500 text-[10px] font-mono py-4 text-center">NO_DATA_FOUND</p>
-                        : playlists.map(pl => (
-                            <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
-                                className="w-full text-left px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white hover:bg-red-600 hover:text-black transition truncate border border-white/5">
-                                {pl.title}
-                            </button>
-                        ))
-                    }
-                </div>
-            </Modal>
-        </>
+      <div className="mt-10 flex flex-col items-center justify-center gap-y-4">
+        <div className="w-12 h-1 bg-red-600/20 animate-pulse" />
+        <p className="text-neutral-500 font-bold uppercase tracking-[0.3em] text-xs">
+          Nenhuma música detectada no sistema
+        </p>
+      </div>
     );
+  }
+
+  return (
+    <div className="mt-8 px-2">
+      
+      {/* ── Section Header ── */}
+      <div className="flex items-center gap-x-4 mb-8">
+        <div 
+          className="bg-red-600 p-2 text-black flex items-center justify-center"
+          style={{ clipPath: 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)' }}
+        >
+          <HiFire size={24} />
+        </div>
+        
+        <div className="flex flex-col">
+          <h2 
+            className="text-white text-xl md:text-2xl font-black uppercase tracking-tighter italic"
+            style={{ textShadow: '0 0 15px rgba(239,68,68,0.4)' }}
+          >
+            Recomendações de Elite
+          </h2>
+          <div className="flex items-center gap-x-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-red-500/60 text-[10px] font-bold uppercase tracking-widest">
+              Status: Live Feed
+            </span>
+          </div>
+        </div>
+
+        {/* Decorative line that fades out */}
+        <div className="flex-1 h-px bg-gradient-to-r from-red-500/50 via-red-500/10 to-transparent ml-4" />
+      </div>
+
+      {/* ── The Grid ── */}
+      <div className="relative group">
+        {/* Subtle background glow for the whole section */}
+        <div className="absolute -inset-4 bg-red-600/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition duration-1000 pointer-events-none" />
+
+        <div className="relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-8 gap-6">
+          {displayed.map((item) => (
+            <div 
+              key={item.id} 
+              className="relative transition-all duration-300 hover:scale-[1.03] active:scale-95"
+            >
+              {/* Corner Accents for each card hover */}
+              <div className="absolute -top-1 -left-1 w-2 h-2 border-t border-l border-red-500 opacity-0 group-hover/card:opacity-100 transition" />
+              
+              <SongItem
+                onClick={() => onPlay(getSongPlayerId(item))}
+                data={item}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Footer HUD Detail ── */}
+      <div className="mt-12 flex justify-between items-center border-t border-neutral-800 pt-4">
+        <div className="flex gap-x-4">
+            <div className="text-[9px] text-neutral-600 font-mono">
+                COORD_X: 42.001 <br/>
+                COORD_Y: 19.998
+            </div>
+        </div>
+        <div className="text-[10px] text-red-500/40 font-black uppercase tracking-[0.2em]">
+            Digital Audio Interface v3.0
+        </div>
+      </div>
+    </div>
+  );
 };
 
-export default SongItem;
+export default PageContent;
