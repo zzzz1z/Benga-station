@@ -22,14 +22,6 @@ function parseLrc(lrc: string): LrcLine[] {
   return lines.sort((a, b) => a.time - b.time);
 }
 
-const cleanMetadata = (str: string) => {
-  return str
-    .split('(')[0]
-    .split('-')[0]
-    .split('[')[0]
-    .trim();
-};
-
 type LyricsState = 'idle' | 'loading' | 'synced' | 'plain' | 'none';
 
 interface LyricsFlipCardProps {
@@ -51,45 +43,75 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
   const fetchedFor = useRef('');
 
   const fetchLyrics = useCallback(async () => {
-    const track = cleanMetadata(song.title);
-    const artist = cleanMetadata(song.author || '');
-    const key = `${track}::${artist}`;
+    // USE FULL RAW DATA - No "cleaning" that might strip essential search terms
+    const track = song.title.trim();
+    const artist = song.author?.trim() || '';
     
+    const key = `${track}::${artist}`;
     if (fetchedFor.current === key) return;
     fetchedFor.current = key;
     
     setLyricsState('loading');
 
     try {
-      const params = new URLSearchParams({
+      // 1. Try the exact GET match with raw names
+      const getParams = new URLSearchParams({
         track_name: track,
         artist_name: artist,
       });
       
-      const res = await fetch(`https://lrclib.net/api/get?${params}`);
-      if (!res.ok) throw new Error('Not found');
+      let res = await fetch(`https://lrclib.net/api/get?${getParams}`);
+
+      // 2. If exact match fails (404), use the Search API with the full combined string
+      if (!res.ok) {
+        console.log(`Exact match failed for ${track}, trying search...`);
+        const searchParams = new URLSearchParams({
+          q: `${track} ${artist}`
+        });
+        const searchRes = await fetch(`https://lrclib.net/api/search?${searchParams}`);
+        const searchData = await searchRes.json();
+
+        if (searchData && searchData.length > 0) {
+          // Find first result with synced lyrics, fallback to plain
+          const bestMatch = searchData.find((s: any) => s.syncedLyrics) || 
+                            searchData.find((s: any) => s.plainLyrics) || 
+                            searchData[0];
+          
+          processLyricsData(bestMatch);
+          return;
+        }
+        throw new Error('No results in search');
+      }
 
       const data = await res.json();
-      
-      if (data.syncedLyrics) {
-        setSyncedLines(parseLrc(data.syncedLyrics));
-        setLyricsState('synced');
-      } else if (data.plainLyrics) {
-        setPlainLyrics(data.plainLyrics);
-        setLyricsState('plain');
-      } else {
-        setLyricsState('none');
-      }
+      processLyricsData(data);
+
     } catch (err) {
       console.error("Lyrics fetch error:", err);
       setLyricsState('none');
     }
   }, [song.title, song.author]);
 
+  const processLyricsData = (data: any) => {
+    if (data.syncedLyrics) {
+      setSyncedLines(parseLrc(data.syncedLyrics));
+      setLyricsState('synced');
+    } else if (data.plainLyrics) {
+      setPlainLyrics(data.plainLyrics);
+      setLyricsState('plain');
+    } else {
+      setLyricsState('none');
+    }
+  };
+
+  // Trigger fetch when card flips
   useEffect(() => {
-    if (flipped && lyricsState === 'idle') fetchLyrics();
+    if (flipped && lyricsState === 'idle') {
+      fetchLyrics();
+    }
   }, [flipped, lyricsState, fetchLyrics]);
 
+  // Reset state on song change
   useEffect(() => {
     fetchedFor.current = '';
     setLyricsState('idle');
@@ -99,16 +121,22 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setFlipped(false);
   }, [song.id]);
 
+  // Handle Sync Highlighting
   useEffect(() => {
     if (lyricsState !== 'synced' || !syncedLines.length) return;
+    
+    // Safety: ensure position is in seconds
+    const currentTime = position > 1000 ? position / 1000 : position;
+
     let idx = 0;
     for (let i = 0; i < syncedLines.length; i++) {
-      if (position >= syncedLines[i].time) idx = i;
+      if (currentTime >= syncedLines[i].time) idx = i;
       else break;
     }
     setActiveLine(idx);
   }, [position, syncedLines, lyricsState]);
 
+  // Auto-scroll to active line
   useEffect(() => {
     if (flipped && lyricsState === 'synced') {
       activeLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -187,7 +215,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
             transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
         >
-          {/* Front — Album Art */}
           <div
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
             className="absolute inset-0 rounded-none border border-red-900/20 overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]"
@@ -204,7 +231,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
           </div>
 
-          {/* Back — Lyrics */}
           <div
             style={{
               backfaceVisibility: 'hidden',
@@ -216,11 +242,9 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
             <div className="absolute top-2 left-2 font-mono text-[8px] text-red-600/20 uppercase">
               LYRIC_STREAM_V3.0
             </div>
-            {/* FIX: Convert ID to string before slicing to prevent crash */}
             <div className="absolute bottom-2 right-2 font-mono text-[8px] text-red-600/20 uppercase">
               {String(song.id).slice(0, 8)}
             </div>
-            
             {renderLyricsContent()}
           </div>
         </div>
