@@ -33,8 +33,8 @@ export default async function Home() {
               href="liked" sizes={""}            />
             {/* Added a second quick-link for balance */}
             <ListaItens
-              image="/images/playlist_placeholder.png"
-              name="Recentes"
+              image="/images/anime-boy-avatar-vector.jpg"
+              name="MINHAS PLAYLISTS"
               href="playlists" sizes={""}            />
           </div>
         </div>
