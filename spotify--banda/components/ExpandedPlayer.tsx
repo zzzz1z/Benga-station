@@ -182,7 +182,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
 
         {/* Top bar */}
-        <div className="flex items-center justify-between pt-[60px] flex-shrink-0">
+        <div className="flex items-center justify-between pt-[55px] flex-shrink-0">
           <button onClick={onClose} className="text-white p-2 -ml-2">
             <IoChevronDown size={26} />
           </button>

@@ -10,7 +10,7 @@ const Account = async () => {
     ]);
 
     return (
-        <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[60px] overflow-y-auto">
+        <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[55px] overflow-y-auto">
             <Header className="from-bg-neutral-900">
                <></>
             </Header>
