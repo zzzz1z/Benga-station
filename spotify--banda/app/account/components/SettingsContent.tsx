@@ -18,18 +18,12 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     const router = useRouter();
     const { isLoading, user, userDetails } = useUser();
     const [activeTab, setActiveTab] = useState<'casa' | 'definicoes'>('casa');
-    // Tracks whether we're past the first client render — prevents hydration mismatch
-    // from useUser() being null on server but populated on client
     const [mounted, setMounted] = useState(false);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
-        if (!isLoading && !user) {
-            router.replace('/');
-        }
+        if (!isLoading && !user) router.replace('/');
     }, [isLoading, user, router]);
 
     const displayName = userDetails?.full_name
@@ -42,58 +36,136 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     return (
         <div className="flex flex-col w-full h-full">
 
-            {/* Profile header */}
-            <div className="flex flex-col px-6 pt-3 pb-4 gap-y-4">
-                <div className="flex items-center gap-x-6">
-                    <ProfilePic />
-                    <div className="flex flex-1 justify-around">
-                        <div className="flex flex-col items-center">
-                            <span className="text-white font-bold text-lg leading-tight">{likedSongs.length}</span>
-                            <span className="text-neutral-400 text-xs mt-0.5">Favoritas</span>
+            {/* ── Gamer profile header ── */}
+            <div className="relative flex flex-col items-center px-6 pt-6 pb-5 gap-y-5 overflow-hidden">
+
+                {/* Red scanline background */}
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)',
+                    }}
+                />
+
+                {/* Top accent line */}
+                <div
+                    className="absolute top-0 left-0 right-0 h-px"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.7), transparent)' }}
+                />
+
+                {/* Avatar + stats row */}
+                <div className="relative z-10 flex items-center gap-x-8 w-full max-w-sm">
+                    {/* Avatar with hex clip + glow */}
+                    <div className="relative flex-shrink-0">
+                        <div
+                            className="absolute inset-0 rounded-full blur-md opacity-60"
+                            style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.5), transparent 70%)' }}
+                        />
+                        <div
+                            className="relative"
+                            style={{
+                                filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))',
+                            }}
+                        >
+                            <ProfilePic />
                         </div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-white font-bold text-lg leading-tight">{playlists.length}</span>
-                            <span className="text-neutral-400 text-xs mt-0.5">Playlists</span>
+                        {/* Online indicator */}
+                        <span
+                            className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900"
+                            style={{ background: '#22c55e', boxShadow: '0 0 6px #22c55e' }}
+                        />
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex gap-x-6">
+                        <div className="flex flex-col items-center gap-y-0.5">
+                            <span
+                                className="text-white font-black text-2xl leading-none tabular-nums"
+                                style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}
+                            >
+                                {likedSongs.length}
+                            </span>
+                            <span className="text-neutral-500 text-[10px] uppercase tracking-widest font-medium">
+                                Favoritas
+                            </span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, rgba(239,68,68,0.4), transparent)' }} />
+
+                        <div className="flex flex-col items-center gap-y-0.5">
+                            <span
+                                className="text-white font-black text-2xl leading-none tabular-nums"
+                                style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}
+                            >
+                                {playlists.length}
+                            </span>
+                            <span className="text-neutral-500 text-[10px] uppercase tracking-widest font-medium">
+                                Playlists
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                {/* Only render user-dependent text after mount to avoid hydration mismatch */}
-                <div className="flex flex-col gap-y-0.5">
-                    <p className="text-white font-semibold text-sm">
-                        {mounted ? displayName : ''}
-                    </p>
-                    <p className="text-neutral-500 text-xs">
+                {/* Name + email */}
+                <div className="relative z-10 flex flex-col items-center gap-y-1 w-full">
+                    <div className="flex items-center gap-x-2">
+                        {/* Red tag */}
+                        <span
+                            className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5"
+                            style={{
+                                background: 'rgba(239,68,68,0.15)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                color: '#f87171',
+                                clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                            }}
+                        >
+                            Player
+                        </span>
+                        <p className="text-white font-bold text-base tracking-wide">
+                            {mounted ? displayName : ''}
+                        </p>
+                    </div>
+                    <p className="text-neutral-600 text-xs tracking-wide">
                         {mounted ? (user?.email ?? '') : ''}
                     </p>
                 </div>
 
-                <ImportPlaylistButton />
+                {/* Centered import button */}
+                <div className="relative z-10 flex justify-center w-full">
+                    <ImportPlaylistButton />
+                </div>
+
+                {/* Bottom accent line */}
+                <div
+                    className="absolute bottom-0 left-0 right-0 h-px"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }}
+                />
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-neutral-700 px-6">
-                <button
-                    onClick={() => setActiveTab('casa')}
-                    className={`px-6 py-3 text-sm font-medium transition border-b-2 -mb-px
-                        ${activeTab === 'casa'
-                            ? 'border-red-500 text-white'
-                            : 'border-transparent text-neutral-400 hover:text-white'}`}
-                >
-                    Casa
-                </button>
-                <button
-                    onClick={() => setActiveTab('definicoes')}
-                    className={`px-6 py-3 text-sm font-medium transition border-b-2 -mb-px
-                        ${activeTab === 'definicoes'
-                            ? 'border-red-500 text-white'
-                            : 'border-transparent text-neutral-400 hover:text-white'}`}
-                >
-                    Definições
-                </button>
+            {/* ── Tabs ── */}
+            <div className="flex border-b border-neutral-800 px-6">
+                {(['casa', 'definicoes'] as const).map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className="relative px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors"
+                        style={{
+                            color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.3)',
+                        }}
+                    >
+                        {tab === 'casa' ? 'Casa' : 'Definições'}
+                        {activeTab === tab && (
+                            <span
+                                className="absolute bottom-0 left-0 right-0 h-0.5"
+                                style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }}
+                            />
+                        )}
+                    </button>
+                ))}
             </div>
 
-            {/* Tab content */}
+            {/* ── Tab content ── */}
             <div className="flex-1 overflow-y-auto">
                 {activeTab === 'casa'
                     ? <CasaTab likedSongs={likedSongs} playlists={playlists} />
