@@ -36,7 +36,6 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
 
 const preExtractAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
-  // Fix: use activePlayerId directly as the queue key, not song.id
   const currentIndex = ids.findIndex(id => id === activePlayerId);
   const targets = [
     ids[currentIndex - 1],
@@ -87,7 +86,7 @@ const Player = () => {
   const isPlayingRef = useRef(false);
   const positionRef = useRef(0);
   const skipOnErrorRef = useRef(false);
-  const endedFiredRef = useRef(false); // prevent double-skip
+  const endedFiredRef = useRef(false);
 
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -152,15 +151,12 @@ const Player = () => {
 
     audio.addEventListener("stalled", handleStuck);
 
-    // visibilitychange fallback — fires when app comes back from background
-    // and the song silently ended while backgrounded
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') return;
       const a = audioRef.current;
       if (!a || !a.src) return;
       const dur = a.duration;
       const cur = a.currentTime;
-      // if we're within 0.5s of the end and paused, treat as ended
       if (dur > 0 && cur >= dur - 0.5 && a.paused && isPlayingRef.current) {
         handleEnded();
       }
@@ -209,7 +205,6 @@ const Player = () => {
         setIsPlaying(true);
         setPosition(0);
         positionRef.current = 0;
-        // Fix: pass activeID (the queue key) not song.id
         if (activeID) preExtractAround(activeID);
       }).catch(() => { setIsLoading(false); });
     }, 100);
@@ -289,7 +284,7 @@ const Player = () => {
           onClose={() => setIsExpanded(false)}
         />
       )}
-      <div className="fixed bottom-0 bg-black w-full py-2 h-[90px] mb-3 px-4">
+      <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] border-t border-red-900/40 px-4 z-[40]">
         <PlayerContent
           {...sharedProps}
           onExpand={() => setIsExpanded(true)}
