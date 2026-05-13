@@ -22,7 +22,6 @@ function parseLrc(lrc: string): LrcLine[] {
   return lines.sort((a, b) => a.time - b.time);
 }
 
-// Cleans titles like "Song Name (Official Video)" to just "Song Name"
 const cleanMetadata = (str: string) => {
   return str
     .split('(')[0]
@@ -214,12 +213,12 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
             }}
             className="absolute inset-0 rounded-none bg-neutral-950 border border-red-600/30 shadow-[0_0_40px_rgba(239,68,68,0.1)] overflow-hidden"
           >
-            {/* Terminal Background UI */}
             <div className="absolute top-2 left-2 font-mono text-[8px] text-red-600/20 uppercase">
               LYRIC_STREAM_V3.0
             </div>
+            {/* FIX: Convert ID to string before slicing to prevent crash */}
             <div className="absolute bottom-2 right-2 font-mono text-[8px] text-red-600/20 uppercase">
-              {song.id.slice(0, 8)}
+              {String(song.id).slice(0, 8)}
             </div>
             
             {renderLyricsContent()}
