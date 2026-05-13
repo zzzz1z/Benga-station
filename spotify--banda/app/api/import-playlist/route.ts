@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 const spotifyUrlInfo = require('spotify-url-info');
 const { getData } = spotifyUrlInfo(fetch);
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const WORKER_URL = process.env.YT_WORKER_URL!;
 const WORKER_SECRET = process.env.WORKER_SECRET!;
@@ -48,7 +48,7 @@ async function fetchYouTubePlaylist(
 ): Promise<{ videoId: string; title: string; artist: string; thumbnail: string }[]> {
   const res = await fetch(`${WORKER_URL}/playlist/${playlistId}`, {
     headers: { 'x-worker-secret': WORKER_SECRET },
-    signal: signal ?? AbortSignal.timeout(55000),
+    signal: signal ?? AbortSignal.timeout(115000),
   });
   if (!res.ok) throw new Error('Failed to fetch YouTube playlist');
   const data = await res.json();
@@ -73,7 +73,6 @@ export async function POST(req: Request) {
       { status: 400 },
     );
 
-  // Abort controller wired to the request signal so we stop if client disconnects
   const ac = new AbortController();
   req.signal.addEventListener('abort', () => ac.abort());
 
@@ -86,7 +85,6 @@ export async function POST(req: Request) {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
     } catch {
-      // Stream closed — stop trying to write
       ac.abort();
     }
   };
@@ -98,7 +96,7 @@ export async function POST(req: Request) {
     try {
       await writer.close();
     } catch {
-      // Already closed — fine
+      // Already closed
     }
   };
 
