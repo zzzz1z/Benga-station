@@ -46,11 +46,10 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
     player.reset();
     toast.success("Tas off!");
 
-    // Wait a tick so onAuthStateChange fires and clears user state
-    // before Next.js re-fetches server components
-    await new Promise(r => setTimeout(r, 100));
-    router.refresh();
-    router.push('/');
+    // Use hard navigation instead of router.push — avoids "Node cannot be found"
+    // which happens when router.push fires after the component unmounts
+    // during the auth state change re-render cycle
+    window.location.href = '/';
   };
 
   return (
