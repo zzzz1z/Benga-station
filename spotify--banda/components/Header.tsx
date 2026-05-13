@@ -17,7 +17,6 @@ import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { AiOutlineFileAdd } from "react-icons/ai";
 
-
 interface HeaderProps {
   children: React.ReactNode;
   className?: string;
@@ -27,24 +26,31 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   const router = useRouter();
   const authModal = useAuthModal();
   const player = usePlayer();
-  const user = useUser();
+  const { user, userDetails } = useUser();
   const uploadModal = useUploadModal();
 
   const onClick = () => {
-    if (!user?.user) return authModal.onOpen("sign_up");
+    if (!user) return authModal.onOpen("sign_up");
     return uploadModal.onOpen();
   };
 
   const handleLogout = async () => {
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
-    player.reset();
-    router.refresh();
+
     if (error) {
       toast.error(error.message);
-    } else {
-      toast.success("Tas off!");
+      return;
     }
+
+    player.reset();
+    toast.success("Tas off!");
+
+    // Wait a tick so onAuthStateChange fires and clears user state
+    // before Next.js re-fetches server components
+    await new Promise(r => setTimeout(r, 100));
+    router.refresh();
+    router.push('/');
   };
 
   return (
@@ -67,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
           <button type="button" onClick={() => router.push("/search")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
             <BiSearch className="text-black" size={20} />
           </button>
-          {user?.user && (
+          {user && (
             <>
               <button type="button" onClick={() => router.push("/playlists")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
                 <SlPlaylist className="text-black" size={20} />
@@ -77,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
               </button>
             </>
           )}
-          {user?.userDetails?.role === "admin" && (
+          {userDetails?.role === "admin" && (
             <button type="button" onClick={onClick} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
               <AiOutlineFileAdd className="text-black" size={20} />
             </button>
@@ -85,7 +91,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         </div>
 
         <div className="flex justify-between items-center gap-x-4">
-          {user?.user ? (
+          {user ? (
             <div className="flex gap-x-4 items-center">
               <Button onClick={() => router.push("/account")} className="bg-white">
                 <FaUserAlt />
