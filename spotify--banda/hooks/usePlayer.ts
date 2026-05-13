@@ -1,11 +1,15 @@
 import { Song } from '@/types';
 import { create } from 'zustand';
 
+type RepeatMode = 'off' | 'all' | 'one';
+
 interface PlayerStore {
     ids: string[];
     songs: Record<string, Song>;
     activeID?: string;
     failedIds: Set<string>;
+    shuffleOn: boolean;
+    repeatMode: RepeatMode;
     setId: (id: string) => void;
     setIds: (ids: string[]) => void;
     setQueue: (songs: Song[], startId?: string) => void;
@@ -16,6 +20,8 @@ interface PlayerStore {
     playRandom: () => void;
     hasPrevious: () => boolean;
     markFailed: (id: string) => void;
+    setShuffleOn: (value: boolean) => void;
+    setRepeatMode: (mode: RepeatMode) => void;
 }
 
 const getSongPlayerId = (song: Song): string =>
@@ -28,9 +34,14 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     songs: {},
     activeID: undefined,
     failedIds: new Set(),
+    shuffleOn: false,
+    repeatMode: 'off',
 
     setId: (id: string) => set({ activeID: id }),
     setIds: (ids: string[]) => set({ ids }),
+
+    setShuffleOn: (value) => set({ shuffleOn: value }),
+    setRepeatMode: (mode) => set({ repeatMode: mode }),
 
     setQueue: (songs: Song[], startId?: string) => {
         if (songs.length === 0) return;
@@ -47,7 +58,6 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         });
     },
 
-    // Safe append — never replaces existing entries, never touches activeID
     appendToQueue: (songs: Song[]) => {
         if (songs.length === 0) return;
         const { ids: currentIds, songs: currentSongs } = get();
@@ -61,7 +71,6 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         }, {});
 
         set({
-            // Spread existing songs first so active song entry is never clobbered
             songs: { ...currentSongs, ...addedMap },
             ids: [...currentIds, ...newSongs.map(getSongPlayerId)],
         });
@@ -74,7 +83,6 @@ const usePlayer = create<PlayerStore>((set, get) => ({
             failedIds: new Set([...state.failedIds, id]),
             ids: state.ids.filter(i => i !== id),
         }));
-        // no auto-skip — prevents cascade failure
     },
 
     playNext: () => {

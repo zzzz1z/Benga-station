@@ -2,6 +2,7 @@ import React from 'react';
 import { Song } from '@/types';
 import { CiShuffle } from 'react-icons/ci';
 import usePlayer from '@/hooks/usePlayer';
+import toast from 'react-hot-toast';
 
 interface ShuffleSongsProps {
   songs: Song[];
@@ -17,7 +18,7 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
 
   const handleShufflePlay = () => {
     if (songs.length === 0) {
-      alert('No songs available in this playlist.');
+      toast.error('Esta playlist não tem músicas.');
       return;
     }
 
@@ -26,11 +27,12 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
   };
 
   return (
-    <div onClick={handleShufflePlay} className="cursor-pointer">
-      <button className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition">
-        <CiShuffle size={30} />
-      </button>
-    </div>
+    <button
+      onClick={handleShufflePlay}
+      className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition cursor-pointer"
+    >
+      <CiShuffle size={30} />
+    </button>
   );
 };
 

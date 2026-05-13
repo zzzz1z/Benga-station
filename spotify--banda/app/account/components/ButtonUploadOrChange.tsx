@@ -1,5 +1,7 @@
+'use client';
+
 import { createClient } from '@/utils/supabase/client';
-import React, { useState, useEffect } from "react";
+import React, { useRef } from "react";
 
 const supabase = createClient();
 
@@ -9,76 +11,91 @@ interface ButtonUploadOrChangeProps {
 }
 
 const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, onImageUpdate }) => {
-  const [isMounted, setIsMounted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const sanitizeFileName = (fileName: string) => {
-    return fileName
+  const sanitizeFileName = (fileName: string) =>
+    fileName
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "_")
       .toLowerCase();
-  };
 
   const uploadUserImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const sanitizedFileName = sanitizeFileName(file.name);
-    const filePath = `avatars/${sanitizedFileName}`;
-
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      console.log("Erro ao fazer upload da imagem:", uploadError);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-    if (!urlData) {
-      console.error("Erro ao obter URL pública da imagem");
-      return;
-    }
-
-    const newImageUrl = urlData.publicUrl;
-
+    // Auth check first — before any storage work
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.error("User is not authenticated");
       return;
     }
 
-    const { error: insertError } = await supabase
-      .from("users")
-      .upsert([{
-        id: user.id,
-        email: user.email,
-        avatar_url: newImageUrl,
-      }]);
+    const sanitizedFileName = sanitizeFileName(file.name);
+    // Prefix with user.id to prevent cross-user filename collisions
+    const filePath = `avatars/${user.id}_${sanitizedFileName}`;
 
-    if (insertError) {
-      console.log("Erro ao inserir o avatar no banco de dados:", insertError);
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      console.error("Erro ao fazer upload da imagem:", uploadError);
       return;
     }
 
-    if (typeof onImageUpdate === "function") {
-      onImageUpdate(newImageUrl);
+    const { data: urlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    if (!urlData?.publicUrl) {
+      console.error("Erro ao obter URL pública da imagem");
+      return;
     }
+
+    const { error: upsertError } = await supabase
+      .from("users")
+      .upsert([{ id: user.id, email: user.email, avatar_url: urlData.publicUrl }]);
+
+    if (upsertError) {
+      console.error("Erro ao inserir o avatar no banco de dados:", upsertError);
+      return;
+    }
+
+    onImageUpdate(urlData.publicUrl);
+
+    // Reset input so the same file can be re-uploaded if needed
+    if (inputRef.current) inputRef.current.value = '';
   };
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) return null;
-
   return (
-    <div className="flex flex-col items-center space-y-2">
-      <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded">
-        {hasAvatar ? "Trocar Foto" : "Enviar Foto"}
-        <input type="file" accept="image/*" onChange={uploadUserImage} className="hidden" />
-      </label>
-    </div>
+    <label
+      className="cursor-pointer relative flex items-center gap-x-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all"
+      style={{
+        background: 'rgba(239,68,68,0.1)',
+        border: '1px solid rgba(239,68,68,0.35)',
+        color: '#f87171',
+        clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+        boxShadow: '0 0 10px rgba(239,68,68,0.1)',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)';
+        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px rgba(239,68,68,0.25)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
+        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(239,68,68,0.1)';
+      }}
+    >
+      {hasAvatar ? '⟳  Trocar Foto' : '↑  Enviar Foto'}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={uploadUserImage}
+        className="hidden"
+      />
+    </label>
   );
 };
 

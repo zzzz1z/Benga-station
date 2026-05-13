@@ -80,11 +80,6 @@ const ProfilePic = () => {
           )}
         </div>
 
-        {/* Online dot */}
-        <span
-          className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900"
-          style={{ background: '#22c55e', boxShadow: '0 0 6px #22c55e' }}
-        />
       </div>
 
       {/* Upload button */}

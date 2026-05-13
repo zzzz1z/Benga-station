@@ -2,6 +2,7 @@ import React from 'react';
 import { CiPlay1 } from "react-icons/ci";
 import { Song } from '@/types';
 import usePlayer from '@/hooks/usePlayer';
+import toast from 'react-hot-toast';
 
 interface PlaySongsFromPlaylistProps {
   songs: Song[];
@@ -17,7 +18,7 @@ const PlaySongsFromPlaylist: React.FC<PlaySongsFromPlaylistProps> = ({ songs }) 
 
   const handleClick = () => {
     if (songs.length === 0) {
-      alert('No songs available in this playlist.');
+      toast.error('Esta playlist não tem músicas.');
       return;
     }
 
@@ -25,14 +26,12 @@ const PlaySongsFromPlaylist: React.FC<PlaySongsFromPlaylistProps> = ({ songs }) 
   };
 
   return (
-    <div>
-      <button
-        onClick={handleClick}
-        className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition"
-      >
-        <CiPlay1 size={30} />
-      </button>
-    </div>
+    <button
+      onClick={handleClick}
+      className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition cursor-pointer"
+    >
+      <CiPlay1 size={30} />
+    </button>
   );
 };
 

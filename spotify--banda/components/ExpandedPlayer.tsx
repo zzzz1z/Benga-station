@@ -84,8 +84,6 @@ const QueueRow = ({
   );
 };
 
-type RepeatMode = 'off' | 'all' | 'one';
-
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
@@ -97,10 +95,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [queueExpanded, setQueueExpanded] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
-  const [shuffleOn, setShuffleOn] = useState(false);
 
-  const { ids, songs, activeID } = player;
+  // Persistent state lives in the store now
+  const { ids, songs, activeID, shuffleOn, setShuffleOn, repeatMode, setRepeatMode } = player;
+
   const currentIndex = ids.findIndex(id => id === activeID);
 
   const history = currentIndex > 0
@@ -131,8 +129,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     if (shuffleOn) { player.playRandom(); return; }
     onNext();
   };
+
   const cycleRepeat = () =>
-    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+    setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
+
   const RepeatIcon = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
 
   const renderPlayButton = () => {
@@ -215,7 +215,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         {/* Shuffle + Repeat */}
         <div className="flex items-center justify-center gap-x-12 flex-shrink-0">
           <button
-            onClick={() => setShuffleOn(prev => !prev)}
+            onClick={() => setShuffleOn(!shuffleOn)}
             className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
           >
             <TbArrowsShuffle size={24} />
