@@ -18,6 +18,13 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     const router = useRouter();
     const { isLoading, user, userDetails } = useUser();
     const [activeTab, setActiveTab] = useState<'casa' | 'definicoes'>('casa');
+    // Tracks whether we're past the first client render — prevents hydration mismatch
+    // from useUser() being null on server but populated on client
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!isLoading && !user) {
@@ -35,7 +42,7 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     return (
         <div className="flex flex-col w-full h-full">
 
-            {/* Instagram-style profile header */}
+            {/* Profile header */}
             <div className="flex flex-col px-6 pt-3 pb-4 gap-y-4">
                 <div className="flex items-center gap-x-6">
                     <ProfilePic />
@@ -51,12 +58,16 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                     </div>
                 </div>
 
+                {/* Only render user-dependent text after mount to avoid hydration mismatch */}
                 <div className="flex flex-col gap-y-0.5">
-                    <p className="text-white font-semibold text-sm">{displayName}</p>
-                    <p className="text-neutral-500 text-xs">{user?.email}</p>
+                    <p className="text-white font-semibold text-sm">
+                        {mounted ? displayName : ''}
+                    </p>
+                    <p className="text-neutral-500 text-xs">
+                        {mounted ? (user?.email ?? '') : ''}
+                    </p>
                 </div>
 
-                {/* Import button */}
                 <ImportPlaylistButton />
             </div>
 

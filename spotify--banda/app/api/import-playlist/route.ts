@@ -67,7 +67,23 @@ export async function POST(req: Request) {
   const writer = stream.writable.getWriter();
 
   const send = async (data: object) => {
-    await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    try {
+      await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    } catch {
+      // Stream already closed — ignore
+    }
+  };
+
+  // Single close guard — prevents "WritableStream is closed" on double-close
+  let closed = false;
+  const closeWriter = async () => {
+    if (closed) return;
+    closed = true;
+    try {
+      await writer.close();
+    } catch {
+      // Already closed
+    }
   };
 
   (async () => {
@@ -97,7 +113,7 @@ export async function POST(req: Request) {
         const playlistId = extractYouTubePlaylistId(url.trim());
         if (!playlistId) {
           await send({ status: 'error', message: 'Link de playlist YouTube inválido.' });
-          await writer.close();
+          await closeWriter();
           return;
         }
         await send({ status: 'fetching', message: 'A obter playlist do YouTube...' });
@@ -114,7 +130,7 @@ export async function POST(req: Request) {
 
       if (!tracks.length) {
         await send({ status: 'error', message: 'Nenhuma música encontrada na playlist.' });
-        await writer.close();
+        await closeWriter();
         return;
       }
 
@@ -135,7 +151,7 @@ export async function POST(req: Request) {
 
       if (playlistError || !playlist) {
         await send({ status: 'error', message: 'Erro ao criar playlist.' });
-        await writer.close();
+        await closeWriter();
         return;
       }
 
@@ -195,7 +211,7 @@ export async function POST(req: Request) {
     } catch (err: any) {
       await send({ status: 'error', message: err.message ?? 'Erro desconhecido.' });
     } finally {
-      await writer.close();
+      await closeWriter();
     }
   })();
 
