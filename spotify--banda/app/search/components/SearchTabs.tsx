@@ -24,26 +24,30 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, triggerYT }) => {
 
   return (
     <>
-      <div className="flex gap-x-2 px-6 mb-4">
+      <div className="flex gap-x-4 px-6 mb-8 mt-4">
         <button
           onClick={() => setTab('library')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-            tab === 'library'
-              ? 'bg-white text-black'
-              : 'bg-neutral-800 text-neutral-400 hover:text-white'
-          }`}
+          className={`
+            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
+            ${tab === 'library' 
+              ? 'text-white border-b-2 border-red-600' 
+              : 'text-neutral-500 hover:text-white border-b-2 border-transparent'
+            }
+          `}
         >
-          Biblioteca
+          [ Local_Files ]
         </button>
         <button
           onClick={() => setTab('youtube')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-            tab === 'youtube'
-              ? 'bg-red-500 text-white'
-              : 'bg-neutral-800 text-neutral-400 hover:text-white'
-          }`}
+          className={`
+            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
+            ${tab === 'youtube' 
+              ? 'text-red-500 border-b-2 border-red-500' 
+              : 'text-neutral-500 hover:text-white border-b-2 border-transparent'
+            }
+          `}
         >
-          YouTube
+          [ Global_YT ]
         </button>
       </div>
 

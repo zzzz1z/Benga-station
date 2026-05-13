@@ -1,8 +1,8 @@
 import Header from "@/components/Header";
 import SearchInput from "@/components/SearchInput";
-import SearchContent from "./components/SearchContent";
 import SearchTabs from "./components/SearchTabs";
 import getSongs from "@/actions/getSongs";
+
 interface SearchProps {
   searchParams: Promise<{
     title: string;
@@ -19,10 +19,15 @@ const Search = async (props: SearchProps) => {
   const songs = await getSongs(title);
 
   return (
-    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
-      <Header className="from-bg-neutral-900">
+    <div className="bg-black h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
+      <Header className="from-black">
         <div className="mb-2 flex flex-col gap-y-6">
-          <h1 className="text-white text-3xl font-semibold">Pesquisar</h1>
+          <div className="flex items-center gap-x-3">
+            <div className="h-8 w-1 bg-red-600" /> {/* Vertical HUD Bar */}
+            <h1 className="text-white text-4xl font-black uppercase tracking-tighter">
+              Pesquisar<span className="text-red-600">.</span>
+            </h1>
+          </div>
           <SearchInput />
         </div>
       </Header>
