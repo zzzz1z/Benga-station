@@ -57,11 +57,9 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         artist_name: song.author ?? '',
       });
       const res = await fetch(`https://lrclib.net/api/get?${params}`);
-
       if (!res.ok) { setLyricsState('none'); return; }
 
       const data = await res.json();
-
       if (data.syncedLyrics) {
         setSyncedLines(parseLrc(data.syncedLyrics));
         setLyricsState('synced');
@@ -125,7 +123,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     }
     if (lyricsState === 'plain') {
       return (
-        <div className="overflow-y-auto h-full px-2 py-4 space-y-1">
+        <div className="overflow-y-auto h-full px-3 py-4 space-y-1">
           {plainLyrics.split('\n').map((line, i) => (
             <p key={i} className="text-neutral-300 text-sm leading-relaxed">
               {line || <br />}
@@ -134,18 +132,19 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         </div>
       );
     }
+    // synced
     return (
-      <div className="overflow-y-auto h-full px-2 py-4 space-y-3">
+      <div className="overflow-y-auto h-full px-3 py-4 space-y-3">
         {syncedLines.map((line, i) => (
           <p
             key={i}
             ref={i === activeLine ? activeLineRef : null}
-            className={`text-sm leading-relaxed transition-all duration-300 ${
+            className={`leading-relaxed transition-all duration-300 ${
               i === activeLine
                 ? 'text-white font-bold text-base'
                 : Math.abs(i - activeLine) === 1
-                ? 'text-neutral-400'
-                : 'text-neutral-600'
+                ? 'text-neutral-400 text-sm'
+                : 'text-neutral-600 text-sm'
             }`}
           >
             {line.text}
@@ -156,11 +155,17 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-y-2">
-      {/* Flip card */}
+    <div className="flex flex-col items-center gap-y-2 w-full">
+      {/* Flip card — expands height when showing lyrics */}
       <div
-        className="w-64 h-64 cursor-pointer"
-        style={{ perspective: '1000px' }}
+        className="w-full cursor-pointer"
+        style={{
+          perspective: '1000px',
+          height: flipped ? '380px' : '256px',
+          transition: 'height 0.5s ease',
+          maxWidth: flipped ? '100%' : '256px',
+          transition2: 'max-width 0.5s ease',
+        } as React.CSSProperties}
         onClick={() => setFlipped(f => !f)}
       >
         <div
@@ -196,7 +201,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
             }}
-            className="absolute inset-0 rounded-2xl bg-neutral-800 shadow-2xl p-3 overflow-hidden"
+            className="absolute inset-0 rounded-2xl bg-neutral-800 shadow-2xl overflow-hidden"
           >
             {renderLyricsContent()}
           </div>

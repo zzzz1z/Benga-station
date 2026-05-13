@@ -1,15 +1,13 @@
 'use client';
 
-import Box from '@/components/Box'
-import {BounceLoader} from 'react-spinners'
+import { BounceLoader } from 'react-spinners';
 
-const loading = () => {
+const Loading = () => {
   return (
-    <Box className='h-full flex items-center justify-center'>
-        <BounceLoader color='#A52A2A' size={40} />
-    </Box>
-   
-  )
-}
+    <div className="h-full flex items-center justify-center">
+      <BounceLoader color="#A52A2A" size={40} />
+    </div>
+  );
+};
 
-export default loading
+export default Loading;
