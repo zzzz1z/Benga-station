@@ -8,13 +8,13 @@ export interface UserDetails {
     role: string;
     email: string;
     full_name: string;
-    avatar_url?: string; // Optional, users may not have an avatar
-    billing_address?: Stripe.Address; // Optional, billing address may not be provided
-    payment_method?: Stripe.PaymentMethod | null; // Payment method or null
+    avatar_url?: string;
+    billing_address?: Stripe.Address;
+    payment_method?: Stripe.PaymentMethod | null;
 }
 
 export interface ProductWithPrice extends Product {
-    prices?: Price[]; // Optional array of prices
+    prices?: Price[];
 }
 
 export interface Song {
@@ -22,21 +22,20 @@ export interface Song {
     user_id: string;
     author: string;
     title: string;
-    song_path: string; // Path or URL to the song file
-    image_path: string; // Path or URL to the song's image
-    source?:'supabase' | 'youtube';
-    youtube_video_id?: string
+    song_path: string;
+    image_path: string;
+    source?: 'supabase' | 'youtube';
+    youtube_video_id?: string;
 }
 
 export interface Playlist {
     readonly id: string;
     user_id: string;
-    description: string;
-    author: string;
+    description?: string;
     title: string;
-    created_at: string; // ISO string of creation time
-    songs: Song[]; // Array of songs in the playlist
-    cover_image: string; // Path or URL to the playlist's cover image
+    created_at: string;
+    songs: Song[]; // always populated by getPlaylists, empty array as fallback
+    cover_image?: string;
 }
 
 export interface Product {
@@ -44,7 +43,7 @@ export interface Product {
     active?: boolean;
     name?: string;
     description?: string;
-    image?: string; // Path or URL to product image
+    image?: string;
     metadata?: Stripe.Metadata;
 }
 
@@ -53,29 +52,29 @@ export interface Price {
     product_id?: string;
     active?: boolean;
     description?: string;
-    unit_amount?: number; // Price amount in cents
-    currency?: string; // ISO 4217 currency code (e.g., USD)
-    type?: Stripe.Price.Type; // One-time or recurring
-    interval?: Stripe.Price.Recurring.Interval; // Billing interval (e.g., "month")
-    interval_count?: number; // Number of intervals between bills
-    trial_period_days?: number | null; // Optional trial period in days
+    unit_amount?: number;
+    currency?: string;
+    type?: Stripe.Price.Type;
+    interval?: Stripe.Price.Recurring.Interval;
+    interval_count?: number;
+    trial_period_days?: number | null;
     metadata?: Stripe.Metadata;
-    products?: Product; // Associated product
+    products?: Product;
 }
 
 export interface Subscription {
     readonly id: string;
     user_id: string;
-    status?: Stripe.Subscription.Status; // Subscription status
-    metadata?: Stripe.Metadata; // Additional metadata
-    price_id?: string; // Price ID
-    quantity?: number; // Quantity of subscription items
-    cancel_at_period_start?: string; // ISO date when cancellation starts
-    current_period_end: string; // ISO date for current period end
-    ended_at?: string; // ISO date when subscription ended
-    cancel_at?: string; // ISO date for scheduled cancellation
-    canceled_at?: string; // ISO date when canceled
-    trial_start?: string; // ISO date for trial start
-    trial_end?: string; // ISO date for trial end
-    prices?: Price; // Associated price
+    status?: Stripe.Subscription.Status;
+    metadata?: Stripe.Metadata;
+    price_id?: string;
+    quantity?: number;
+    cancel_at_period_start?: string;
+    current_period_end: string;
+    ended_at?: string;
+    cancel_at?: string;
+    canceled_at?: string;
+    trial_start?: string;
+    trial_end?: string;
+    prices?: Price;
 }

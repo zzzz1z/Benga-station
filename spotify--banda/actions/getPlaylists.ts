@@ -2,7 +2,7 @@ import { Playlist } from "@/types";
 import { type CookieOptions, createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const getPlaylists = async (search?: string, userId?: string): Promise<Playlist[]> => {
+const getPlaylists = async (search?: string): Promise<Playlist[]> => {
     const cookieStore = await cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,19 +21,13 @@ const getPlaylists = async (search?: string, userId?: string): Promise<Playlist[
         }
     );
 
-    // If no userId passed, read from session
-    
     const resolvedUserId = (await supabase.auth.getUser()).data.user?.id;
+    if (!resolvedUserId) return [];
 
     let query = supabase
         .from('Playlists')
-        .select('*');
-
-        
-
-    if (resolvedUserId) {
-        query = query.eq('user_id', resolvedUserId);
-    }
+        .select('*, playlist_songs(Songs(*))')
+        .eq('user_id', resolvedUserId);
 
     if (search) {
         query = query.ilike('title', `%${search}%`);
@@ -46,7 +40,12 @@ const getPlaylists = async (search?: string, userId?: string): Promise<Playlist[
         return [];
     }
 
-    return (data as Playlist[]) ?? [];
+    return (data ?? []).map((playlist: any) => ({
+        ...playlist,
+        songs: (playlist.playlist_songs ?? [])
+            .map((ps: any) => ps.Songs)
+            .filter(Boolean),
+    }));
 };
 
 export default getPlaylists;
