@@ -34,9 +34,9 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-const preExtractAround = (currentId: string) => {
+const preExtractAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
-  const currentIndex = ids.findIndex(id => id === currentId);
+  const currentIndex = ids.findIndex(id => id === activePlayerId);
   const targets = [
     ids[currentIndex - 1],
     ids[currentIndex + 1],
