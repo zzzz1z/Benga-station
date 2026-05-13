@@ -14,6 +14,7 @@ import ShuffleSongs from './ShuffleSongs';
 import useOnPlaylist from '@/hooks/useOnPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
+import { scheduleWarm } from '@/utils/warmCache';
 
 const supabase = createClient();
 
@@ -21,19 +22,6 @@ const getSongPlayerId = (song: any): string =>
     song.source === 'youtube' && song.youtube_video_id
         ? `yt_${song.youtube_video_id}`
         : String(song.id);
-
-const preExtractPlaylist = (songs: Song[]) => {
-    songs.forEach((song, i) => {
-        if (song.source !== 'youtube' || !song.youtube_video_id) return;
-        setTimeout(() => {
-            fetch('/api/preextract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videoId: song.youtube_video_id }),
-            }).catch(() => {});
-        }, i * 300); // stagger 300ms so first songs get priority
-    });
-};
 
 const PlaylistDetails: React.FC = () => {
     const { id } = useParams();
@@ -63,12 +51,12 @@ const PlaylistDetails: React.FC = () => {
 
             if (playlistData && songData) {
                 const songs = songData.map((item: any) => item.Songs);
-                setPlaylist({
-                    ...playlistData,
-                    songs,
-                });
-                // Warm the worker cache for all YT songs as soon as playlist loads
-                preExtractPlaylist(songs);
+                setPlaylist({ ...playlistData, songs });
+
+                const ytIds = songs
+                    .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
+                    .map((s: any) => s.youtube_video_id);
+                scheduleWarm(ytIds);
             }
         } catch (error) {
             console.error('Error fetching playlist or songs:', error);
