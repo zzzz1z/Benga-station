@@ -14,24 +14,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const extractRes = await fetch(`${WORKER_URL}/extract/${videoId}`, {
+    // 1. TRIGGER THE WORKER (Don't 'await' the full response body)
+    // We send the fetch but we don't wait for the worker to finish the extract
+    fetch(`${WORKER_URL}/extract/${videoId}`, {
       headers: { 'x-worker-secret': WORKER_SECRET! },
-      signal: AbortSignal.timeout(50000), // 50s — give yt-dlp enough time
-    });
+    }).catch(err => console.error("Background extraction failed:", err));
 
-    if (!extractRes.ok) {
-      return NextResponse.json({ error: 'Extraction failed' }, { status: 502 });
-    }
-
-    const { url } = await extractRes.json();
-
-    if (!url) {
-      return NextResponse.json({ error: 'No URL returned' }, { status: 502 });
-    }
-
-    return NextResponse.json({ ok: true });
+    // 2. RESPOND IMMEDIATELY TO THE FRONTEND
+    // This stops the 502 error because the connection is closed successfully
+    return NextResponse.json({ ok: true, message: 'Extraction started' });
+    
   } catch (err: any) {
-    console.error('Preextract error:', err.message);
-    return NextResponse.json({ error: 'Failed' }, { status: 502 });
+    return NextResponse.json({ error: 'Trigger failed' }, { status: 500 });
   }
 }
