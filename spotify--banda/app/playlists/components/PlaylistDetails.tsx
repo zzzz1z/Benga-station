@@ -26,7 +26,7 @@ const getSongPlayerId = (song: any): string =>
 const PlaylistDetails: React.FC = () => {
     const { id } = useParams();
     const [playlist, setPlaylist] = useState<Playlist | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [uploadingCover, setUploadingCover] = useState(false);
     const coverInputRef = useRef<HTMLInputElement>(null);
     const onPlay = useOnPlaylist();
@@ -106,13 +106,7 @@ const PlaylistDetails: React.FC = () => {
         }
     };
 
-    if (!loading) {
-        return (
-            <div className="flex justify-center items-center h-full">
-                <p className="text-white">Carregando...</p>
-            </div>
-        );
-    }
+   
 
     if (!playlist) {
         return (
