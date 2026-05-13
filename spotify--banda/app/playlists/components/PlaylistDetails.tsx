@@ -106,7 +106,13 @@ const PlaylistDetails: React.FC = () => {
         }
     };
 
-   
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <p className="text-white">Carregando...</p>
+            </div>
+        );
+    }
 
     if (!playlist) {
         return (
