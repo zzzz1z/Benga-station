@@ -3,10 +3,10 @@
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
-import useAdminModal from '@/hooks/useAdminModal';
 import CasaTab from './CasaTab';
 import DefinicoesTab from './DefinicoesTab';
 import ProfilePic from './ProfilePic';
+import ImportPlaylistButton from '@/components/ImportPlaylistButton';
 import { Song, Playlist } from '@/types';
 
 interface SettingsContentProps {
@@ -50,10 +50,14 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                         </div>
                     </div>
                 </div>
+
                 <div className="flex flex-col gap-y-0.5">
                     <p className="text-white font-semibold text-sm">{displayName}</p>
                     <p className="text-neutral-500 text-xs">{user?.email}</p>
                 </div>
+
+                {/* Import button */}
+                <ImportPlaylistButton />
             </div>
 
             {/* Tabs */}
