@@ -38,6 +38,8 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+// ── QueueRow ──────────────────────────────────────────────────────────────────
+// song is guaranteed non-null by the filter(Boolean) at call sites
 const QueueRow = ({
   song,
   label,
@@ -84,30 +86,41 @@ const QueueRow = ({
   );
 };
 
+// ── ExpandedPlayer ─────────────────────────────────────────────────────────────
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
 }) => {
   const router = useRouter();
-  const player = usePlayer();
+
+  // Read each slice separately to avoid stale object refs
+  const ids = usePlayer(s => s.ids);
+  const songs = usePlayer(s => s.songs);
+  const activeID = usePlayer(s => s.activeID);
+  const shuffleOn = usePlayer(s => s.shuffleOn);
+  const repeatMode = usePlayer(s => s.repeatMode);
+  const setShuffleOn = usePlayer(s => s.setShuffleOn);
+  const setRepeatMode = usePlayer(s => s.setRepeatMode);
+  const setId = usePlayer(s => s.setId);
+  const playRandom = usePlayer(s => s.playRandom);
 
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [queueExpanded, setQueueExpanded] = useState(false);
 
-  // Persistent state lives in the store now
-  const { ids, songs, activeID, shuffleOn, setShuffleOn, repeatMode, setRepeatMode } = player;
+  const currentIndex = activeID ? ids.findIndex(id => id === activeID) : -1;
 
-  const currentIndex = ids.findIndex(id => id === activeID);
-
-  const history = currentIndex > 0
-    ? ids.slice(0, currentIndex).map(id => songs[id]).filter(Boolean) : [];
-  const upcoming = currentIndex !== -1 && currentIndex < ids.length - 1
-    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter(Boolean) : [];
+  const history: Song[] = currentIndex > 0
+    ? ids.slice(0, currentIndex).map(id => songs[id]).filter((s): s is Song => !!s)
+    : [];
+  const upcoming: Song[] = currentIndex !== -1 && currentIndex < ids.length - 1
+    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s)
+    : [];
   const previewHistory = history.slice(-1);
   const previewUpcoming = upcoming.slice(0, 1);
 
+  // ── Touch drag to close ─────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
@@ -124,10 +137,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = null;
   };
 
-const handleNext = () => {
-  if (repeatMode === 'one') { onSeek(0); return; } // manual skip = seek to 0
-  onNext(); // playNext handles shuffle + repeat:all internally now
-};
+  // ── Playback ────────────────────────────────────────────────────────────────
+  const handleNext = () => {
+    if (repeatMode === 'one') { onSeek(0); return; }
+    onNext();
+  };
 
   const cycleRepeat = () =>
     setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
@@ -259,7 +273,7 @@ const handleNext = () => {
                     dimmed
                     onClick={() => {
                       const pid = ids[currentIndex - (previewHistory.length - i)];
-                      player.setId(pid);
+                      if (pid) setId(pid);
                     }}
                   />
                 ))}
@@ -270,7 +284,7 @@ const handleNext = () => {
                     song={s}
                     onClick={() => {
                       const pid = ids[currentIndex + 1 + i];
-                      player.setId(pid);
+                      if (pid) setId(pid);
                     }}
                   />
                 ))}
@@ -289,7 +303,7 @@ const handleNext = () => {
                         key={`hist-${i}`}
                         song={s}
                         dimmed
-                        onClick={() => player.setId(ids[i])}
+                        onClick={() => { const pid = ids[i]; if (pid) setId(pid); }}
                       />
                     ))}
                   </>
@@ -307,7 +321,10 @@ const handleNext = () => {
                       <QueueRow
                         key={`up-${i}`}
                         song={s}
-                        onClick={() => player.setId(ids[currentIndex + 1 + i])}
+                        onClick={() => {
+                          const pid = ids[currentIndex + 1 + i];
+                          if (pid) setId(pid);
+                        }}
                       />
                     ))}
                   </>
