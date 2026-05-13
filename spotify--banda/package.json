@@ -58,8 +58,6 @@
     "@types/react-navigation": "^3.4.0",
     "@types/uniqid": "^5.3.4",
     "autoprefixer": "^10.0.1",
-    "eslint": "^9.39.4",
-    "eslint-config-next": "^16.1.6",
     "nodemon": "^3.1.7",
     "postcss": "^8",
     "supabase": "^2.98.2",
