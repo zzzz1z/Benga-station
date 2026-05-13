@@ -23,10 +23,17 @@ const supabase = createClient();
 const GAMER_CUT = "polygon(12% 0%, 100% 0%, 100% 88%, 88% 100%, 0% 100%, 0% 12%)";
 const BADGE_CUT = "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)";
 
-const getSongPlayerId = (song: any): string =>
-    song.source === 'youtube' && song.youtube_video_id
-        ? `yt_${song.youtube_video_id}`
-        : String(song.id);
+// Optimized version
+const getSongPlayerId = (song: any): string => {
+    if (!song) return '';
+    
+    // Ensure we are working with strings for the player logic
+    if (song.source === 'youtube' && song.youtube_video_id) {
+        return `yt_${song.youtube_video_id}`;
+    }
+    
+    return String(song.id); // Explicitly cast Number IDs to String
+};
 
 const PlaylistDetails: React.FC = () => {
     const { id } = useParams();
