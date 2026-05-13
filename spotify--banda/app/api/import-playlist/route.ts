@@ -149,11 +149,10 @@ export async function POST(req: Request) {
         .select()
         .single();
 
-      if (playlistError || !playlist) {
-        await send({ status: 'error', message: 'Erro ao criar playlist.' });
-        await closeWriter();
-        return;
-      }
+if (playlistError || !playlist) {
+  await send({ status: 'error', message: 'Erro ao criar playlist.', detail: playlistError?.message ?? 'no data returned' });
+  return;
+}
 
       // ── Process each track ──────────────────────────────────────────────────
       let imported = 0;
