@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 const spotifyUrlInfo = require('spotify-url-info');
 const { getData } = spotifyUrlInfo(fetch);
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 const WORKER_URL = process.env.YT_WORKER_URL!;
 const WORKER_SECRET = process.env.WORKER_SECRET!;
