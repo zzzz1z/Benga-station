@@ -34,10 +34,13 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
+// FIX: This is now a pure helper function (No Hooks inside)
 const preExtractAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
-  const currentIndex = ids.findIndex(id => String(id) === String(activePlayerId));
   
+  const activeIdStr = String(activePlayerId);
+  const currentIndex = ids.findIndex(id => String(id) === activeIdStr);
+
   const targets = [
     ids[currentIndex - 1],
     ids[currentIndex + 1],
@@ -45,7 +48,7 @@ const preExtractAround = (activePlayerId: string) => {
   ].filter(Boolean);
 
   targets.forEach(id => {
-    const idStr = String(id); // Force conversion to string
+    const idStr = String(id); 
     if (!idStr.startsWith('yt_')) return;
     
     const videoId = idStr.replace('yt_', '');
@@ -58,6 +61,12 @@ const preExtractAround = (activePlayerId: string) => {
 };
 
 const Player = () => {
+  // --- HYDRATION FIX ---
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const player = usePlayer();
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
@@ -96,7 +105,6 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // Main Audio Setup
   useEffect(() => {
     const audio = new Audio();
     audio.crossOrigin = 'anonymous';
@@ -132,7 +140,6 @@ const Player = () => {
       if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
     };
 
-    // Robust Stuck Detection
     stuckInterval = setInterval(() => {
         if (isPlayingRef.current && !audio.paused && audio.src) {
             if (audio.currentTime === lastTime && audio.currentTime !== 0 && audio.currentTime < audio.duration) {
@@ -159,7 +166,6 @@ const Player = () => {
     };
   }, []);
 
-  // Handle Song Change
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -183,14 +189,13 @@ const Player = () => {
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
-        if (activeID) preExtractAround(activeID);
+        if (activeID) preExtractAround(String(activeID));
       }).catch(() => { setIsLoading(false); });
     }, 100);
 
     return () => clearTimeout(timer);
   }, [songUrl]);
 
-  // Handle Repeat One (playCount increment)
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && audio.src && playCount > 0) {
@@ -235,6 +240,8 @@ const Player = () => {
     () => { audioRef.current?.pause(); }
   );
 
+  // --- RENDERING LOGIC ---
+  if (!isMounted) return null; 
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;
 
