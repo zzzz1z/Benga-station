@@ -10,57 +10,44 @@ import toast from "react-hot-toast";
 const supabase = createClient();
 
 interface PlaylistItemProps {
-  data: Playlist;
-  onClick?: (id: string) => void;
+    data: Playlist;
+    onClick?: (id: string) => void;
 }
 
 const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
-  const imageUrl = useLoadImagePlaylist(data);
-  const router = useRouter();
+    const imageUrl = useLoadImagePlaylist(data);
+    const router = useRouter();
 
-  const handleClick = () => {
-    router.push(`/playlists/${data?.id}`);
-    if (onClick) onClick(data.id);
-  };
+    const handleClick = () => {
+        router.push(`/playlists/${data?.id}`);
+        if (onClick) onClick(data.id);
+    };
 
-  const deletePlaylist = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-
-    const confirmDelete = confirm(`Are you sure you want to delete "${data.title}"?`);
-    if (!confirmDelete) return;
-
-    try {
-      const { error } = await supabase.from('Playlists').delete().eq('id', data.id);
-      if (error) throw error;
-
-      toast.success('Playlist deleted successfully.');
-      router.refresh();
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-      toast.error('Failed to delete playlist. Please try again.');
-    }
-  };
-
-  return (
-    <div
-      onClick={handleClick}
-      className="flex items-center gap-x-3 cursor-pointer hover:bg-neutral-800/50 w-full p-2 rounded-md"
-    >
-      <div className="relative rounded-md min-h-[48px] min-w-[48px] overflow-hidden">
-        <Image
-          priority
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          src={imageUrl ?? '/images/likedit.png'}
-          alt={`${data.title} Cover`}
-          className="object-cover"
-        />
-      </div>
-      <div className="flex flex-col gap-y-1 overflow-hidden">
-        <p className="text-white truncate">{data.title}</p>
-      </div>
-    </div>
-  );
+    return (
+        <div
+            onClick={handleClick}
+            className="flex items-center gap-x-3 cursor-pointer hover:bg-red-600/5 w-full p-2 border border-transparent hover:border-red-900/30 transition-all group"
+        >
+            <div className="relative rounded-none min-h-[52px] min-w-[52px] overflow-hidden border border-white/5">
+                <Image
+                    priority fill
+                    sizes="52px"
+                    src={imageUrl ?? '/images/likedit.png'}
+                    alt={`${data.title}`}
+                    className="object-cover grayscale-[0.5] group-hover:grayscale-0 transition duration-500"
+                />
+                <div className="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition" />
+            </div>
+            <div className="flex flex-col gap-y-0.5 overflow-hidden">
+                <p className="text-white font-black uppercase tracking-tighter group-hover:text-red-500 transition truncate">
+                    {data.title}
+                </p>
+                <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-[0.2em]">
+                    DIR_TYPE::PLAYLIST
+                </p>
+            </div>
+        </div>
+    );
 };
 
 export default PlaylistItem;

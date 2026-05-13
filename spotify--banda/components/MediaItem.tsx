@@ -16,190 +16,169 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 interface MediaItemProps {
-  data: Song;
-  onClick?: () => void;
+    data: Song;
+    onClick?: () => void;
 }
 
 const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
-  const imageUrl = useLoadImage(data);
-  const player = usePlayer();
-  const { user } = useUser();
-  const authModal = useAuthModal();
-  const router = useRouter();
+    const imageUrl = useLoadImage(data);
+    const player = usePlayer();
+    const { user } = useUser();
+    const authModal = useAuthModal();
+    const router = useRouter();
 
-  const [isLiked, setIsLiked] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const menuRef = useRef<HTMLDivElement>(null);
+    const [isLiked, setIsLiked] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [playlists, setPlaylists] = useState<Playlist[]>([]);
+    const menuRef = useRef<HTMLDivElement>(null);
 
-  const songId = String(data.id);
+    const songId = String(data.id);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    fetch(`/api/likes?songId=${songId}`)
-      .then(res => res.json())
-      .then(json => { if (json.liked) setIsLiked(true); });
-  }, [user?.id, songId]);
+    useEffect(() => {
+        if (!user?.id) return;
+        fetch(`/api/likes?songId=${songId}`)
+            .then(res => res.json())
+            .then(json => { if (json.liked) setIsLiked(true); });
+    }, [user?.id, songId]);
 
-  // close menu on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        if (showMenu) document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
+
+    const handleClick = () => {
+        if (onClick) onClick();
+        else player.setId(songId);
     };
-    if (showMenu) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showMenu]);
 
-  const handleClick = () => {
-    if (onClick) onClick();
-    else player.setId(songId);
-  };
+    const handleLike = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user) { authModal.onOpen('sign_up'); return; }
+        const method = isLiked ? 'DELETE' : 'POST';
+        const res = await fetch('/api/likes', {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ songId }),
+        });
+        if (res.ok) {
+            setIsLiked(!isLiked);
+            toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
+        }
+        setShowMenu(false);
+    };
 
-  const handleLike = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) { authModal.onOpen('sign_up'); return; }
-    const method = isLiked ? 'DELETE' : 'POST';
-    const res = await fetch('/api/likes', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId }),
-    });
-    if (res.ok) {
-      setIsLiked(!isLiked);
-      toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
-    } else {
-      toast.error('Erro ao atualizar favoritos');
-    }
-    setShowMenu(false);
-  };
+    const handlePlaylistClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user) { authModal.onOpen('sign_up'); return; }
+        const res = await fetch('/api/playlist/user-playlists');
+        const json = await res.json();
+        setPlaylists(json.playlists ?? []);
+        setShowMenu(false);
+        setShowModal(true);
+    };
 
-  const handlePlaylistClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) { authModal.onOpen('sign_up'); return; }
-    const res = await fetch('/api/playlist/user-playlists');
-    const json = await res.json();
-    setPlaylists(json.playlists ?? []);
-    setShowMenu(false);
-    setShowModal(true);
-  };
+    const handleAddToPlaylist = async (playlistId: string) => {
+        const res = await fetch('/api/playlist/add-song', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playlistId, song: data }),
+        });
+        if (res.status === 409) toast.error('Música já está na playlist');
+        else if (!res.ok) toast.error('Erro ao adicionar música');
+        else toast.success('Adicionado à playlist!');
+        setShowModal(false);
+    };
 
-  const handleAddToPlaylist = async (playlistId: string) => {
-    const res = await fetch('/api/playlist/add-song', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playlistId, song: data }),
-    });
-    if (res.status === 409) toast.error('Música já está na playlist');
-    else if (!res.ok) toast.error('Erro ao adicionar música');
-    else toast.success('Adicionado à playlist!');
-    setShowModal(false);
-  };
+    const handleInfo = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowMenu(false);
+        router.push(`/songs/${data.id}`);
+    };
 
-  const handleInfo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    router.push(`/songs/${data.id}`);
-  };
+    return (
+        <>
+            <div
+                onClick={handleClick}
+                className="flex items-center gap-4 cursor-pointer hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative overflow-hidden"
+            >
+                <div className="relative rounded-none h-14 w-16 flex-shrink-0 overflow-hidden border border-white/5">
+                    <Image
+                        priority fill
+                        sizes="64px"
+                        src={imageUrl ?? '/images/likedit.png'}
+                        alt={data.title}
+                        className="object-cover grayscale-[0.4] group-hover:grayscale-0 transition duration-500"
+                    />
+                </div>
 
-  return (
-    <>
-      <div
-        onClick={handleClick}
-        className="flex items-center gap-4 cursor-pointer hover:bg-neutral-800/50 p-2 rounded-md w-full group"
-      >
-        <div className="relative rounded-md h-14 w-16 flex-shrink-0 overflow-hidden">
-          <Image
-            priority fill
-            sizes="(max-width: 968px) 100vw, (max-width: 1400px) 70vw, 53vw"
-            src={imageUrl ?? '/images/likedit.png'}
-            alt={data.title ?? 'Media Item'}
-            className="object-cover"
-          />
-        </div>
+                <div className="flex flex-col w-full gap-y-0.5 min-w-0">
+                    <p className="text-white font-black uppercase italic tracking-tighter truncate w-full group-hover:text-red-500 transition">
+                        {data.title}
+                    </p>
+                    <p className="text-red-600/50 font-mono text-[10px] uppercase tracking-widest">
+                        DATA_NODE::{data.author.replace(/\s+/g, '_')}
+                    </p>
+                </div>
 
-        <div className="flex flex-col w-full gap-y-1 min-w-0">
-          <p className="text-white truncate w-full">{data.title}</p>
-          <p className="text-neutral-400 text-sm">{data.author}</p>
-        </div>
+                {/* Desktop hover buttons */}
+                <div
+                    className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 opacity-0 group-hover:opacity-100 transition translate-x-4 group-hover:translate-x-0"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <button onClick={handleLike} className="text-neutral-500 hover:text-red-500 transition">
+                        {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
+                    </button>
+                    <button onClick={handlePlaylistClick} className="text-neutral-500 hover:text-red-500 transition">
+                        <MdPlaylistAdd size={20} />
+                    </button>
+                    <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
+                        <AiOutlineInfoCircle size={18} />
+                    </button>
+                </div>
 
-        {/* Desktop hover buttons */}
-        <div
-          className="hidden md:flex items-center gap-x-3 flex-shrink-0 pr-2 opacity-0 group-hover:opacity-100 transition"
-          onClick={e => e.stopPropagation()}
-        >
-          <button onClick={handleLike} className="text-neutral-400 hover:text-white flex items-center justify-center w-5 h-5">
-            {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
-          </button>
-          <button onClick={handlePlaylistClick} className="text-neutral-400 hover:text-white flex items-center justify-center w-5 h-5">
-            <MdPlaylistAdd size={18} />
-          </button>
-          <button onClick={handleInfo} className="text-neutral-400 hover:text-white flex items-center justify-center w-5 h-5">
-            <AiOutlineInfoCircle size={16} />
-          </button>
-        </div>
-
-        {/* Mobile three-dot menu */}
-        <div
-          className="relative md:hidden flex-shrink-0"
-          ref={menuRef}
-          onClick={e => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setShowMenu(prev => !prev)}
-            className="text-neutral-400 p-2 flex items-center justify-center"
-          >
-            <BsThreeDotsVertical size={16} />
-          </button>
-
-          {showMenu && (
-            <div className="absolute right-0 bottom-full mb-1 w-44 bg-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden border border-neutral-700">
-              <button
-                onClick={handleLike}
-                className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition"
-              >
-                {isLiked
-                  ? <AiFillHeart size={16} className="text-red-500" />
-                  : <AiOutlineHeart size={16} className="text-neutral-400" />
-                }
-                {isLiked ? 'Remover favorito' : 'Adicionar favorito'}
-              </button>
-              <button
-                onClick={handlePlaylistClick}
-                className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition"
-              >
-                <MdPlaylistAdd size={16} className="text-neutral-400" />
-                Adicionar à playlist
-              </button>
-              <button
-                onClick={handleInfo}
-                className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition"
-              >
-                <AiOutlineInfoCircle size={16} className="text-neutral-400" />
-                Ver detalhes
-              </button>
+                {/* Mobile three-dot menu */}
+                <div className="relative md:hidden flex-shrink-0" ref={menuRef} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setShowMenu(prev => !prev)} className="text-red-900/40 p-2">
+                        <BsThreeDotsVertical size={16} />
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 bottom-full mb-1 w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden">
+                            <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
+                                {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
+                                {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
+                            </button>
+                            <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
+                                <MdPlaylistAdd size={16} /> Add_Playlist
+                            </button>
+                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition">
+                                <AiOutlineInfoCircle size={16} /> Ver_Metadata
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="Adicionar à playlist" description="Escolhe uma playlist para adicionar esta música">
-        <div className="flex flex-col gap-y-2">
-          {playlists.length === 0
-            ? <p className="text-neutral-400 text-sm text-center py-4">Sem playlists criadas</p>
-            : playlists.map(pl => (
-              <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
-                className="w-full text-left px-4 py-3 text-sm text-white bg-neutral-700 hover:bg-neutral-600 rounded-md transition truncate">
-                {pl.title}
-              </button>
-            ))
-          }
-        </div>
-      </Modal>
-    </>
-  );
+            <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="SYNC_PLAYLIST" description="Selecione o destino para o pacote de dados:">
+                <div className="flex flex-col gap-y-2 mt-4">
+                    {playlists.length === 0
+                        ? <p className="text-red-600/40 font-mono text-xs text-center py-4 tracking-tighter">NULL_DIRECTORIES_FOUND</p>
+                        : playlists.map(pl => (
+                            <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
+                                className="w-full text-left px-4 py-3 text-[10px] font-mono uppercase tracking-widest text-red-500 bg-red-900/5 border border-red-900/20 hover:bg-red-600 hover:text-white transition truncate">
+                                {'>'} {pl.title}
+                            </button>
+                        ))
+                    }
+                </div>
+            </Modal>
+        </>
+    );
 };
 
 export default MediaItem;
