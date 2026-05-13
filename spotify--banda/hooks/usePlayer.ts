@@ -7,6 +7,7 @@ interface PlayerStore {
     ids: string[];
     songs: Record<string, Song>;
     activeID?: string;
+    playCount: number; // New: triggers re-plays for same ID
     failedIds: Set<string>;
     shuffleOn: boolean;
     repeatMode: RepeatMode;
@@ -33,13 +34,13 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     ids: [],
     songs: {},
     activeID: undefined,
+    playCount: 0,
     failedIds: new Set(),
     shuffleOn: false,
     repeatMode: 'off',
 
     setId: (id: string) => set({ activeID: id }),
     setIds: (ids: string[]) => set({ ids }),
-
     setShuffleOn: (value) => set({ shuffleOn: value }),
     setRepeatMode: (mode) => set({ repeatMode: mode }),
 
@@ -85,43 +86,35 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         }));
     },
 
-playNext: () => {
-    const { ids, activeID, repeatMode, shuffleOn, playRandom } = get();
+    playNext: () => {
+        const { ids, activeID, repeatMode, shuffleOn, playRandom, playCount } = get();
 
-    if (repeatMode === 'one') {
-        // re-trigger the same song by setting activeID to itself
-        // Player.tsx watches activeID change — force re-render by briefly unsetting
-        set({ activeID: undefined });
-        setTimeout(() => set({ activeID }), 0);
-        return;
-    }
+        if (repeatMode === 'one' && activeID) {
+            set({ playCount: playCount + 1 });
+            return;
+        }
 
-    if (!ids.length || activeID === undefined) {
-        playRandom();
-        return;
-    }
+        if (!ids.length || activeID === undefined) {
+            playRandom();
+            return;
+        }
 
-    if (shuffleOn) {
-        playRandom();
-        return;
-    }
+        if (shuffleOn) {
+            playRandom();
+            return;
+        }
 
-    const currentIndex = ids.findIndex(id => id === activeID);
+        const currentIndex = ids.findIndex(id => id === activeID);
 
-    if (repeatMode === 'all') {
-        // wrap around to beginning
-        const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
-        set({ activeID: ids[nextIndex] });
-        return;
-    }
+        if (repeatMode === 'all') {
+            const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
+            set({ activeID: ids[nextIndex] });
+            return;
+        }
 
-    // repeatMode === 'off', no shuffle
-    if (currentIndex === -1 || currentIndex === ids.length - 1) {
-        // end of queue, stop
-        return;
-    }
-    set({ activeID: ids[currentIndex + 1] });
-},
+        if (currentIndex === -1 || currentIndex === ids.length - 1) return;
+        set({ activeID: ids[currentIndex + 1] });
+    },
 
     playPrevious: () => {
         const { ids, activeID } = get();

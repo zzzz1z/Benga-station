@@ -2,7 +2,6 @@ import { Song } from "@/types";
 import usePlayer from "./usePlayer";
 import useAuthModal from "./useAuthModal";
 import { useUser } from "./useUser";
-import useSubscribeModal from "./useSubscribeModal.ts";
 
 const getSongPlayerId = (song: Song): string =>
     song.source === 'youtube' && song.youtube_video_id
@@ -17,24 +16,16 @@ const preExtract = (videoId: string) => {
     }).catch(() => {});
 };
 
-export const preExtractAll = (songs: Song[]) => {
-    songs.forEach(song => {
-        if (song.source === 'youtube' && song.youtube_video_id) {
-            preExtract(song.youtube_video_id);
-        }
-    });
-};
-
 const useOnPlay = (songs: Song[]) => {
     const player = usePlayer();
     const authModal = useAuthModal();
     const { user } = useUser();
-    const subscribeModal = useSubscribeModal();
 
     const onPlay = (id: string) => {
-        if (!user) {
-            return authModal.onOpen('sign_up');
-        }
+        if (!user) return authModal.onOpen('sign_up');
+
+        // Guard: Don't restart or re-extract if already playing
+        if (player.activeID === id) return;
 
         const song = songs.find(s => getSongPlayerId(s) === id);
         if (song?.source === 'youtube' && song.youtube_video_id) {

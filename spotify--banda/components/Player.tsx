@@ -60,21 +60,17 @@ const Player = () => {
   useEffect(() => { playerRef.current = player; }, [player]);
 
   const activeID = usePlayer(state => state.activeID);
+  const playCount = usePlayer(state => state.playCount);
   const songsMap = usePlayer(state => state.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
-  const lastGoodActiveIDRef = useRef<string | null>(null);
-
   const songFromStore = activeID ? songsMap[activeID] : null;
-  if (songFromStore && activeID) {
-    lastGoodSongRef.current = songFromStore;
-    lastGoodActiveIDRef.current = activeID;
-  }
+  if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
   const song = songFromStore ?? lastGoodSongRef.current;
 
   const songUrl = useLoadSongUrl((song ?? {}) as Song);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -84,7 +80,6 @@ const Player = () => {
 
   const volumeRef = useRef(1);
   const isPlayingRef = useRef(false);
-  const positionRef = useRef(0);
   const skipOnErrorRef = useRef(false);
   const endedFiredRef = useRef(false);
 
@@ -98,31 +93,25 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
+  // Main Audio Setup
   useEffect(() => {
     const audio = new Audio();
     audio.crossOrigin = 'anonymous';
-    audio.style.display = 'none';
-    document.body.appendChild(audio);
     audioRef.current = audio;
 
-    audio.ontimeupdate = () => {
-      positionRef.current = audio.currentTime;
-      setPosition(audio.currentTime);
-    };
+    let lastTime = 0;
+    let stuckInterval: NodeJS.Timeout;
+
+    audio.ontimeupdate = () => { setPosition(audio.currentTime); };
     audio.onloadedmetadata = () => setDuration(audio.duration);
     audio.onended = handleEnded;
     audio.onplay = () => { setIsPlaying(true); setIsLoading(false); };
-    audio.onpause = () => {
-      if (!audio.src) return;
-      setIsPlaying(false);
-    };
+    audio.onpause = () => { if (audio.src) setIsPlaying(false); };
     audio.onwaiting = () => setIsLoading(true);
     audio.oncanplay = () => setIsLoading(false);
 
     audio.onerror = () => {
       if (!audio.src || !skipOnErrorRef.current) return;
-      const currentId = playerRef.current.activeID;
-
       if (!audio.dataset.retried) {
         audio.dataset.retried = '1';
         const src = audio.src;
@@ -135,52 +124,39 @@ const Player = () => {
         }, 800);
         return;
       }
-
       setIsLoading(false);
       setIsPlaying(false);
-      if (currentId) playerRef.current.markFailed(currentId);
+      if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
     };
 
-    const handleStuck = () => {
-      setTimeout(async () => {
-        if (isPlayingRef.current && audio.paused && audio.src) {
-          await safePlay(audio);
+    // Robust Stuck Detection
+    stuckInterval = setInterval(() => {
+        if (isPlayingRef.current && !audio.paused && audio.src) {
+            if (audio.currentTime === lastTime && audio.currentTime !== 0 && audio.currentTime < audio.duration) {
+                audio.play().catch(() => {});
+            }
+            lastTime = audio.currentTime;
         }
-      }, 800);
-    };
-
-    audio.addEventListener("stalled", handleStuck);
+    }, 2000);
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') return;
-      const a = audioRef.current;
-      if (!a || !a.src) return;
-      const dur = a.duration;
-      const cur = a.currentTime;
-      if (dur > 0 && cur >= dur - 0.5 && a.paused && isPlayingRef.current) {
+      if (document.visibilityState !== 'visible' || !audio.src) return;
+      if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 && audio.paused && isPlayingRef.current) {
         handleEnded();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      audio.removeEventListener("stalled", handleStuck);
+      clearInterval(stuckInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      audio.ontimeupdate = null;
-      audio.onloadedmetadata = null;
-      audio.onended = null;
-      audio.onplay = null;
-      audio.onpause = null;
-      audio.onwaiting = null;
-      audio.oncanplay = null;
-      audio.onerror = null;
       audio.pause();
       audio.src = '';
-      if (audio.parentNode) audio.parentNode.removeChild(audio);
       audioRef.current = null;
     };
   }, []);
 
+  // Handle Song Change
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -204,7 +180,6 @@ const Player = () => {
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
-        positionRef.current = 0;
         if (activeID) preExtractAround(activeID);
       }).catch(() => { setIsLoading(false); });
     }, 100);
@@ -212,27 +187,27 @@ const Player = () => {
     return () => clearTimeout(timer);
   }, [songUrl]);
 
+  // Handle Repeat One (playCount increment)
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) audio.volume = volume;
-  }, [volume]);
+    if (audio && audio.src && playCount > 0) {
+        audio.currentTime = 0;
+        safePlay(audio);
+    }
+  }, [playCount]);
+
+  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume; }, [volume]);
 
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      safePlay(audio).catch(() => {});
-    }
+    isPlaying ? audio.pause() : safePlay(audio).catch(() => {});
   };
 
   const handleNext = () => playerRef.current.playNext();
-
   const handlePrevious = () => {
     const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.currentTime > 3) {
+    if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
       setPosition(0);
     } else {
@@ -241,11 +216,10 @@ const Player = () => {
   };
 
   const handleSeek = (value: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = value;
-    setPosition(value);
-    positionRef.current = value;
+    if (audioRef.current) {
+        audioRef.current.currentTime = value;
+        setPosition(value);
+    }
   };
 
   const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 0);
@@ -254,7 +228,7 @@ const Player = () => {
     isPlaying,
     (song ?? {}) as Song,
     audioRef,
-    () => { const audio = audioRef.current; if (audio) safePlay(audio).catch(() => {}); },
+    () => { audioRef.current && safePlay(audioRef.current).catch(() => {}); },
     () => { audioRef.current?.pause(); }
   );
 
@@ -262,33 +236,16 @@ const Player = () => {
   if (!song) return null;
 
   const sharedProps = {
-    song,
-    isPlaying,
-    isLoading,
-    position,
-    duration,
-    volume,
-    onPlay: handlePlay,
-    onNext: handleNext,
-    onPrevious: handlePrevious,
-    onSeek: handleSeek,
-    onVolumeChange: setVolume,
-    onToggleMute: toggleMute,
+    song, isPlaying, isLoading, position, duration, volume,
+    onPlay: handlePlay, onNext: handleNext, onPrevious: handlePrevious,
+    onSeek: handleSeek, onVolumeChange: setVolume, onToggleMute: toggleMute,
   };
 
   return (
     <>
-      {isExpanded && (
-        <ExpandedPlayer
-          {...sharedProps}
-          onClose={() => setIsExpanded(false)}
-        />
-      )}
+      {isExpanded && <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />}
       <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] border-t border-red-900/40 px-4 z-[40]">
-        <PlayerContent
-          {...sharedProps}
-          onExpand={() => setIsExpanded(true)}
-        />
+        <PlayerContent {...sharedProps} onExpand={() => setIsExpanded(true)} />
       </div>
     </>
   );

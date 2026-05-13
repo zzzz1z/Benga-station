@@ -18,6 +18,9 @@ const useOnPlaylist = () => {
             return;
         }
 
+        // Guard: Don't reset the queue if the song is already active
+        if (player.activeID === id) return;
+
         player.setQueue(songs, id);
     };
 
