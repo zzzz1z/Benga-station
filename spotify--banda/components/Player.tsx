@@ -36,7 +36,8 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
 
 const preExtractAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
-  const currentIndex = ids.findIndex(id => id === activePlayerId);
+  const currentIndex = ids.findIndex(id => String(id) === String(activePlayerId));
+  
   const targets = [
     ids[currentIndex - 1],
     ids[currentIndex + 1],
@@ -44,8 +45,10 @@ const preExtractAround = (activePlayerId: string) => {
   ].filter(Boolean);
 
   targets.forEach(id => {
-    if (!id.startsWith('yt_')) return;
-    const videoId = id.replace('yt_', '');
+    const idStr = String(id); // Force conversion to string
+    if (!idStr.startsWith('yt_')) return;
+    
+    const videoId = idStr.replace('yt_', '');
     fetch('/api/preextract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

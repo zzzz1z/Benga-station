@@ -8,6 +8,10 @@ const useLoadSongUrl = (song: Song) => {
     const [url, setUrl] = useState('');
 
     useEffect(() => {
+        // 1. Immediately clear the URL when the song ID changes 
+        // to prevent the player from trying to play the previous song's URL.
+        setUrl(''); 
+
         if (!song?.id) return;
 
         if (song.source === 'youtube' && song.youtube_video_id) {
@@ -16,7 +20,10 @@ const useLoadSongUrl = (song: Song) => {
             const { data } = supabase.storage
                 .from('musicas')
                 .getPublicUrl(song.song_path);
-            setUrl(data.publicUrl);
+            
+            if (data?.publicUrl) {
+                setUrl(data.publicUrl);
+            }
         }
     }, [song?.id, song?.source, song?.youtube_video_id, song?.song_path]);
 
