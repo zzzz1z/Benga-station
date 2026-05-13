@@ -1,7 +1,6 @@
 import Header from "@/components/Header";
 import ListaItens from "@/components/ListaItens";
 import PageContent from "./components/PageContent";
-import AddContent from "./components/AddContent";
 import getSongs from "@/actions/getSongs";
 
 export const dynamic = 'force-dynamic';
@@ -28,12 +27,7 @@ export default async function Home() {
         </div>
       </Header>
 
-      <div className="mt-2 mb-7 px-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-white text-2xl font-semibold">Adicionadas Recentemente</h1>
-        </div>
-        <AddContent songs={songs} />
-      </div>
+   
 
       <div className="mt-2 mb-7 px-6">
         <div className="flex justify-between items-center">

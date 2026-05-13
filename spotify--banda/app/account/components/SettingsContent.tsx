@@ -8,6 +8,7 @@ import DefinicoesTab from './DefinicoesTab';
 import ProfilePic from './ProfilePic';
 import ImportPlaylistButton from '@/components/ImportPlaylistButton';
 import { Song, Playlist } from '@/types';
+import { BounceLoader } from 'react-spinners';
 
 interface SettingsContentProps {
     likedSongs: Song[];
@@ -25,6 +26,14 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     useEffect(() => {
         if (!isLoading && !user) router.replace('/');
     }, [isLoading, user, router]);
+
+    if (!mounted || isLoading) {
+        return (
+            <div className="flex justify-center items-center h-40">
+                <BounceLoader color="#A52A2A" size={40} />
+            </div>
+        );
+    }
 
     const displayName = userDetails?.full_name
         ?? (userDetails?.first_name
@@ -55,7 +64,6 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
 
                 {/* Avatar + stats row */}
                 <div className="relative z-10 flex items-center gap-x-8 w-full max-w-sm">
-                    {/* Avatar with hex clip + glow */}
                     <div className="relative flex-shrink-0">
                         <div
                             className="absolute inset-0 rounded-full blur-md opacity-60"
@@ -63,9 +71,7 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                         />
                         <div
                             className="relative"
-                            style={{
-                                filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))',
-                            }}
+                            style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))' }}
                         >
                             <ProfilePic />
                         </div>
@@ -90,7 +96,6 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                             </span>
                         </div>
 
-                        {/* Divider */}
                         <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, rgba(239,68,68,0.4), transparent)' }} />
 
                         <div className="flex flex-col items-center gap-y-0.5">
@@ -110,7 +115,6 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                 {/* Name + email */}
                 <div className="relative z-10 flex flex-col items-center gap-y-1 w-full">
                     <div className="flex items-center gap-x-2">
-                        {/* Red tag */}
                         <span
                             className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5"
                             style={{
@@ -123,11 +127,11 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                             Player
                         </span>
                         <p className="text-white font-bold text-base tracking-wide">
-                            {mounted ? displayName : ''}
+                            {displayName}
                         </p>
                     </div>
                     <p className="text-neutral-600 text-xs tracking-wide">
-                        {mounted ? (user?.email ?? '') : ''}
+                        {user?.email ?? ''}
                     </p>
                 </div>
 
@@ -150,9 +154,7 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className="relative px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors"
-                        style={{
-                            color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.3)',
-                        }}
+                        style={{ color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.3)' }}
                     >
                         {tab === 'casa' ? 'Casa' : 'Definições'}
                         {activeTab === tab && (
