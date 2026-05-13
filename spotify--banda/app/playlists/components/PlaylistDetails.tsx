@@ -112,7 +112,7 @@ const PlaylistDetails: React.FC = () => {
     if (!playlist) return <div className="p-20 text-white">Playlist não encontrada.</div>;
 
     return (
-        <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto relative">
+        <div className="bg-neutral-900 rounded-lg h-full w-full pt-[65px] overflow-hidden overflow-y-auto relative">
             
             {/* Header with Gamer Accents */}
             <Header className="relative overflow-hidden">
