@@ -40,3 +40,33 @@ input, textarea, select {
   0% { transform: translateX(100%); }
   100% { transform: translateX(-100%); }
 }
+
+@layer utilities {
+  .animate-glow-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  .animate-glow-sweep::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(239, 68, 68, 0.15),
+      rgba(239, 68, 68, 0.4),
+      rgba(239, 68, 68, 0.15),
+      transparent
+    );
+    transform: rotate(25deg);
+    animation: sweep 4s infinite opacity-50;
+  }
+
+  @keyframes sweep {
+    0% { left: -60%; }
+    100% { left: 120%; }
+  }
+}

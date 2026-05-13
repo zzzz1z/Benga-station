@@ -16,40 +16,66 @@ const ListaItens: React.FC<ListaItensProps> = ({
   image,
   name,
   href,
-  fill = true,  // Default fill to true if not provided
+  fill = true,
   sizes,
 }) => {
   const router = useRouter();
 
-  const onClick = () => {
-    router.push(href);
-  };
-
   return (
     <button
-      onClick={onClick}
-      className="relative group flex items-center rounded-md overflow-hidden gap-x-4 bg-neutral-100/10 hover:bg-neutral-100/20 transition pr-4"
+      onClick={() => router.push(href)}
+      className="
+        relative 
+        group 
+        flex 
+        items-center 
+        gap-x-4 
+        bg-neutral-100/5 
+        hover:bg-neutral-100/10 
+        transition 
+        pr-4
+        border-l-2
+        border-red-600/40
+      "
+      style={{
+        clipPath: "polygon(0 0, 95% 0, 100% 25%, 100% 100%, 5% 100%, 0 75%)"
+      }}
     >
-      {/* Image Container */}
       <div className="relative min-h-[64px] min-w-[64px]">
         <Image
-        priority
+          priority
           className="object-cover"
-          fill={fill} // Using the fill prop
-          sizes={sizes} // Responsive sizes passed down from parent
+          fill={fill}
+          sizes={sizes}
           src={image}
           alt="Image"
         />
+        {/* Neon Overlay */}
+        <div className="absolute inset-0 bg-red-600/10 opacity-40 group-hover:opacity-0 transition" />
       </div>
 
-      {/* Text for Playlist Name */}
-      <p className="font-medium truncate py-5">{name}</p>
+      <p className="font-black uppercase tracking-widest text-[11px] text-white truncate py-5 ml-2">
+        {name}
+      </p>
 
-      {/* Play Button (Appears on hover) */}
       <div
-        className="absolute transition opacity-0 rounded-full flex items-center justify-center bg-red-500 p-4 drop-shadow-md right-5 group-hover:opacity-100 hover:scale-110"
+        className="
+          absolute 
+          transition 
+          opacity-0 
+          rounded-full 
+          flex 
+          items-center 
+          justify-center 
+          bg-red-600 
+          p-4 
+          drop-shadow-[0_0_10px_#ef4444] 
+          right-5 
+          group-hover:opacity-100 
+          hover:scale-110
+        "
       >
-        <FaPlay className="text-black" />
+        <FaPlay className="text-black" size={14} />
       </div>
     </button>
   );

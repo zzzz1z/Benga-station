@@ -33,6 +33,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
 
     const songId = String(data.id);
 
+    // --- YOUR LOGIC PRESERVED ---
     useEffect(() => {
         if (!user?.id) return;
         fetch(`/api/likes?songId=${songId}`)
@@ -100,83 +101,101 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         <>
             <div
                 onClick={() => onClick(data.id)}
-                className="relative group flex flex-col items-center justify-center rounded-md overflow-hidden gap-x-4 bg-neutral-400/10 cursor-pointer hover:bg-neutral-400/20 transition p-3"
+                className="
+                  relative group flex flex-col items-center justify-center 
+                  overflow-hidden bg-neutral-400/5 cursor-pointer 
+                  hover:bg-neutral-400/10 transition p-3 border border-white/5 
+                  hover:border-red-500/50
+                "
+                style={{
+                  clipPath: "polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%)"
+                }}
             >
-                <div className="relative aspect-square w-full h-full rounded-md overflow-hidden">
+                {/* HUD Corner Accents */}
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-red-500 opacity-0 group-hover:opacity-100 transition" />
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-red-500 opacity-0 group-hover:opacity-100 transition" />
+
+                <div className="relative aspect-square w-full h-full overflow-hidden bg-neutral-800">
                     <Image
                         priority
-                        className="object-cover"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                         src={imagePath ?? '/images/likedit.png'}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         alt={data.title ?? 'Song cover image'}
                     />
+                    {/* Red tint on hover */}
+                    <div className="absolute inset-0 bg-red-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
 
-                <div className="flex flex-col items-start w-full p-4 gap-y-1">
-                    <p className="font-semibold truncate w-full">{data.title}</p>
-                    <p className="text-neutral-400 text-sm w-full truncate">{data.author}</p>
+                <div className="flex flex-col items-start w-full pt-4 pb-2 gap-y-1">
+                    <p className="font-black truncate w-full text-white uppercase text-xs tracking-tighter">
+                      {data.title}
+                    </p>
+                    <p className="text-neutral-500 text-[10px] truncate w-full font-bold tracking-[0.2em]">
+                      MOD: {data.author}
+                    </p>
                 </div>
 
-                {/* Desktop: hover buttons top-right */}
+                {/* Desktop Action Buttons */}
                 <div
-                    className="absolute top-2 right-2 hidden md:flex flex-col gap-y-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-4 right-4 hidden md:flex flex-col gap-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                     onClick={e => e.stopPropagation()}
                 >
-                    <button onClick={handleLike} className="flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-neutral-400 hover:text-white transition">
-                        {isLiked ? <AiFillHeart size={14} className="text-red-500" /> : <AiOutlineHeart size={14} />}
+                    <button onClick={handleLike} className="flex items-center justify-center w-8 h-8 bg-black/80 border border-white/10 text-neutral-400 hover:text-white hover:border-red-500 transition shadow-lg">
+                        {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
                     </button>
-                    <button onClick={handlePlaylistClick} className="flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-neutral-400 hover:text-white transition">
-                        <MdPlaylistAdd size={16} />
+                    <button onClick={handlePlaylistClick} className="flex items-center justify-center w-8 h-8 bg-black/80 border border-white/10 text-neutral-400 hover:text-white hover:border-red-500 transition shadow-lg">
+                        <MdPlaylistAdd size={18} />
                     </button>
-                    <button onClick={handleInfo} className="flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-neutral-400 hover:text-white transition">
-                        <AiOutlineInfoCircle size={14} />
+                    <button onClick={handleInfo} className="flex items-center justify-center w-8 h-8 bg-black/80 border border-white/10 text-neutral-400 hover:text-white hover:border-red-500 transition shadow-lg">
+                        <AiOutlineInfoCircle size={16} />
                     </button>
                 </div>
 
-                {/* Mobile: three-dot menu top-right */}
+                {/* Mobile three-dot menu */}
                 <div
-                    className="absolute top-2 right-2 md:hidden"
+                    className="absolute top-3 right-3 md:hidden z-30"
                     ref={menuRef}
                     onClick={e => e.stopPropagation()}
                 >
                     <button
                         onClick={() => setShowMenu(prev => !prev)}
-                        className="flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-neutral-400"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-black/80 text-white border border-red-500/50"
                     >
-                        <BsThreeDotsVertical size={14} />
+                        <BsThreeDotsVertical size={16} />
                     </button>
 
                     {showMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden border border-neutral-700">
-                            <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition">
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-neutral-900 rounded-lg shadow-2xl z-[100] overflow-hidden border border-red-500/30">
+                            <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-3 text-xs uppercase font-bold text-white hover:bg-red-500/10 transition">
                                 {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} className="text-neutral-400" />}
-                                {isLiked ? 'Remover favorito' : 'Adicionar favorito'}
+                                {isLiked ? 'Remover' : 'Favoritar'}
                             </button>
-                            <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition">
-                                <MdPlaylistAdd size={16} className="text-neutral-400" />
-                                Adicionar à playlist
+                            <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-3 text-xs uppercase font-bold text-white hover:bg-red-500/10 transition">
+                                <MdPlaylistAdd size={18} className="text-neutral-400" />
+                                Add Playlist
                             </button>
-                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition">
+                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-3 text-xs uppercase font-bold text-white hover:bg-red-500/10 transition">
                                 <AiOutlineInfoCircle size={16} className="text-neutral-400" />
-                                Ver detalhes
+                                Detalhes
                             </button>
                         </div>
                     )}
                 </div>
 
-                <div className="absolute bottom-4 right-5 group-hover:opacity-100 opacity-0 transition-opacity" role="presentation">
+                <div className="absolute bottom-5 right-5 group-hover:opacity-100 opacity-0 transition-all translate-y-2 group-hover:translate-y-0" role="presentation">
                     <PlayButton />
                 </div>
             </div>
 
-            <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="Adicionar à playlist" description="Escolhe uma playlist para adicionar esta música">
+            <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="Terminal: Playlists" description="Selecione o diretório de destino:">
                 <div className="flex flex-col gap-y-2">
                     {playlists.length === 0
-                        ? <p className="text-neutral-400 text-sm text-center py-4">Sem playlists criadas</p>
+                        ? <p className="text-neutral-500 text-xs font-mono text-center py-4 uppercase tracking-widest">Acesso Negado: Sem Playlists</p>
                         : playlists.map(pl => (
                             <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
-                                className="w-full text-left px-4 py-3 text-sm text-white bg-neutral-700 hover:bg-neutral-600 rounded-md transition truncate">
+                                className="w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest text-white bg-neutral-800 border border-white/5 hover:border-red-500 hover:bg-red-500/10 transition truncate">
                                 {pl.title}
                             </button>
                         ))
