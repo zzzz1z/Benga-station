@@ -36,6 +36,7 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
 
 const preExtractAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
+  // Fix: use activePlayerId directly as the queue key, not song.id
   const currentIndex = ids.findIndex(id => id === activePlayerId);
   const targets = [
     ids[currentIndex - 1],
@@ -62,11 +63,14 @@ const Player = () => {
   const activeID = usePlayer(state => state.activeID);
   const songsMap = usePlayer(state => state.songs);
 
-  // Use a ref to hold the last known good song — prevents unmount when
-  // appendToQueue briefly causes a re-render before songs map is stable.
   const lastGoodSongRef = useRef<Song | null>(null);
+  const lastGoodActiveIDRef = useRef<string | null>(null);
+
   const songFromStore = activeID ? songsMap[activeID] : null;
-  if (songFromStore) lastGoodSongRef.current = songFromStore;
+  if (songFromStore && activeID) {
+    lastGoodSongRef.current = songFromStore;
+    lastGoodActiveIDRef.current = activeID;
+  }
   const song = songFromStore ?? lastGoodSongRef.current;
 
   const songUrl = useLoadSongUrl((song ?? {}) as Song);
@@ -83,9 +87,17 @@ const Player = () => {
   const isPlayingRef = useRef(false);
   const positionRef = useRef(0);
   const skipOnErrorRef = useRef(false);
+  const endedFiredRef = useRef(false); // prevent double-skip
 
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
+  const handleEnded = () => {
+    if (endedFiredRef.current) return;
+    endedFiredRef.current = true;
+    playerRef.current.playNext();
+    setTimeout(() => { endedFiredRef.current = false; }, 1000);
+  };
 
   useEffect(() => {
     const audio = new Audio();
@@ -99,7 +111,7 @@ const Player = () => {
       setPosition(audio.currentTime);
     };
     audio.onloadedmetadata = () => setDuration(audio.duration);
-    audio.onended = () => playerRef.current.playNext();
+    audio.onended = handleEnded;
     audio.onplay = () => { setIsPlaying(true); setIsLoading(false); };
     audio.onpause = () => {
       if (!audio.src) return;
@@ -140,8 +152,24 @@ const Player = () => {
 
     audio.addEventListener("stalled", handleStuck);
 
+    // visibilitychange fallback — fires when app comes back from background
+    // and the song silently ended while backgrounded
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      const a = audioRef.current;
+      if (!a || !a.src) return;
+      const dur = a.duration;
+      const cur = a.currentTime;
+      // if we're within 0.5s of the end and paused, treat as ended
+      if (dur > 0 && cur >= dur - 0.5 && a.paused && isPlayingRef.current) {
+        handleEnded();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       audio.removeEventListener("stalled", handleStuck);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       audio.ontimeupdate = null;
       audio.onloadedmetadata = null;
       audio.onended = null;
@@ -181,9 +209,9 @@ const Player = () => {
         setIsPlaying(true);
         setPosition(0);
         positionRef.current = 0;
+        // Fix: pass activeID (the queue key) not song.id
+        if (activeID) preExtractAround(activeID);
       }).catch(() => { setIsLoading(false); });
-
-      if (song?.id) preExtractAround(song.id);
     }, 100);
 
     return () => clearTimeout(timer);
@@ -235,7 +263,6 @@ const Player = () => {
     () => { audioRef.current?.pause(); }
   );
 
-  // Only hide if we've never had a song — not during a transient appendToQueue re-render
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;
 

@@ -321,41 +321,58 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     };
   }, [query]);
 
-  const handlePlay = async (result: YTResult) => {
-    if (!user) { authModal.onOpen('sign_up'); return; }
-    if (loadingId === result.videoId) return;
-    if (unavailableIds.has(result.videoId)) return;
-    if (failedIds.has(`yt_${result.videoId}`)) return;
+const handlePlay = async (result: YTResult) => {
+  if (!user) { authModal.onOpen('sign_up'); return; }
+  if (loadingId === result.videoId) return;
+  if (unavailableIds.has(result.videoId)) return;
+  if (failedIds.has(`yt_${result.videoId}`)) return;
 
-    if (!readyIds.has(result.videoId)) {
-      setLoadingId(result.videoId);
-      const success = await preExtract(result.videoId);
-      setLoadingId(null);
-      if (success) {
-        availableIdsRef.current.add(result.videoId);
-        setReadyIds(prev => new Set([...prev, result.videoId]));
-      } else {
-        setUnavailableIds(prev => new Set([...prev, result.videoId]));
-        return;
-      }
+  if (!readyIds.has(result.videoId)) {
+    setLoadingId(result.videoId);
+    const success = await preExtract(result.videoId);
+    setLoadingId(null);
+    if (success) {
+      availableIdsRef.current.add(result.videoId);
+      setReadyIds(prev => new Set([...prev, result.videoId]));
+    } else {
+      setUnavailableIds(prev => new Set([...prev, result.videoId]));
+      return;
     }
+  }
 
-    const allSongs = results
-      .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
-      .map(r => ({
-        id: `yt_${r.videoId}`,
-        user_id: 'youtube',
-        author: r.artist,
-        title: r.title,
-        song_path: r.videoId,
-        image_path: r.thumbnail,
-        source: 'youtube' as const,
-        youtube_video_id: r.videoId,
-      }));
+  const targetId = `yt_${result.videoId}`;
 
-    player.setQueue(allSongs, `yt_${result.videoId}`);
+  // If already in the queue, just seek to it — don't rebuild
+  const { ids } = usePlayer.getState();
+  if (ids.includes(targetId)) {
+    player.setId(targetId);
     setPlayingId(result.videoId);
-  };
+    return;
+  }
+
+  // Otherwise build queue from available results + any already-appended songs
+  const currentSongs = usePlayer.getState().songs;
+  const appendedSongs = Object.values(currentSongs).filter(
+    s => !results.some(r => `yt_${r.videoId}` === (s.youtube_video_id ? `yt_${s.youtube_video_id}` : String(s.id)))
+  );
+
+  const baseSongs = results
+    .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
+    .map(r => ({
+      id: `yt_${r.videoId}`,
+      user_id: 'youtube',
+      author: r.artist,
+      title: r.title,
+      song_path: r.videoId,
+      image_path: r.thumbnail,
+      source: 'youtube' as const,
+      youtube_video_id: r.videoId,
+    }));
+
+  const allSongs = [...baseSongs, ...appendedSongs];
+  player.setQueue(allSongs as any, targetId);
+  setPlayingId(result.videoId);
+};
 
   if (!query || query.trim().length < 2) {
     return (
