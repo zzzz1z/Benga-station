@@ -43,9 +43,21 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
   const fetchedFor = useRef('');
 
   const fetchLyrics = useCallback(async () => {
-    // USE FULL RAW DATA - No "cleaning" that might strip essential search terms
-    const track = song.title.trim();
-    const artist = song.author?.trim() || '';
+    // 1. STRIP JUNK: Removes VEVO, - Topic, Official Video, etc.
+    const cleanName = (name: string) => {
+      return name
+        .replace(/(VEVO|Official|Topic|Video|Audio|Lyrics|Lyric Video)/gi, '')
+        .replace(/[-()[\]]/g, ' ') // Replace dashes/brackets with spaces
+        .replace(/\s+/g, ' ')      // Collapse multiple spaces
+        .trim();
+    };
+
+    const rawTrack = song.title;
+    const rawArtist = song.author || '';
+
+    // Cleaned versions for the API
+    const track = cleanName(rawTrack);
+    const artist = cleanName(rawArtist);
     
     const key = `${track}::${artist}`;
     if (fetchedFor.current === key) return;
@@ -54,7 +66,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setLyricsState('loading');
 
     try {
-      // 1. Try the exact GET match with raw names
+      // 1. Try Exact Match
       const getParams = new URLSearchParams({
         track_name: track,
         artist_name: artist,
@@ -62,9 +74,8 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
       
       let res = await fetch(`https://lrclib.net/api/get?${getParams}`);
 
-      // 2. If exact match fails (404), use the Search API with the full combined string
+      // 2. Fallback to Search if Get fails
       if (!res.ok) {
-        console.log(`Exact match failed for ${track}, trying search...`);
         const searchParams = new URLSearchParams({
           q: `${track} ${artist}`
         });
@@ -72,15 +83,13 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         const searchData = await searchRes.json();
 
         if (searchData && searchData.length > 0) {
-          // Find first result with synced lyrics, fallback to plain
           const bestMatch = searchData.find((s: any) => s.syncedLyrics) || 
                             searchData.find((s: any) => s.plainLyrics) || 
                             searchData[0];
-          
           processLyricsData(bestMatch);
           return;
         }
-        throw new Error('No results in search');
+        throw new Error('No results');
       }
 
       const data = await res.json();
@@ -104,14 +113,10 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     }
   };
 
-  // Trigger fetch when card flips
   useEffect(() => {
-    if (flipped && lyricsState === 'idle') {
-      fetchLyrics();
-    }
+    if (flipped && lyricsState === 'idle') fetchLyrics();
   }, [flipped, lyricsState, fetchLyrics]);
 
-  // Reset state on song change
   useEffect(() => {
     fetchedFor.current = '';
     setLyricsState('idle');
@@ -121,13 +126,9 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setFlipped(false);
   }, [song.id]);
 
-  // Handle Sync Highlighting
   useEffect(() => {
     if (lyricsState !== 'synced' || !syncedLines.length) return;
-    
-    // Safety: ensure position is in seconds
     const currentTime = position > 1000 ? position / 1000 : position;
-
     let idx = 0;
     for (let i = 0; i < syncedLines.length; i++) {
       if (currentTime >= syncedLines[i].time) idx = i;
@@ -136,7 +137,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setActiveLine(idx);
   }, [position, syncedLines, lyricsState]);
 
-  // Auto-scroll to active line
   useEffect(() => {
     if (flipped && lyricsState === 'synced') {
       activeLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
