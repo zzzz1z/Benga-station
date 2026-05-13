@@ -59,7 +59,16 @@ const Player = () => {
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
 
-  const song = player.activeID ? player.songs[player.activeID] : null;
+  const activeID = usePlayer(state => state.activeID);
+  const songsMap = usePlayer(state => state.songs);
+
+  // Use a ref to hold the last known good song — prevents unmount when
+  // appendToQueue briefly causes a re-render before songs map is stable.
+  const lastGoodSongRef = useRef<Song | null>(null);
+  const songFromStore = activeID ? songsMap[activeID] : null;
+  if (songFromStore) lastGoodSongRef.current = songFromStore;
+  const song = songFromStore ?? lastGoodSongRef.current;
+
   const songUrl = useLoadSongUrl((song ?? {}) as Song);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -226,7 +235,9 @@ const Player = () => {
     () => { audioRef.current?.pause(); }
   );
 
-  if (!song || !player.activeID) return null;
+  // Only hide if we've never had a song — not during a transient appendToQueue re-render
+  if (!activeID && !lastGoodSongRef.current) return null;
+  if (!song) return null;
 
   const sharedProps = {
     song,

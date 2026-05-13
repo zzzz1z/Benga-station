@@ -186,16 +186,8 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         youtube_video_id: r.videoId,
       }));
 
-      const { ids, songs } = usePlayer.getState();
-      const existingIdSet = new Set(ids);
-      const trulyNew = newSongs.filter(s => !existingIdSet.has(s.id));
-      if (!trulyNew.length) return;
-
-      const updatedSongs = { ...songs };
-      trulyNew.forEach(s => { updatedSongs[s.id] = s as any; });
-      const updatedIds = [...ids, ...trulyNew.map(s => s.id)];
-
-      usePlayer.setState({ ids: updatedIds, songs: updatedSongs });
+      // Use the store action instead of direct setState — safe, atomic, never touches activeID
+      usePlayer.getState().appendToQueue(newSongs as any);
 
     } catch (err) {
       console.error('fetchMoreAndAppend error:', err);

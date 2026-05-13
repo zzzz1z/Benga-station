@@ -9,6 +9,7 @@ interface PlayerStore {
     setId: (id: string) => void;
     setIds: (ids: string[]) => void;
     setQueue: (songs: Song[], startId?: string) => void;
+    appendToQueue: (songs: Song[]) => void;
     reset: () => void;
     playNext: () => void;
     playPrevious: () => void;
@@ -43,6 +44,26 @@ const usePlayer = create<PlayerStore>((set, get) => ({
             ids,
             songs: songMap,
             activeID: startId ?? ids[0],
+        });
+    },
+
+    // Safe append — never replaces existing entries, never touches activeID
+    appendToQueue: (songs: Song[]) => {
+        if (songs.length === 0) return;
+        const { ids: currentIds, songs: currentSongs } = get();
+        const existingIdSet = new Set(currentIds);
+        const newSongs = songs.filter(s => !existingIdSet.has(getSongPlayerId(s)));
+        if (newSongs.length === 0) return;
+
+        const addedMap = newSongs.reduce<Record<string, Song>>((acc, song) => {
+            acc[getSongPlayerId(song)] = song;
+            return acc;
+        }, {});
+
+        set({
+            // Spread existing songs first so active song entry is never clobbered
+            songs: { ...currentSongs, ...addedMap },
+            ids: [...currentIds, ...newSongs.map(getSongPlayerId)],
         });
     },
 

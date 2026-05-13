@@ -1,87 +1,120 @@
-import { useEffect, useState, createContext, useContext, useMemo } from 'react';
-import { User } from '@supabase/supabase-js';
-import { createClient } from '@/utils/supabase/client';
-import { UserDetails } from '@/types';
+"use client"
 
-const supabase = createClient();
+import { useRouter } from "next/navigation";
+import { BiSearch } from "react-icons/bi";
+import { HiHome } from "react-icons/hi";
+import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
+import { twMerge } from "tailwind-merge";
+import useAuthModal from "@/hooks/useAuthModal";
+import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/hooks/useUser";
+import Button from "./Botão";
+import { FaUserAlt } from "react-icons/fa";
+import toast from "react-hot-toast";
+import usePlayer from "@/hooks/usePlayer";
+import { SlPlaylist } from "react-icons/sl";
+import { FcLike } from "react-icons/fc";
+import useUploadModal from "@/hooks/useUploadModal";
+import { AiOutlineFileAdd } from "react-icons/ai";
 
-type UserContextType = {
-  accessToken: string | null;
-  user: User | null;
-  userDetails: UserDetails | null;
-  isLoading: boolean;
-};
-
-export const UserContext = createContext<UserContextType | undefined>(undefined);
-
-export interface Props {
-  [propName: string]: any;
+interface HeaderProps {
+  children: React.ReactNode;
+  className?: string;
 }
 
-export const MyUserContextProvider = (props: Props) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingData, setIsLoadingData] = useState(false);
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+const Header: React.FC<HeaderProps> = ({ children, className }) => {
+  const router = useRouter();
+  const authModal = useAuthModal();
+  const player = usePlayer();
+  const { user, userDetails } = useUser();
+  const uploadModal = useUploadModal();
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setAccessToken(session?.access_token ?? null);
-      setIsLoadingUser(false);
-    });
+  const onClick = () => {
+    if (!user) return authModal.onOpen("sign_up");
+    return uploadModal.onOpen();
+  };
 
-    // Listen for auth changes
-const { data: { subscription } } = supabase.auth.onAuthStateChange(
-  (event, session) => {
-    // Ignore token refreshes — they don't change the user
-    if (event === 'TOKEN_REFRESHED') return;
-    
-    setUser(session?.user ?? null);
-    setAccessToken(session?.access_token ?? null);
-    setIsLoadingUser(false);
-  }
-);
+  const handleLogout = async () => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user && !isLoadingData && !userDetails) {
-      setIsLoadingData(true);
-      supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          setUserDetails(data as UserDetails);
-          setIsLoadingData(false);
-        });
-    } else if (!user && !isLoadingUser) {
-      setUserDetails(null);
+    if (error) {
+      toast.error(error.message);
+      return;
     }
-  }, [user, isLoadingUser]);
 
-  const value = useMemo(
-    () => ({
-      accessToken,
-      user,
-      userDetails,
-      isLoading: isLoadingUser || isLoadingData,
-    }),
-    [accessToken, user, userDetails, isLoadingUser, isLoadingData]
+    player.reset();
+    toast.success("Tas off!");
+
+    // Wait a tick so onAuthStateChange fires and clears user state
+    // before Next.js re-fetches server components
+    await new Promise(r => setTimeout(r, 100));
+    router.refresh();
+    router.push('/');
+  };
+
+  return (
+    <div className={twMerge(`h-fit bg-gradient-to-b from-red-800 p-6`, className)}>
+      <div className="w-full mb-4 flex items-center justify-between">
+
+        <div className="hidden md:flex gap-x-2 items-center">
+          <button type="button" onClick={() => router.back()} className="rounded-full bg-black flex items-center justify-center hover:opacity-75 transition">
+            <RxCaretLeft className="text-white" size={35} />
+          </button>
+          <button type="button" onClick={() => router.forward()} className="rounded-full bg-black flex items-center justify-center hover:opacity-75 transition">
+            <RxCaretRight className="text-white" size={35} />
+          </button>
+        </div>
+
+        <div className="flex md:hidden gap-x-2 items-center">
+          <button type="button" onClick={() => router.push("/")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
+            <HiHome className="text-black" size={20} />
+          </button>
+          <button type="button" onClick={() => router.push("/search")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
+            <BiSearch className="text-black" size={20} />
+          </button>
+          {user && (
+            <>
+              <button type="button" onClick={() => router.push("/playlists")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
+                <SlPlaylist className="text-black" size={20} />
+              </button>
+              <button type="button" onClick={() => router.push("/liked")} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
+                <FcLike className="text-black" size={20} />
+              </button>
+            </>
+          )}
+          {userDetails?.role === "admin" && (
+            <button type="button" onClick={onClick} className="rounded-full p-2 bg-white flex items-center justify-center hover:opacity-75 transition">
+              <AiOutlineFileAdd className="text-black" size={20} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex justify-between items-center gap-x-4">
+          {user ? (
+            <div className="flex gap-x-4 items-center">
+              <Button onClick={() => router.push("/account")} className="bg-white">
+                <FaUserAlt />
+              </Button>
+              <Button onClick={handleLogout} className="bg-white px-6 py-2">
+                Sair
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button onClick={() => authModal.onOpen("sign_up")} className="bg-transparent text-neutral-300 font-medium">
+                Criar conta
+              </Button>
+              <Button onClick={() => authModal.onOpen("sign_in")} className="bg-red-700 px-6 py-2">
+                Iniciar sessão
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      {children}
+    </div>
   );
-
-  return <UserContext.Provider value={value} {...props} />;
 };
 
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error(`useUser must be used within a MyUserContextProvider.`);
-  }
-  return context;
-};
+export default Header;
