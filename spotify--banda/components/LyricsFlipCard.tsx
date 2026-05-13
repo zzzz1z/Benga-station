@@ -22,6 +22,23 @@ function parseLrc(lrc: string): LrcLine[] {
   return lines.sort((a, b) => a.time - b.time);
 }
 
+// Strip featured artists, parentheses, etc. for better matching
+function cleanTitle(title: string): string {
+  return title
+    .replace(/\(feat\..*?\)/gi, '')
+    .replace(/\[feat\..*?\]/gi, '')
+    .replace(/\(with.*?\)/gi, '')
+    .replace(/\(.*?remix.*?\)/gi, '')
+    .replace(/\(.*?version.*?\)/gi, '')
+    .trim();
+}
+
+function cleanArtist(artist: string): string {
+  return artist.split(/[,&]/)[0].trim();
+}
+
+const SYNC_OFFSET = 0.5; // seconds — lyrics are often slightly ahead
+
 type LyricsState = 'idle' | 'loading' | 'synced' | 'plain' | 'none';
 
 interface LyricsFlipCardProps {
@@ -41,7 +58,18 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
   const activeLineRef = useRef<HTMLParagraphElement>(null);
   const fetchedFor = useRef('');
 
-  // ── Fetch from LRCLIB ───────────────────────────────────────────────────────
+  const applyResult = (data: { syncedLyrics?: string; plainLyrics?: string }) => {
+    if (data.syncedLyrics) {
+      setSyncedLines(parseLrc(data.syncedLyrics));
+      setLyricsState('synced');
+    } else if (data.plainLyrics) {
+      setPlainLyrics(data.plainLyrics);
+      setLyricsState('plain');
+    } else {
+      setLyricsState('none');
+    }
+  };
+
   const fetchLyrics = useCallback(async () => {
     const key = `${song.title}::${song.author}`;
     if (fetchedFor.current === key) return;
@@ -51,35 +79,57 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setPlainLyrics('');
     setActiveLine(0);
 
-    try {
-      const params = new URLSearchParams({
-        track_name: song.title,
-        artist_name: song.author ?? '',
-      });
-      const res = await fetch(`https://lrclib.net/api/get?${params}`);
-      if (!res.ok) { setLyricsState('none'); return; }
+    const title = song.title ?? '';
+    const artist = song.author ?? '';
+    const cleanedTitle = cleanTitle(title);
+    const cleanedArtist = cleanArtist(artist);
 
-      const data = await res.json();
-      if (data.syncedLyrics) {
-        setSyncedLines(parseLrc(data.syncedLyrics));
-        setLyricsState('synced');
-      } else if (data.plainLyrics) {
-        setPlainLyrics(data.plainLyrics);
-        setLyricsState('plain');
-      } else {
-        setLyricsState('none');
+    try {
+      // Attempt 1: exact get with original title/artist
+      const p1 = new URLSearchParams({ track_name: title, artist_name: artist });
+      const r1 = await fetch(`https://lrclib.net/api/get?${p1}`);
+      if (r1.ok) {
+        const d1 = await r1.json();
+        if (d1.syncedLyrics || d1.plainLyrics) { applyResult(d1); return; }
       }
+
+      // Attempt 2: cleaned title + cleaned artist via search
+      const p2 = new URLSearchParams({ track_name: cleanedTitle, artist_name: cleanedArtist });
+      const r2 = await fetch(`https://lrclib.net/api/search?${p2}`);
+      if (r2.ok) {
+        const results = await r2.json();
+        if (Array.isArray(results) && results.length > 0) {
+          // prefer synced, fallback to plain
+          const synced = results.find((r: any) => r.syncedLyrics);
+          const plain = results.find((r: any) => r.plainLyrics);
+          const best = synced ?? plain;
+          if (best) { applyResult(best); return; }
+        }
+      }
+
+      // Attempt 3: title only search (no artist)
+      const p3 = new URLSearchParams({ track_name: cleanedTitle });
+      const r3 = await fetch(`https://lrclib.net/api/search?${p3}`);
+      if (r3.ok) {
+        const results = await r3.json();
+        if (Array.isArray(results) && results.length > 0) {
+          const synced = results.find((r: any) => r.syncedLyrics);
+          const plain = results.find((r: any) => r.plainLyrics);
+          const best = synced ?? plain;
+          if (best) { applyResult(best); return; }
+        }
+      }
+
+      setLyricsState('none');
     } catch {
       setLyricsState('none');
     }
   }, [song.title, song.author]);
 
-  // fetch on first flip
   useEffect(() => {
     if (flipped && lyricsState === 'idle') fetchLyrics();
   }, [flipped, lyricsState, fetchLyrics]);
 
-  // reset on song change
   useEffect(() => {
     fetchedFor.current = '';
     setLyricsState('idle');
@@ -89,23 +139,22 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
     setFlipped(false);
   }, [song.id]);
 
-  // sync active line
+  // sync active line with offset correction
   useEffect(() => {
     if (lyricsState !== 'synced' || !syncedLines.length) return;
+    const adjustedPosition = position + SYNC_OFFSET;
     let idx = 0;
     for (let i = 0; i < syncedLines.length; i++) {
-      if (position >= syncedLines[i].time) idx = i;
+      if (adjustedPosition >= syncedLines[i].time) idx = i;
       else break;
     }
     setActiveLine(idx);
   }, [position, syncedLines, lyricsState]);
 
-  // auto-scroll active line
   useEffect(() => {
     activeLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [activeLine]);
 
-  // ── Lyrics content ──────────────────────────────────────────────────────────
   const renderLyricsContent = () => {
     if (lyricsState === 'loading') {
       return (
@@ -132,7 +181,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         </div>
       );
     }
-    // synced
     return (
       <div className="overflow-y-auto h-full px-3 py-4 space-y-3">
         {syncedLines.map((line, i) => (
@@ -156,7 +204,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
 
   return (
     <div className="flex flex-col items-center gap-y-2 w-full">
-      {/* Flip card — expands height when showing lyrics */}
       <div
         className="w-full cursor-pointer"
         style={{
@@ -164,7 +211,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
           height: flipped ? '380px' : '256px',
           transition: 'height 0.5s ease',
           maxWidth: flipped ? '100%' : '256px',
-          transition2: 'max-width 0.5s ease',
         } as React.CSSProperties}
         onClick={() => setFlipped(f => !f)}
       >
@@ -208,7 +254,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         </div>
       </div>
 
-      {/* Hint */}
       <p className="text-neutral-600 text-[10px]">
         {flipped ? 'Toca para ver a capa' : 'Toca na capa para ver a letra'}
       </p>
