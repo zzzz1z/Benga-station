@@ -10,9 +10,8 @@ export default async function Home() {
   const allSongs = await getSongs();
 
   // Logic to split sections (Slicing for demo purposes)
-  const trendingSongs = allSongs.slice(0, 5);
-  const newReleases = [...allSongs].reverse().slice(0, 5);
-
+const trendingSongs = allSongs.slice(0, 15);
+const newReleases = [...allSongs].reverse().slice(0, 15);
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto safe-top pt-[30px] pb-24 relative">
       

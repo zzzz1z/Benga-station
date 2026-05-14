@@ -88,26 +88,39 @@ const useMediaSession = (
     if (!song?.title) return;
 
     const artworkUrl = getArtworkUrl(song);
-    const artwork: MediaImage[] = artworkUrl
+
+    // Cache-bust so iOS treats each song change as a new image —
+    // without this, iOS reuses the cached artwork from the previous song
+    const cacheBustedUrl = artworkUrl
+      ? `${artworkUrl}${artworkUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`
+      : '';
+
+    const artwork: MediaImage[] = cacheBustedUrl
       ? [
-          { src: artworkUrl, sizes: "96x96",   type: "image/jpeg" },
-          { src: artworkUrl, sizes: "128x128", type: "image/jpeg" },
-          { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
-          { src: artworkUrl, sizes: "256x256", type: "image/jpeg" },
-          { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "96x96",   type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "128x128", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "192x192", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "256x256", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "512x512", type: "image/jpeg" },
         ]
       : [];
 
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: song.title,
-      artist: song.author,
-      album: "Benga Station",
-      artwork,
-    });
+    // Clear first — forces iOS to drop the previous artwork before setting new one
+    navigator.mediaSession.metadata = null;
 
-    reassertHandlers();
+    // Small delay lets iOS process the null before we set the new metadata
+    const t = setTimeout(() => {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: song.title,
+        artist: song.author,
+        album: "Benga Station",
+        artwork,
+      });
+      reassertHandlers();
+    }, 50);
 
     return () => {
+      clearTimeout(t);
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.setActionHandler("play", null);
       navigator.mediaSession.setActionHandler("pause", null);
