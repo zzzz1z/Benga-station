@@ -34,6 +34,16 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
+// Record a play event into play_history via the API route.
+// Fire-and-forget — never blocks playback.
+const recordPlayEvent = (videoId: string) => {
+  fetch('/api/play-event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoId }),
+  }).catch(() => {});
+};
+
 // Fire one warm-batch request for the songs surrounding the active song.
 // Runs as soon as activeID changes — NOT after play resolves — so yt-dlp
 // starts extracting while the current song is still loading.
@@ -56,7 +66,6 @@ const preWarmAround = (activePlayerId: string) => {
 
   if (videoIds.length === 0) return;
 
-  // Single batch call instead of one /api/preextract per song
   fetch('/api/warm-batch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -109,14 +118,20 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // KEY FIX: Pre-warm neighbours as soon as activeID changes.
-  // This fires immediately when the user taps a song — before useLoadSongUrl
-  // resolves, before safePlay is called. Gives yt-dlp the maximum possible
-  // head-start on the next songs in the queue.
+  // Pre-warm neighbours + record play event as soon as activeID changes.
+  // Both fire immediately — before useLoadSongUrl resolves, before safePlay.
   useEffect(() => {
     if (!activeID) return;
+
+    // Warm next/prev songs in queue
     preWarmAround(String(activeID));
-  }, [activeID]);
+
+    // Record this play in play_history (feeds GlobalWarmer top-5 on next login)
+    const s = songsMap[activeID];
+    if (s?.source === 'youtube' && s?.youtube_video_id) {
+      recordPlayEvent(s.youtube_video_id);
+    }
+  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const audio = new Audio();
@@ -199,7 +214,6 @@ const Player = () => {
       audio.volume = volumeRef.current;
       audio.load();
 
-      // No preExtractAround here anymore — it already fired on activeID change above.
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
