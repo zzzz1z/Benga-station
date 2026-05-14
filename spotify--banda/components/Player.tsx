@@ -211,13 +211,33 @@ const Player = () => {
 
     if (!songUrl) return;
 
-    // Use a one-time event listener instead of onloadedmetadata property
-    // to prevent double-firing when audio.load() is called
-    const onMeta = () => {
+// iOS WebView fires loadedmetadata twice — once with a wrong duration,
+// then again with the correct one. We wait for a stable value.
+let metaDuration = 0;
+let metaStableTimer: ReturnType<typeof setTimeout>;
+
+const onMeta = () => {
+  const reported = audio.duration;
+  if (!reported || !isFinite(reported)) return;
+
+  // If this is the first fire, record it and wait briefly
+  // to see if a second (corrected) event comes in
+  if (metaDuration === 0) {
+    metaDuration = reported;
+    metaStableTimer = setTimeout(() => {
+      // No second event came — use what we have
       setDuration(audio.duration);
       audio.removeEventListener('loadedmetadata', onMeta);
-    };
-    audio.addEventListener('loadedmetadata', onMeta);
+    }, 800);
+    return;
+  }
+
+  // Second event fired — use the latest value (the correct one)
+  clearTimeout(metaStableTimer);
+  setDuration(reported);
+  audio.removeEventListener('loadedmetadata', onMeta);
+};
+audio.addEventListener('loadedmetadata', onMeta);
 
     const timer = setTimeout(() => {
       skipOnErrorRef.current = true;
@@ -231,10 +251,11 @@ const Player = () => {
       }).catch(() => { setIsLoading(false); });
     }, 100);
 
-    return () => {
-      clearTimeout(timer);
-      audio.removeEventListener('loadedmetadata', onMeta);
-    };
+   return () => {
+  clearTimeout(timer);
+  clearTimeout(metaStableTimer);  // add this
+  audio.removeEventListener('loadedmetadata', onMeta);
+};
   }, [songUrl]);
 
   useEffect(() => {
