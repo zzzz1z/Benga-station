@@ -12,10 +12,10 @@ import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
 import EditPlaylist from './EditPlaylist';
-import useOnPlaylist from '@/hooks/useOnPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import { scheduleWarm } from '@/utils/warmCache';
+import useOnPlay from '@/hooks/useOnPlay';
 
 const supabase = createClient();
 
@@ -41,7 +41,7 @@ const PlaylistDetails: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [uploadingCover, setUploadingCover] = useState(false);
     const coverInputRef = useRef<HTMLInputElement>(null);
-    const onPlay = useOnPlaylist();
+    const onPlay = useOnPlay();
 
     const fetchPlaylist = async () => {
         setLoading(true);

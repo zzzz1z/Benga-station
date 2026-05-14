@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Song } from '@/types';
 import { CiShuffle } from 'react-icons/ci';
@@ -22,8 +24,12 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
       return;
     }
 
-    const shuffledSongs = [...songs].sort(() => Math.random() - 0.5);
-    player.setQueue(shuffledSongs, getSongPlayerId(shuffledSongs[0]));
+    // FIX: Don't pre-shuffle the array — pass original order and let the
+    // store's playRandom handle shuffle consistently with the expanded player.
+    // This means both shuffle buttons now use the same code path.
+    const firstId = getSongPlayerId(songs[0]);
+    player.setQueue(songs, firstId);
+    player.setShuffleOn(true); // store picks next song randomly via playRandom()
   };
 
   return (

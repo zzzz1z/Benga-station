@@ -34,30 +34,34 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-// FIX: This is now a pure helper function (No Hooks inside)
-const preExtractAround = (activePlayerId: string) => {
+// Fire one warm-batch request for the songs surrounding the active song.
+// Runs as soon as activeID changes — NOT after play resolves — so yt-dlp
+// starts extracting while the current song is still loading.
+const preWarmAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
-  
+
   const activeIdStr = String(activePlayerId);
   const currentIndex = ids.findIndex(id => String(id) === activeIdStr);
+  if (currentIndex === -1) return;
 
-  const targets = [
-    ids[currentIndex - 1],
+  const neighbours = [
     ids[currentIndex + 1],
     ids[currentIndex + 2],
-  ].filter(Boolean);
+    ids[currentIndex - 1],
+  ].filter(Boolean) as string[];
 
-  targets.forEach(id => {
-    const idStr = String(id); 
-    if (!idStr.startsWith('yt_')) return;
-    
-    const videoId = idStr.replace('yt_', '');
-    fetch('/api/preextract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId }),
-    }).catch(() => {});
-  });
+  const videoIds = neighbours
+    .filter(id => id.startsWith('yt_'))
+    .map(id => id.replace('yt_', ''));
+
+  if (videoIds.length === 0) return;
+
+  // Single batch call instead of one /api/preextract per song
+  fetch('/api/warm-batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoIds }),
+  }).catch(() => {});
 };
 
 const Player = () => {
@@ -104,6 +108,15 @@ const Player = () => {
     playerRef.current.playNext();
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
+
+  // KEY FIX: Pre-warm neighbours as soon as activeID changes.
+  // This fires immediately when the user taps a song — before useLoadSongUrl
+  // resolves, before safePlay is called. Gives yt-dlp the maximum possible
+  // head-start on the next songs in the queue.
+  useEffect(() => {
+    if (!activeID) return;
+    preWarmAround(String(activeID));
+  }, [activeID]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -186,10 +199,10 @@ const Player = () => {
       audio.volume = volumeRef.current;
       audio.load();
 
+      // No preExtractAround here anymore — it already fired on activeID change above.
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
-        if (activeID) preExtractAround(String(activeID));
       }).catch(() => { setIsLoading(false); });
     }, 100);
 
@@ -241,7 +254,7 @@ const Player = () => {
   );
 
   // --- RENDERING LOGIC ---
-  if (!isMounted) return null; 
+  if (!isMounted) return null;
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;
 

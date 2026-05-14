@@ -43,58 +43,87 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
   const fetchedFor = useRef('');
 
   const fetchLyrics = useCallback(async () => {
-    // 1. STRIP JUNK: Removes VEVO, - Topic, Official Video, etc.
     const cleanName = (name: string) => {
       return name
         .replace(/(VEVO|Official|Topic|Video|Audio|Lyrics|Lyric Video)/gi, '')
-        .replace(/[-()[\]]/g, ' ') // Replace dashes/brackets with spaces
-        .replace(/\s+/g, ' ')      // Collapse multiple spaces
+        .replace(/[-()[\]]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
     };
 
-    const rawTrack = song.title;
-    const rawArtist = song.author || '';
+    const track = cleanName(song.title);
+    const artist = cleanName(song.author || '');
 
-    // Cleaned versions for the API
-    const track = cleanName(rawTrack);
-    const artist = cleanName(rawArtist);
-    
     const key = `${track}::${artist}`;
     if (fetchedFor.current === key) return;
     fetchedFor.current = key;
-    
+
     setLyricsState('loading');
 
     try {
-      // 1. Try Exact Match
-      const getParams = new URLSearchParams({
-        track_name: track,
-        artist_name: artist,
-      });
-      
-      let res = await fetch(`https://lrclib.net/api/get?${getParams}`);
+      // ── Attempt 1: title only (no artist) ──────────────────────────────────
+      // Many YouTube titles already include "Artist - Track", so sending the
+      // author field as well doubles up and confuses the API.
+      const attempt1 = await fetch(
+        `https://lrclib.net/api/get?${new URLSearchParams({ track_name: track, artist_name: '' })}`
+      );
 
-      // 2. Fallback to Search if Get fails
-      if (!res.ok) {
-        const searchParams = new URLSearchParams({
-          q: `${track} ${artist}`
-        });
-        const searchRes = await fetch(`https://lrclib.net/api/search?${searchParams}`);
-        const searchData = await searchRes.json();
-
-        if (searchData && searchData.length > 0) {
-          const bestMatch = searchData.find((s: any) => s.syncedLyrics) || 
-                            searchData.find((s: any) => s.plainLyrics) || 
-                            searchData[0];
-          processLyricsData(bestMatch);
+      if (attempt1.ok) {
+        const data = await attempt1.json();
+        if (data.syncedLyrics || data.plainLyrics) {
+          processLyricsData(data);
           return;
         }
-        throw new Error('No results');
       }
 
-      const data = await res.json();
-      processLyricsData(data);
+      // ── Attempt 2: title + author field ────────────────────────────────────
+      if (artist) {
+        const attempt2 = await fetch(
+          `https://lrclib.net/api/get?${new URLSearchParams({ track_name: track, artist_name: artist })}`
+        );
 
+        if (attempt2.ok) {
+          const data = await attempt2.json();
+          if (data.syncedLyrics || data.plainLyrics) {
+            processLyricsData(data);
+            return;
+          }
+        }
+      }
+
+      // ── Attempt 3: search with title only ──────────────────────────────────
+      const search1 = await fetch(
+        `https://lrclib.net/api/search?${new URLSearchParams({ q: track })}`
+      );
+      if (search1.ok) {
+        const results = await search1.json();
+        if (results?.length > 0) {
+          const best = results.find((s: any) => s.syncedLyrics)
+            || results.find((s: any) => s.plainLyrics)
+            || results[0];
+          processLyricsData(best);
+          return;
+        }
+      }
+
+      // ── Attempt 4: search with title + artist ──────────────────────────────
+      if (artist) {
+        const search2 = await fetch(
+          `https://lrclib.net/api/search?${new URLSearchParams({ q: `${track} ${artist}` })}`
+        );
+        if (search2.ok) {
+          const results = await search2.json();
+          if (results?.length > 0) {
+            const best = results.find((s: any) => s.syncedLyrics)
+              || results.find((s: any) => s.plainLyrics)
+              || results[0];
+            processLyricsData(best);
+            return;
+          }
+        }
+      }
+
+      throw new Error('No results');
     } catch (err) {
       console.error("Lyrics fetch error:", err);
       setLyricsState('none');
@@ -128,7 +157,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
 
   useEffect(() => {
     if (lyricsState !== 'synced' || !syncedLines.length) return;
-    const currentTime = position > 1000 ? position / 1000 : position;
+    const currentTime = position;    
     let idx = 0;
     for (let i = 0; i < syncedLines.length; i++) {
       if (currentTime >= syncedLines[i].time) idx = i;
@@ -172,9 +201,9 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         </div>
       );
     }
-    
+
     return (
-      <div 
+      <div
         ref={scrollContainerRef}
         className="overflow-y-auto h-full px-6 py-20 space-y-6 scrollbar-hide"
       >
@@ -250,7 +279,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position }) => {
         </div>
       </div>
 
-      <button 
+      <button
         onClick={() => setFlipped(!flipped)}
         className="group flex flex-col items-center"
       >
