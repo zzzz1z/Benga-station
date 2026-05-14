@@ -16,13 +16,13 @@ import { SlPlaylist } from "react-icons/sl";
 import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { AiOutlineFileAdd } from "react-icons/ai";
+import { MdWifiOff } from "react-icons/md";
 
 interface HeaderProps {
   children: React.ReactNode;
   className?: string;
 }
 
-// Geometric cut for buttons/badges
 const BUTTON_CUT = "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)";
 
 const Header: React.FC<HeaderProps> = ({ children, className }) => {
@@ -40,12 +40,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   const handleLogout = async () => {
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
+    if (error) { toast.error(error.message); return; }
     player.reset();
     toast.success("TAS OFF! [SESSÃO ENCERRADA]");
     window.location.href = '/';
@@ -53,41 +48,30 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
 
   return (
     <div className={twMerge(`relative h-fit bg-neutral-900/50 p-6 overflow-hidden`, className)}>
-      
-      {/* ── Gamer Background HUD ── */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.02) 3px, rgba(239,68,68,0.02) 4px)',
-        }}
+
+      {/* Gamer HUD background */}
+      <div className="absolute inset-0 pointer-events-none z-0"
+        style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.02) 3px, rgba(239,68,68,0.02) 4px)' }}
       />
-      <div
-        className="absolute top-0 left-0 right-0 h-px z-10"
+      <div className="absolute top-0 left-0 right-0 h-px z-10"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), transparent)' }}
       />
-      <div
-        className="absolute bottom-0 left-0 right-0 h-px z-10"
+      <div className="absolute bottom-0 left-0 right-0 h-px z-10"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }}
       />
 
       <div className="relative z-20 w-full mb-4 flex items-center justify-between">
-        
+
         {/* Desktop Navigation */}
         <div className="hidden md:flex gap-x-2 items-center">
-          <button 
-            type="button" 
-            onClick={() => router.back()} 
+          <button type="button" onClick={() => router.back()}
             className="flex items-center justify-center bg-black/40 border border-red-500/30 hover:border-red-500 transition-all p-1"
-            style={{ clipPath: BUTTON_CUT }}
-          >
+            style={{ clipPath: BUTTON_CUT }}>
             <RxCaretLeft className="text-white" size={35} />
           </button>
-          <button 
-            type="button" 
-            onClick={() => router.forward()} 
+          <button type="button" onClick={() => router.forward()}
             className="flex items-center justify-center bg-black/40 border border-red-500/30 hover:border-red-500 transition-all p-1"
-            style={{ clipPath: BUTTON_CUT }}
-          >
+            style={{ clipPath: BUTTON_CUT }}>
             <RxCaretRight className="text-white" size={35} />
           </button>
         </div>
@@ -99,27 +83,25 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             { icon: BiSearch, path: "/search" },
             ...(user ? [
               { icon: SlPlaylist, path: "/playlists" },
-              { icon: FcLike, path: "/liked" }
+              { icon: FcLike, path: "/liked" },
+              { icon: MdWifiOff, path: "/offline" },
             ] : []),
           ].map((item, i) => (
-            <button 
+            <button
               key={i}
-              type="button" 
-              onClick={() => router.push(item.path)} 
+              type="button"
+              onClick={() => router.push(item.path)}
               className="p-2 bg-neutral-800 border border-red-500/20 text-white flex items-center justify-center hover:bg-red-500/20 transition-all"
               style={{ clipPath: BUTTON_CUT }}
             >
               <item.icon size={20} />
             </button>
           ))}
-          
+
           {userDetails?.role === "admin" && (
-            <button 
-              type="button" 
-              onClick={onClick} 
+            <button type="button" onClick={onClick}
               className="p-2 bg-red-600/20 border border-red-500 text-red-500 flex items-center justify-center"
-              style={{ clipPath: BUTTON_CUT }}
-            >
+              style={{ clipPath: BUTTON_CUT }}>
               <AiOutlineFileAdd size={20} />
             </button>
           )}
@@ -129,34 +111,26 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         <div className="flex justify-between items-center gap-x-4">
           {user ? (
             <div className="flex gap-x-4 items-center">
-              <button 
-                onClick={() => router.push("/account")} 
+              <button onClick={() => router.push("/account")}
                 className="bg-white p-2 flex items-center justify-center transition hover:scale-105 active:scale-95"
-                style={{ clipPath: BUTTON_CUT }}
-              >
+                style={{ clipPath: BUTTON_CUT }}>
                 <FaUserAlt className="text-black" />
               </button>
-              <button 
-                onClick={handleLogout} 
+              <button onClick={handleLogout}
                 className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest hover:bg-red-500 transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)]"
-                style={{ clipPath: BUTTON_CUT }}
-              >
+                style={{ clipPath: BUTTON_CUT }}>
                 Logout
               </button>
             </div>
           ) : (
             <>
-              <button 
-                onClick={() => authModal.onOpen("sign_up")} 
-                className="bg-transparent text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] hover:text-white transition"
-              >
+              <button onClick={() => authModal.onOpen("sign_up")}
+                className="bg-transparent text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] hover:text-white transition">
                 Registar
               </button>
-              <button 
-                onClick={() => authModal.onOpen("sign_in")} 
+              <button onClick={() => authModal.onOpen("sign_in")}
                 className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-                style={{ clipPath: BUTTON_CUT }}
-              >
+                style={{ clipPath: BUTTON_CUT }}>
                 Login
               </button>
             </>
@@ -164,10 +138,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-20">
-        {children}
-      </div>
+      <div className="relative z-20">{children}</div>
     </div>
   );
 };

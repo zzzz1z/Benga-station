@@ -9,10 +9,11 @@ import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
 import { TbRepeat, TbRepeatOnce, TbArrowsShuffle } from "react-icons/tb";
+import { MdDragHandle, MdClose } from "react-icons/md";
 import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import LyricsFlipCard from "./LyricsFlipCard";
 import OfflineButton from "./OfflineButton";
 
@@ -39,26 +40,49 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+// ── QueueRow ──────────────────────────────────────────────────────────────────
+
 const QueueRow = ({
   song,
   label,
   isCurrent,
   dimmed,
+  dragging,
+  onDragStart,
   onClick,
+  onRemove,
 }: {
   song: Song;
   label?: string;
   isCurrent?: boolean;
   dimmed?: boolean;
+  dragging?: boolean;
+  onDragStart?: (e: React.TouchEvent | React.MouseEvent) => void;
   onClick?: () => void;
+  onRemove?: (e: React.MouseEvent) => void;
 }) => {
   const imageUrl = useLoadImage(song);
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-x-3 px-3 py-2 rounded-lg transition
-        ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50 hover:opacity-75 cursor-pointer' : 'hover:bg-white/5 cursor-pointer'}`}
+      className={`flex items-center gap-x-3 px-2 py-2 rounded-lg transition select-none
+        ${dragging ? 'opacity-40 bg-white/5' : ''}
+        ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50' : 'hover:bg-white/5 cursor-pointer'}`}
     >
+      {/* Drag handle — only on non-current rows */}
+      {!isCurrent && onDragStart ? (
+        <div
+          className="text-neutral-600 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 px-1"
+          onMouseDown={onDragStart}
+          onTouchStart={onDragStart}
+          onClick={e => e.stopPropagation()}
+        >
+          <MdDragHandle size={16} />
+        </div>
+      ) : (
+        <div className="w-6 flex-shrink-0" />
+      )}
+
       <div className="relative w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
         <Image
           fill
@@ -81,9 +105,20 @@ const QueueRow = ({
           {label}
         </span>
       )}
+      {/* Remove button for non-current queue items */}
+      {!isCurrent && onRemove && (
+        <button
+          onClick={onRemove}
+          className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1"
+        >
+          <MdClose size={12} />
+        </button>
+      )}
     </div>
   );
 };
+
+// ── ExpandedPlayer ────────────────────────────────────────────────────────────
 
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
@@ -99,11 +134,21 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setShuffleOn = usePlayer(s => s.setShuffleOn);
   const setRepeatMode = usePlayer(s => s.setRepeatMode);
   const setId = usePlayer(s => s.setId);
+  const setIds = usePlayer(s => s.setIds);
 
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [queueExpanded, setQueueExpanded] = useState(false);
+
+  // ── drag-to-reorder state ──
+  const dragIndexRef = useRef<number | null>(null);   // which ids[] index is being dragged
+  const dragOverIndexRef = useRef<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const rowHeightRef = useRef(52); // approximate px per row
+  const dragStartYRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = activeID ? ids.findIndex(id => id === activeID) : -1;
 
@@ -113,15 +158,16 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const upcoming: Song[] = currentIndex !== -1 && currentIndex < ids.length - 1
     ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s)
     : [];
-  const previewHistory = history.slice(-1);
-  const previewUpcoming = upcoming.slice(0, 1);
 
+  // ── player drag (swipe down to close) ──
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't intercept if a queue drag is active
+    if (draggingIndex !== null) return;
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
   };
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current === null) return;
+    if (touchStartY.current === null || draggingIndex !== null) return;
     const delta = e.touches[0].clientY - touchStartY.current;
     if (delta > 0) setDragY(delta);
   };
@@ -131,6 +177,71 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIsDragging(false);
     touchStartY.current = null;
   };
+
+  // ── queue reorder ──
+  const startQueueDrag = useCallback((globalIndex: number, clientY: number) => {
+    dragIndexRef.current = globalIndex;
+    dragOverIndexRef.current = globalIndex;
+    dragStartYRef.current = clientY;
+    setDraggingIndex(globalIndex);
+    setDragOverIndex(globalIndex);
+  }, []);
+
+  const moveQueueDrag = useCallback((clientY: number) => {
+    if (dragIndexRef.current === null) return;
+    const delta = clientY - dragStartYRef.current;
+    const steps = Math.round(delta / rowHeightRef.current);
+    const newIndex = Math.max(0, Math.min(ids.length - 1, dragIndexRef.current + steps));
+    if (newIndex !== dragOverIndexRef.current) {
+      dragOverIndexRef.current = newIndex;
+      setDragOverIndex(newIndex);
+    }
+  }, [ids.length]);
+
+  const endQueueDrag = useCallback(() => {
+    if (dragIndexRef.current === null || dragOverIndexRef.current === null) return;
+    const from = dragIndexRef.current;
+    const to = dragOverIndexRef.current;
+    if (from !== to) {
+      const newIds = [...ids];
+      const [moved] = newIds.splice(from, 1);
+      newIds.splice(to, 0, moved);
+      setIds(newIds);
+    }
+    dragIndexRef.current = null;
+    dragOverIndexRef.current = null;
+    setDraggingIndex(null);
+    setDragOverIndex(null);
+  }, [ids, setIds]);
+
+  // Attach window listeners while dragging (mouse + touch)
+  const handleDragHandleDown = useCallback((globalIndex: number, e: React.TouchEvent | React.MouseEvent) => {
+    e.stopPropagation();
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    startQueueDrag(globalIndex, clientY);
+
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
+      moveQueueDrag(y);
+    };
+    const onUp = () => {
+      endQueueDrag();
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove as any);
+      window.removeEventListener('touchend', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove as any, { passive: true });
+    window.addEventListener('touchend', onUp);
+  }, [startQueueDrag, moveQueueDrag, endQueueDrag]);
+
+  const removeFromQueue = useCallback((globalIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newIds = ids.filter((_, i) => i !== globalIndex);
+    setIds(newIds);
+  }, [ids, setIds]);
 
   const handleNext = () => {
     if (repeatMode === 'one') { onSeek(0); return; }
@@ -150,6 +261,14 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   };
 
   const hasQueue = history.length > 0 || upcoming.length > 0;
+
+  // Build full queue list for expanded view
+  const allQueueRows = ids.map((id, i) => ({
+    song: songs[id],
+    globalIndex: i,
+    isCurrent: id === activeID,
+    isPast: i < currentIndex,
+  })).filter(r => !!r.song);
 
   return (
     <div
@@ -255,77 +374,45 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               </span>
               <div className="flex items-center gap-x-2">
                 <span className="text-[10px] text-neutral-600">
-                  {history.length + 1 + upcoming.length} músicas
+                  {ids.length} músicas
                 </span>
                 {queueExpanded ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
               </div>
             </button>
 
+            {/* Collapsed preview */}
             {!queueExpanded && (
               <div className="pb-2">
-                {previewHistory.map((s, i) => (
-                  <QueueRow
-                    key={`prev-hist-${i}`}
-                    song={s}
-                    dimmed
-                    onClick={() => {
-                      const pid = ids[currentIndex - (previewHistory.length - i)];
-                      if (pid) setId(pid);
-                    }}
+                {history.slice(-1).map((s, i) => (
+                  <QueueRow key={`prev-hist-${i}`} song={s} dimmed
+                    onClick={() => { const pid = ids[currentIndex - 1]; if (pid) setId(pid); }}
                   />
                 ))}
                 <QueueRow song={song} isCurrent label="▶" />
-                {previewUpcoming.map((s, i) => (
-                  <QueueRow
-                    key={`prev-up-${i}`}
-                    song={s}
-                    onClick={() => {
-                      const pid = ids[currentIndex + 1 + i];
-                      if (pid) setId(pid);
-                    }}
+                {upcoming.slice(0, 1).map((s, i) => (
+                  <QueueRow key={`prev-up-${i}`} song={s}
+                    onClick={() => { const pid = ids[currentIndex + 1]; if (pid) setId(pid); }}
                   />
                 ))}
               </div>
             )}
 
+            {/* Expanded — full drag-to-reorder list */}
             {queueExpanded && (
-              <div className="pb-2 max-h-72 overflow-y-auto">
-                {history.length > 0 && (
-                  <>
-                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-1 pb-1">
-                      Anteriores ({history.length})
-                    </p>
-                    {history.map((s, i) => (
-                      <QueueRow
-                        key={`hist-${i}`}
-                        song={s}
-                        dimmed
-                        onClick={() => { const pid = ids[i]; if (pid) setId(pid); }}
-                      />
-                    ))}
-                  </>
-                )}
-                <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
-                  A tocar
-                </p>
-                <QueueRow song={song} isCurrent label="▶" />
-                {upcoming.length > 0 && (
-                  <>
-                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest px-4 pt-2 pb-1">
-                      A seguir ({upcoming.length})
-                    </p>
-                    {upcoming.map((s, i) => (
-                      <QueueRow
-                        key={`up-${i}`}
-                        song={s}
-                        onClick={() => {
-                          const pid = ids[currentIndex + 1 + i];
-                          if (pid) setId(pid);
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
+              <div ref={containerRef} className="pb-2 max-h-72 overflow-y-auto">
+                {allQueueRows.map(({ song: s, globalIndex, isCurrent, isPast }) => (
+                  <QueueRow
+                    key={`q-${globalIndex}`}
+                    song={s}
+                    isCurrent={isCurrent}
+                    dimmed={isPast && !isCurrent}
+                    dragging={draggingIndex === globalIndex}
+                    label={isCurrent ? '▶' : undefined}
+                    onDragStart={!isCurrent ? (e) => handleDragHandleDown(globalIndex, e) : undefined}
+                    onRemove={!isCurrent ? (e) => removeFromQueue(globalIndex, e) : undefined}
+                    onClick={!isCurrent ? () => setId(ids[globalIndex]) : undefined}
+                  />
+                ))}
               </div>
             )}
           </div>

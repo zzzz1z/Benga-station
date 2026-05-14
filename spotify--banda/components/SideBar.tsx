@@ -8,6 +8,7 @@ import { HiHome } from "react-icons/hi";
 import { BiSearch } from "react-icons/bi";
 import { FcLike } from "react-icons/fc";
 import { SlPlaylist } from "react-icons/sl";
+import { MdWifiOff } from "react-icons/md";
 import { Playlist, Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
 import Box from "./Box";
@@ -32,32 +33,27 @@ const SideBar: React.FC<SidebarProps> = ({ children }) => {
   useEffect(() => {
     const getSongsAndPlaylists = async () => {
       if (!user) return;
-
       const { data: songsData, error: songsError } = await supabase
-        .from("Songs")
-        .select("*")
-        .eq("user_id", user.id);
-
+        .from("Songs").select("*").eq("user_id", user.id);
       const { data: playlistsData, error: playlistsError } = await supabase
-        .from("Playlists")
-        .select("*")
-        .eq("user_id", user.id);
-
+        .from("Playlists").select("*").eq("user_id", user.id);
       if (!songsError && songsData) setUserSongs(songsData);
       if (!playlistsError && playlistsData) setUserPlaylists(playlistsData);
     };
-
     getSongsAndPlaylists();
   }, [user]);
 
   const routes = useMemo(
     () => [
-      { icon: HiHome, label: "Casa", active: pathname !== "/", href: "/" },
-      { icon: BiSearch, label: "Pesquisar", active: pathname === "/search", href: "/search" },
-      { icon: SlPlaylist, label: "Playlists", active: pathname === "/playlists", href: "/playlists" },
-      { icon: FcLike, label: "Músicas Favoritas", active: pathname === "/liked", href: "/liked" },
+      { icon: HiHome,     label: "Casa",             active: pathname === "/",          href: "/" },
+      { icon: BiSearch,   label: "Pesquisar",        active: pathname === "/search",    href: "/search" },
+      { icon: SlPlaylist, label: "Playlists",        active: pathname === "/playlists", href: "/playlists" },
+      { icon: FcLike,     label: "Músicas Favoritas",active: pathname === "/liked",     href: "/liked" },
+      ...(user ? [
+        { icon: MdWifiOff, label: "Offline", active: pathname === "/offline", href: "/offline" },
+      ] : []),
     ],
-    [pathname]
+    [pathname, user]
   );
 
   return (

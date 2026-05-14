@@ -6,8 +6,10 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { MdWifiOff, MdDelete, MdPlayArrow, MdStorage } from 'react-icons/md';
 import { HiOutlineSignalSlash } from 'react-icons/hi2';
+import { BiSearch } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import usePlayer from '@/hooks/usePlayer';
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const formatBytes = (bytes: number) => {
@@ -49,6 +51,7 @@ export default function OfflinePage() {
   const [songs, setSongList] = useState<OfflineSong[]>([]);
   const [removing, setRemoving] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -87,6 +90,13 @@ export default function OfflinePage() {
   }, [removeOffline]);
 
   const totalSize = getTotalSize();
+
+  const filteredSongs = query.trim()
+    ? songs.filter(s =>
+        s.title.toLowerCase().includes(query.toLowerCase()) ||
+        s.author.toLowerCase().includes(query.toLowerCase())
+      )
+    : songs;
 
   // ── not native ──────────────────────────────────────────────────────────────
   if (!isNative) {
@@ -145,10 +155,28 @@ export default function OfflinePage() {
       {/* Header */}
       <OfflineHeader isOnline={isOnline} totalSize={totalSize} songCount={songs.length} />
 
+      {/* Search bar */}
+      <div className="px-4 pt-3 pb-2 flex-shrink-0">
+        <div className="flex items-center gap-x-2 bg-neutral-800 border border-white/5 px-3 py-2"
+          style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}>
+          <BiSearch size={14} className="text-neutral-500 flex-shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Pesquisar offline..."
+            className="bg-transparent text-white text-xs placeholder:text-neutral-600 outline-none flex-1 font-mono"
+          />
+          {query && (
+            <button onClick={() => setQuery('')} className="text-neutral-600 hover:text-white text-xs transition">✕</button>
+          )}
+        </div>
+      </div>
+
       {/* Song list */}
       <div className="flex-1 overflow-y-auto pb-28 px-4">
-        {/* Play all */}
-        {songs.length > 0 && (
+        {/* Play all — only when not searching */}
+        {!query && songs.length > 0 && (
           <button
             onClick={() => handlePlay(songs[0])}
             className="w-full flex items-center justify-center gap-x-2 py-3 mb-4
@@ -162,15 +190,21 @@ export default function OfflinePage() {
         )}
 
         <ul className="flex flex-col gap-y-1">
-          {songs.map((song) => (
-            <OfflineRow
-              key={song.videoId}
-              song={song}
-              isRemoving={removing === song.videoId}
-              onPlay={() => handlePlay(song)}
-              onRemove={(e) => handleRemove(song.videoId, e)}
-            />
-          ))}
+          {filteredSongs.length === 0 && query ? (
+            <li className="text-center py-10 text-neutral-600 text-xs font-mono uppercase tracking-widest">
+              Sem resultados para "{query}"
+            </li>
+          ) : (
+            filteredSongs.map((song) => (
+              <OfflineRow
+                key={song.videoId}
+                song={song}
+                isRemoving={removing === song.videoId}
+                onPlay={() => handlePlay(song)}
+                onRemove={(e) => handleRemove(song.videoId, e)}
+              />
+            ))
+          )}
         </ul>
       </div>
     </div>
