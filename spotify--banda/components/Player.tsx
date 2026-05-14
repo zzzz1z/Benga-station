@@ -34,8 +34,6 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-// Record a play event into play_history via the API route.
-// Fire-and-forget — never blocks playback.
 const recordPlayEvent = (videoId: string) => {
   fetch('/api/play-event', {
     method: 'POST',
@@ -44,9 +42,6 @@ const recordPlayEvent = (videoId: string) => {
   }).catch(() => {});
 };
 
-// Fire one warm-batch request for the songs surrounding the active song.
-// Runs as soon as activeID changes — NOT after play resolves — so yt-dlp
-// starts extracting while the current song is still loading.
 const preWarmAround = (activePlayerId: string) => {
   const { ids } = usePlayer.getState();
 
@@ -73,17 +68,13 @@ const preWarmAround = (activePlayerId: string) => {
   }).catch(() => {});
 };
 
-// At the top of Player.tsx, outside the component
 const isNative = () =>
   typeof (window as any).Capacitor !== 'undefined' &&
   (window as any).Capacitor.isNativePlatform();
 
 const Player = () => {
-  // --- HYDRATION FIX ---
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => { setIsMounted(true); }, []);
 
   const player = usePlayer();
   const playerRef = useRef(player);
@@ -123,15 +114,9 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // Pre-warm neighbours + record play event as soon as activeID changes.
-  // Both fire immediately — before useLoadSongUrl resolves, before safePlay.
   useEffect(() => {
     if (!activeID) return;
-
-    // Warm next/prev songs in queue
     preWarmAround(String(activeID));
-
-    // Record this play in play_history (feeds GlobalWarmer top-5 on next login)
     const s = songsMap[activeID];
     if (s?.source === 'youtube' && s?.youtube_video_id) {
       recordPlayEvent(s.youtube_video_id);
@@ -140,13 +125,13 @@ const Player = () => {
 
   useEffect(() => {
     const audio = new Audio();
-    if (!isNative()) audio.crossOrigin = 'anonymous';    audioRef.current = audio;
+    if (!isNative()) audio.crossOrigin = 'anonymous';
+    audioRef.current = audio;
 
     let lastTime = 0;
     let stuckInterval: NodeJS.Timeout;
 
     audio.ontimeupdate = () => { setPosition(audio.currentTime); };
-    audio.onloadedmetadata = () => setDuration(audio.duration);
     audio.onended = handleEnded;
     audio.onplay = () => { setIsPlaying(true); setIsLoading(false); };
     audio.onpause = () => { if (audio.src) setIsPlaying(false); };
@@ -173,12 +158,20 @@ const Player = () => {
     };
 
     stuckInterval = setInterval(() => {
-        if (isPlayingRef.current && !audio.paused && audio.src) {
-            if (audio.currentTime === lastTime && audio.currentTime !== 0 && audio.currentTime < audio.duration) {
-                audio.play().catch(() => {});
-            }
-            lastTime = audio.currentTime;
+      if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
+      if (isPlayingRef.current) {
+        const dur = audio.duration;
+        // Catch silence-after-end: currentTime at or past duration
+        if (dur > 0 && audio.currentTime >= dur - 0.3) {
+          if (!endedFiredRef.current) handleEnded();
+          return;
         }
+        // Catch genuinely stuck stream
+        if (audio.currentTime === lastTime && audio.currentTime > 0) {
+          audio.play().catch(() => {});
+        }
+        lastTime = audio.currentTime;
+      }
     }, 2000);
 
     const handleVisibilityChange = () => {
@@ -205,12 +198,26 @@ const Player = () => {
     skipOnErrorRef.current = false;
     setIsLoading(!!songUrl);
     setIsPlaying(false);
+    setDuration(0); // reset duration immediately on song change
+
     audio.pause();
     audio.src = '';
     delete audio.dataset.retried;
+
+    // Remove any previous metadata listener before adding a new one
+    audio.onloadedmetadata = null;
+
     audio.load();
 
     if (!songUrl) return;
+
+    // Use a one-time event listener instead of onloadedmetadata property
+    // to prevent double-firing when audio.load() is called
+    const onMeta = () => {
+      setDuration(audio.duration);
+      audio.removeEventListener('loadedmetadata', onMeta);
+    };
+    audio.addEventListener('loadedmetadata', onMeta);
 
     const timer = setTimeout(() => {
       skipOnErrorRef.current = true;
@@ -224,14 +231,17 @@ const Player = () => {
       }).catch(() => { setIsLoading(false); });
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      audio.removeEventListener('loadedmetadata', onMeta);
+    };
   }, [songUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && audio.src && playCount > 0) {
-        audio.currentTime = 0;
-        safePlay(audio);
+      audio.currentTime = 0;
+      safePlay(audio);
     }
   }, [playCount]);
 
@@ -256,8 +266,8 @@ const Player = () => {
 
   const handleSeek = (value: number) => {
     if (audioRef.current) {
-        audioRef.current.currentTime = value;
-        setPosition(value);
+      audioRef.current.currentTime = value;
+      setPosition(value);
     }
   };
 
@@ -271,7 +281,6 @@ const Player = () => {
     () => { audioRef.current?.pause(); }
   );
 
-  // --- RENDERING LOGIC ---
   if (!isMounted) return null;
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;

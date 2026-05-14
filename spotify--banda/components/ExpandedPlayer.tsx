@@ -315,7 +315,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <p className="text-neutral-400 text-sm truncate mt-0.5">{song.author}</p>
           </div>
           <div className="flex items-center gap-x-3 flex-shrink-0">
-            <OfflineButton song={song} size={22} />
             <LikedButton songId={String(song.id)} />
           </div>
         </div>
