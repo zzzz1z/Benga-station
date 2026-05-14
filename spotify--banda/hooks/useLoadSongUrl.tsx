@@ -39,17 +39,23 @@ const useLoadSongUrl = (song: Song) => {
     if (song.source === 'youtube' && song.youtube_video_id) {
       const videoId = song.youtube_video_id;
 
-      // Check offline cache first (Capacitor native only)
-      getOfflineUri(videoId).then(localUri => {
-        if (localUri) {
-          // Serve from local filesystem — no network needed
-          console.log(`[useLoadSongUrl] serving ${videoId} from offline cache`);
-          setUrl(localUri);
-        } else {
-          // Fall back to streaming via worker
-          setUrl(`/api/youtube/stream?videoId=${videoId}`);
-        }
-      });
+const getOfflineUri = async (videoId: string): Promise<string | null> => {
+  if (!isNative()) return null;
+  try {
+    // stat() throws if file doesn't exist — getUri() does not
+    await Filesystem.stat({
+      path: `offline/${videoId}.m4a`,
+      directory: Directory.Documents,
+    });
+    const result = await Filesystem.getUri({
+      path: `offline/${videoId}.m4a`,
+      directory: Directory.Documents,
+    });
+    return result.uri || null;
+  } catch {
+    return null;
+  }
+};
     } else if (song.song_path) {
       const { data } = supabase.storage
         .from('musicas')

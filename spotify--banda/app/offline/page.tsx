@@ -9,6 +9,7 @@ import { HiOutlineSignalSlash } from 'react-icons/hi2';
 import { BiSearch } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import usePlayer from '@/hooks/usePlayer';
+import Header from '@/components/Header';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -226,6 +227,10 @@ function OfflineHeader({
 }) {
   return (
     <div className="relative px-6 pt-4 pb-5 border-b border-white/5 flex-shrink-0">
+
+      <Header>
+        <></>
+      </Header>
       {/* Scanline */}
       <div
         className="absolute inset-0 pointer-events-none"
