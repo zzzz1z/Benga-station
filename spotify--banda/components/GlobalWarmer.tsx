@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 
 const supabase = createClient();
+const MAX_WARM = 20; // cap so we don't hammer the worker on login
 
 const GlobalWarmer = () => {
     const hasWarmed = useRef(false);
@@ -12,45 +13,50 @@ const GlobalWarmer = () => {
         if (hasWarmed.current) return;
         hasWarmed.current = true;
 
-        const warmInBatches = async (videoIds: string[], batchSize = 5) => {
-            for (let i = 0; i < videoIds.length; i += batchSize) {
-                const batch = videoIds.slice(i, i + batchSize);
-                // Process 5 requests at once, then move to next 5
-                await Promise.all(batch.map(videoId => 
-                    fetch('/api/preextract', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ videoId }),
-                    }).catch(() => {})
-                ));
-            }
-        };
-
         const warmLibrary = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Fetch ALL playlist songs for this user
-            const { data: playlists } = await supabase
-                .from('Playlists')
-                .select(`playlist_songs ( Songs (*) )`)
-                .eq('user_id', user.id);
+            const videoIds = new Set<string>();
 
-            if (!playlists) return;
+            // 1. Liked songs — Músicas_Favoritas → Songs
+            const { data: liked } = await supabase
+                .from('Músicas_Favoritas')
+                .select('Songs ( youtube_video_id, source )')
+                .eq('user_id', user.id)
+                .limit(MAX_WARM);
 
-            const videoIds: string[] = [];
-            playlists.forEach(p => {
-                p.playlist_songs?.forEach((ps: any) => {
-                    const vid = ps.Songs?.youtube_video_id;
-                    if (ps.Songs?.source === 'youtube' && vid) {
-                        if (!videoIds.includes(vid)) videoIds.push(vid);
-                    }
-                });
+            liked?.forEach((row: any) => {
+                const vid = row.Songs?.youtube_video_id;
+                if (row.Songs?.source === 'youtube' && vid) videoIds.add(vid);
             });
 
-            if (videoIds.length > 0) {
-                warmInBatches(videoIds);
+            // 2. Playlist songs — Playlists → playlist_songs → Songs
+            if (videoIds.size < MAX_WARM) {
+                const { data: playlists } = await supabase
+                    .from('Playlists')
+                    .select('playlist_songs ( Songs ( youtube_video_id, source ) )')
+                    .eq('user_id', user.id);
+
+                playlists?.forEach((p: any) => {
+                    p.playlist_songs?.forEach((ps: any) => {
+                        const vid = ps.Songs?.youtube_video_id;
+                        if (ps.Songs?.source === 'youtube' && vid) videoIds.add(vid);
+                    });
+                });
             }
+
+            if (videoIds.size === 0) return;
+
+            const ids = Array.from(videoIds).slice(0, MAX_WARM);
+            console.log(`[GlobalWarmer] warming ${ids.length} songs`);
+
+            // Fire a single batch request — don't spam individual preextract calls
+            fetch('/api/warm-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoIds: ids }),
+            }).catch(() => {});
         };
 
         warmLibrary();
