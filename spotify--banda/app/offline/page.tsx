@@ -225,12 +225,14 @@ function OfflineHeader({
   totalSize: number;
   songCount: number;
 }) {
-  return (
-    <div className="relative px-6 pt-4 pb-5 border-b border-white/5 flex-shrink-0">
-
+  return ( 
+    <>
       <Header>
-        <></>
+       <></>
       </Header>
+     <div className="relative px-6 pt-4 pb-5 border-b border-white/5 flex-shrink-0">
+
+     
       {/* Scanline */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -293,6 +295,11 @@ function OfflineHeader({
         )}
       </div>
     </div>
+    
+    </>
+  
+
+   
   );
 }
 

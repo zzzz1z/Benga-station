@@ -73,6 +73,11 @@ const preWarmAround = (activePlayerId: string) => {
   }).catch(() => {});
 };
 
+// At the top of Player.tsx, outside the component
+const isNative = () =>
+  typeof (window as any).Capacitor !== 'undefined' &&
+  (window as any).Capacitor.isNativePlatform();
+
 const Player = () => {
   // --- HYDRATION FIX ---
   const [isMounted, setIsMounted] = useState(false);
@@ -135,8 +140,7 @@ const Player = () => {
 
   useEffect(() => {
     const audio = new Audio();
-    audio.crossOrigin = 'anonymous';
-    audioRef.current = audio;
+    if (!isNative()) audio.crossOrigin = 'anonymous';    audioRef.current = audio;
 
     let lastTime = 0;
     let stuckInterval: NodeJS.Timeout;
