@@ -84,7 +84,6 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             ...(user ? [
               { icon: SlPlaylist, path: "/playlists" },
               { icon: FcLike, path: "/liked" },
-              { icon: MdWifiOff, path: "/offline" },
             ] : []),
           ].map((item, i) => (
             <button
