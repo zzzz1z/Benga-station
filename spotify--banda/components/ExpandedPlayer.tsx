@@ -14,6 +14,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import LyricsFlipCard from "./LyricsFlipCard";
+import OfflineButton from "./OfflineButton";
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -38,8 +39,6 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// ── QueueRow ──────────────────────────────────────────────────────────────────
-// song is guaranteed non-null by the filter(Boolean) at call sites
 const QueueRow = ({
   song,
   label,
@@ -86,14 +85,12 @@ const QueueRow = ({
   );
 };
 
-// ── ExpandedPlayer ─────────────────────────────────────────────────────────────
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
 }) => {
   const router = useRouter();
 
-  // Read each slice separately to avoid stale object refs
   const ids = usePlayer(s => s.ids);
   const songs = usePlayer(s => s.songs);
   const activeID = usePlayer(s => s.activeID);
@@ -102,7 +99,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setShuffleOn = usePlayer(s => s.setShuffleOn);
   const setRepeatMode = usePlayer(s => s.setRepeatMode);
   const setId = usePlayer(s => s.setId);
-  const playRandom = usePlayer(s => s.playRandom);
 
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
@@ -120,7 +116,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const previewHistory = history.slice(-1);
   const previewUpcoming = upcoming.slice(0, 1);
 
-  // ── Touch drag to close ─────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
@@ -137,7 +132,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = null;
   };
 
-  // ── Playback ────────────────────────────────────────────────────────────────
   const handleNext = () => {
     if (repeatMode === 'one') { onSeek(0); return; }
     onNext();
@@ -195,13 +189,16 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           <LyricsFlipCard song={song} position={position} />
         </div>
 
-        {/* Title + like */}
+        {/* Title + like + offline */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
             <p className="text-white text-xl font-bold truncate">{song.title}</p>
             <p className="text-neutral-400 text-sm truncate mt-0.5">{song.author}</p>
           </div>
-          <LikedButton songId={String(song.id)} />
+          <div className="flex items-center gap-x-3 flex-shrink-0">
+            <OfflineButton song={song} size={22} />
+            <LikedButton songId={String(song.id)} />
+          </div>
         </div>
 
         {/* Seek bar */}

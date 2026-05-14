@@ -11,11 +11,13 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import PlayButton from "@/components/PlayButton";
+import OfflineButton from "@/components/OfflineButton";
 
 interface SongItemProps {
     data: Song;
     onClick: (id: string) => void;
 }
+
 const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
     const imagePath = useLoadImage(data);
     const { user } = useUser();
@@ -47,7 +49,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         return () => document.removeEventListener('mousedown', handler);
     }, [showMenu]);
 
- const handleLike = async (e: React.MouseEvent) => {
+    const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
         const method = isLiked ? 'DELETE' : 'POST';
@@ -63,7 +65,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         setShowMenu(false);
     };
 
-       const handlePlaylistClick = async (e: React.MouseEvent) => {
+    const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
         const res = await fetch('/api/playlist/user-playlists');
@@ -91,15 +93,13 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
     };
 
     return (
-         <>
+        <>
             <div
                 onClick={() => onClick(data.id)}
                 className="relative group flex flex-col cursor-pointer transition p-0"
-            
             >
                 {/* Image Wrapper */}
                 <div className="relative aspect-square w-full overflow-hidden rounded-sm">
-                    {/* Hover Target Accents - No box, just corners appearing on the image */}
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
                     <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
 
@@ -111,16 +111,14 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         alt={data.title}
                     />
-                    
-                    {/* Dark gradient overlay that appears on hover */}
+
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                    {/* Play Button - Floating centered or bottom right */}
                     <div className="absolute bottom-3 right-3 translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                         <PlayButton />
                     </div>
 
-                    {/* Desktop Overlay Actions (Now cleaner without the background box) */}
+                    {/* Desktop Overlay Actions */}
                     <div
                         className="absolute top-2 right-2 hidden md:flex flex-col gap-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                         onClick={e => e.stopPropagation()}
@@ -131,10 +129,13 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                         <button onClick={handlePlaylistClick} className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm text-white hover:text-red-600 transition">
                             <MdPlaylistAdd size={20} />
                         </button>
+                        <div className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm">
+                            <OfflineButton song={data} size={18} />
+                        </div>
                     </div>
                 </div>
 
-                {/* Text Section - Outside the "Box" */}
+                {/* Text Section */}
                 <div className="flex flex-col items-start w-full pt-3 gap-y-0.5">
                     <p className="font-black truncate w-full text-white uppercase text-sm tracking-tight group-hover:text-red-500 transition-colors">
                         {data.title}
@@ -171,12 +172,15 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                             <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
                                 <AiOutlineInfoCircle /> Info
                             </button>
+                            <div className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
+                                <OfflineButton song={data} size={16} />
+                                <span>Offline</span>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
-              
-            {/* Modal remains the same but with terminal styling */}
+
             <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="> ADD_TO_PLAYLIST" description="Selecione o diretório:">
                 <div className="flex flex-col gap-y-1">
                     {playlists.length === 0
@@ -193,4 +197,5 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         </>
     );
 };
+
 export default SongItem;

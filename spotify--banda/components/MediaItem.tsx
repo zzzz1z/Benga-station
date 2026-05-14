@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
 import useLoadImage from "@/hooks/useLoadImage";
 import usePlayer from "@/hooks/usePlayer";
 import { Song, Playlist } from "@/types";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
+import { AiFillHeart, AiOutlineHeart, AiOutlineInfoCircle } from "react-icons/ai";
 import { MdPlaylistAdd } from "react-icons/md";
-import { AiOutlineInfoCircle } from "react-icons/ai";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useUser } from "@/hooks/useUser";
 import useAuthModal from "@/hooks/useAuthModal";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import OfflineButton from "@/components/OfflineButton";
 
 interface MediaItemProps {
     data: Song;
@@ -140,6 +140,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
                         <AiOutlineInfoCircle size={18} />
                     </button>
+                    <OfflineButton song={data} size={18} />
                 </div>
 
                 {/* Mobile three-dot menu */}
@@ -156,9 +157,13 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                             <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
                                 <MdPlaylistAdd size={16} /> Add_Playlist
                             </button>
-                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition">
+                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
                                 <AiOutlineInfoCircle size={16} /> Ver_Metadata
                             </button>
+                            <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition">
+                                <OfflineButton song={data} size={16} />
+                                <span>Offline</span>
+                            </div>
                         </div>
                     )}
                 </div>
