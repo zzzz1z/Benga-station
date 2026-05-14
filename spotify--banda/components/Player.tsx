@@ -315,7 +315,7 @@ audio.addEventListener('loadedmetadata', onMeta);
   return (
     <>
       {isExpanded && <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />}
-      <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] border-t border-red-900/40 px-4 z-[40]">
+      <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] pb-[30px] border-t border-red-900/40 px-4 z-[40]">
         <PlayerContent {...sharedProps} onExpand={() => setIsExpanded(true)} />
       </div>
     </>
