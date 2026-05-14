@@ -132,19 +132,19 @@ export const useOfflineStorage = () => {
       // Read with progress tracking
       const contentLength = parseInt(response.headers.get('Content-Length') || '0', 10);
       const reader = response.body!.getReader();
-const chunks: Uint8Array<ArrayBuffer>[] = [];
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
       let received = 0;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        chunks.push(value);
+        chunks.push(value as Uint8Array<ArrayBuffer>);
         received += value.length;
         if (contentLength > 0) {
-          const progress = Math.round((received / contentLength) * 100);
+           const progress = Math.round((received / contentLength) * 100);
           setDownloading(prev => ({ ...prev, [videoId]: progress }));
         }
-      }
+}
 
       // Convert to base64 for Capacitor Filesystem
       const blob = new Blob(chunks, { type: 'audio/mp4' });
