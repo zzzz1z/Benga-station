@@ -264,22 +264,23 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   })).filter(r => !!r.song);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-neutral-900 flex flex-col"
-      style={{
-        transform: `translateY(${dragY}px)`,
-        transition: isDragging ? 'none' : 'transform 0.3s ease',
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-        <div className="w-10 h-1 rounded-full bg-neutral-600" />
-      </div>
+// Remove onTouchStart/Move/End from the outer <div className="fixed inset-0 ...">
+// Change it to:
+<div className="fixed inset-0 z-50 bg-neutral-900 flex flex-col">
 
-      <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
+  {/* Drag handle — ONLY this zone triggers swipe-down-to-close */}
+  <div
+    className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
+    onTouchStart={handleTouchStart}
+    onTouchMove={handleTouchMove}
+    onTouchEnd={handleTouchEnd}
+  >
+    <div className="w-10 h-1 rounded-full bg-neutral-600" />
+  </div>
 
+  {/* Rest of content — no touch handlers */}
+  <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
+    ...
         <div className="flex items-center justify-between pt-[30px] flex-shrink-0">
           <button onClick={onClose} className="text-white p-2 -ml-2">
             <IoChevronDown size={26} />
@@ -294,7 +295,8 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         </div>
 
         <div className="flex justify-center flex-shrink-0">
-<LyricsFlipCard song={song} position={position} duration={duration} />        </div>
+<LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
+        </div>
 
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">

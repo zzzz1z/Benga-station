@@ -319,27 +319,44 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         };
     }, [query]);
 
-    const handlePlay = async (result: YTResult) => {
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        if (loadingId === result.videoId) return;
-        if (unavailableIds.has(result.videoId)) return;
-        if (failedIds.has(`yt_${result.videoId}`)) return;
+const handlePlay = async (result: YTResult) => {
+  if (!user) { authModal.onOpen('sign_up'); return; }
+  if (loadingId === result.videoId) return;
+  if (unavailableIds.has(result.videoId)) return;
+  if (failedIds.has(`yt_${result.videoId}`)) return;
 
-        if (!readyIds.has(result.videoId)) {
-            setLoadingId(result.videoId);
-            const success = await preExtract(result.videoId);
-            setLoadingId(null);
-            if (success) {
-                availableIdsRef.current.add(result.videoId);
-                setReadyIds(prev => new Set([...prev, result.videoId]));
-            } else {
-                setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                return;
-            }
-        }
+  if (!readyIds.has(result.videoId)) {
+    setLoadingId(result.videoId);
+    const success = await preExtract(result.videoId);
+    setLoadingId(null);
+    if (success) {
+      availableIdsRef.current.add(result.videoId);
+      setReadyIds(prev => new Set([...prev, result.videoId]));
+    } else {
+      setUnavailableIds(prev => new Set([...prev, result.videoId]));
+      return;
+    }
+  }
 
-        const targetId = `yt_${result.videoId}`;
+  const targetId = `yt_${result.videoId}`;
 
+  // Only use current search results as the queue — never bleed store songs in
+  const baseSongs = results
+    .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
+    .map(r => ({
+      id: `yt_${r.videoId}`,
+      user_id: 'youtube',
+      author: r.artist,
+      title: r.title,
+      song_path: r.videoId,
+      image_path: r.thumbnail,
+      source: 'youtube' as const,
+      youtube_video_id: r.videoId,
+    }));
+
+  player.setQueue(baseSongs as any, targetId);
+  setPlayingId(result.videoId);
+};
         const { ids } = usePlayer.getState();
         if (ids.includes(targetId)) {
             player.setId(targetId);

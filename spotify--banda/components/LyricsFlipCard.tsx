@@ -24,53 +24,49 @@ function parseLrc(lrc: string): LrcLine[] {
 
 type LyricsState = 'idle' | 'loading' | 'synced' | 'plain' | 'none';
 
+interface CachedLyrics {
+  state: LyricsState;
+  syncedLines: LrcLine[];
+  plainLyrics: string;
+}
+
+// Module-level cache — survives component unmounts for the whole session
+const lyricsSessionCache = new Map<string, CachedLyrics>();
+
 interface LyricsFlipCardProps {
   song: Song;
   position: number;
-  duration: number; // needed for 85% cutoff
+  duration: number;
 }
 
-// ─── Title cleaning ────────────────────────────────────────────────────────────
-// Strips YouTube noise so we get clean artist/track strings for lrclib queries.
-const NOISE_RE = /\b(official\s*(music\s*)?video|official\s*audio|official\s*lyric\s*video|lyric\s*video|lyrics?|audio|video|vevo|topic|hd|hq|4k|live|performance|visualizer|explicit|clean|remix|remaster(?:ed)?|feat\.?|ft\.?|prod\.?(\s*by)?|x\s+|\(.*?\)|\[.*?\])/gi;
+// ─── Supabase fallback: lrclib directly ───────────────────────────────────────
+
+const NOISE_RE = /\b(official\s*(music\s*)?video|official\s*audio|official\s*lyric\s*video|lyric\s*video|lyrics?|audio|video|vevo|topic|hd|hq|4k|live|performance|visualizer|explicit|clean|remix|remaster(?:ed)?|feat\.?|ft\.?|prod\.?(\s*by)?)\b|\(.*?\)|\[.*?\]/gi;
 
 function cleanTitle(raw: string): string {
-  return raw
-    .replace(NOISE_RE, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  return raw.replace(NOISE_RE, ' ').replace(/\s{2,}/g, ' ').trim();
 }
 
-// Given a YouTube title and channel name, produce an ordered list of
-// { artist, track } candidates to try against lrclib.
-function buildCandidates(rawTitle: string, rawChannel: string): { artist: string; track: string }[] {
+function buildCandidates(rawTitle: string, rawChannel: string) {
   const channel = cleanTitle(rawChannel.replace(/\s*-\s*Topic$/i, '').replace(/VEVO$/i, '').trim());
   const fullCleaned = cleanTitle(rawTitle);
-
-  // Try to split on the FIRST " - " in the cleaned title
   const dashIdx = fullCleaned.indexOf(' - ');
   const left = dashIdx !== -1 ? fullCleaned.slice(0, dashIdx).trim() : '';
   const right = dashIdx !== -1 ? fullCleaned.slice(dashIdx + 3).trim() : '';
 
   const candidates: { artist: string; track: string }[] = [];
-
   if (left && right) {
-    // "Artist - Track" pattern found in title
-    candidates.push({ artist: left, track: right });           // title split, normal order
-    candidates.push({ artist: right, track: left });           // title split, swapped (rare but happens)
-    candidates.push({ artist: channel, track: right });        // channel as artist, right as track
-    candidates.push({ artist: channel, track: left });         // channel as artist, left as track
-    candidates.push({ artist: channel, track: fullCleaned });  // channel + full cleaned title
+    candidates.push({ artist: left, track: right });
+    candidates.push({ artist: right, track: left });
+    candidates.push({ artist: channel, track: right });
+    candidates.push({ artist: channel, track: left });
+    candidates.push({ artist: channel, track: fullCleaned });
   } else {
-    // No " - " in title — treat full title as track
     candidates.push({ artist: channel, track: fullCleaned });
     candidates.push({ artist: '', track: fullCleaned });
   }
-
-  // Always add a track-only fallback at the end
   candidates.push({ artist: '', track: right || fullCleaned });
 
-  // Deduplicate
   const seen = new Set<string>();
   return candidates.filter(c => {
     const key = `${c.artist}||${c.track}`;
@@ -81,7 +77,6 @@ function buildCandidates(rawTitle: string, rawChannel: string): { artist: string
 }
 
 async function queryLrclib(artist: string, track: string): Promise<any | null> {
-  // Try exact /get first (faster, more precise)
   try {
     const params = new URLSearchParams({ track_name: track });
     if (artist) params.set('artist_name', artist);
@@ -91,21 +86,15 @@ async function queryLrclib(artist: string, track: string): Promise<any | null> {
       if (data.syncedLyrics || data.plainLyrics) return data;
     }
   } catch (_) {}
-
-  // Fall back to /search
   try {
     const q = artist ? `${artist} ${track}` : track;
     const res = await fetch(`https://lrclib.net/api/search?${new URLSearchParams({ q })}`);
     if (res.ok) {
       const results = await res.json();
-      if (results?.length > 0) {
-        return results.find((r: any) => r.syncedLyrics)
-          || results.find((r: any) => r.plainLyrics)
-          || null;
-      }
+      if (results?.length > 0)
+        return results.find((r: any) => r.syncedLyrics) || results.find((r: any) => r.plainLyrics) || null;
     }
   } catch (_) {}
-
   return null;
 }
 
@@ -113,58 +102,63 @@ async function queryLrclib(artist: string, track: string): Promise<any | null> {
 
 const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duration }) => {
   const imageUrl = useLoadImage(song);
+  const songCacheKey = String(song.id);
+
+  const fromCache = lyricsSessionCache.get(songCacheKey);
 
   const [flipped, setFlipped] = useState(false);
-  const [lyricsState, setLyricsState] = useState<LyricsState>('idle');
-  const [syncedLines, setSyncedLines] = useState<LrcLine[]>([]);
-  const [plainLyrics, setPlainLyrics] = useState('');
+  const [lyricsState, setLyricsState] = useState<LyricsState>(fromCache?.state ?? 'idle');
+  const [syncedLines, setSyncedLines] = useState<LrcLine[]>(fromCache?.syncedLines ?? []);
+  const [plainLyrics, setPlainLyrics] = useState(fromCache?.plainLyrics ?? '');
   const [activeLine, setActiveLine] = useState(0);
 
   const activeLineRef = useRef<HTMLParagraphElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Track which song we've fetched for, and retry state
-  const fetchedForRef = useRef('');
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const candidatesRef = useRef<{ artist: string; track: string }[]>([]);
   const candidateIndexRef = useRef(0);
   const isFetchingRef = useRef(false);
+  const abortedRef = useRef(false);
 
-  const processLyricsData = useCallback((data: any) => {
-    if (data.syncedLyrics) {
-      setSyncedLines(parseLrc(data.syncedLyrics));
-      setLyricsState('synced');
-    } else if (data.plainLyrics) {
-      setPlainLyrics(data.plainLyrics);
-      setLyricsState('plain');
-    } else {
-      setLyricsState('none');
-    }
-  }, []);
+  const saveToCache = useCallback((state: LyricsState, synced: LrcLine[], plain: string) => {
+    lyricsSessionCache.set(songCacheKey, { state, syncedLines: synced, plainLyrics: plain });
+  }, [songCacheKey]);
 
   const clearRetry = useCallback(() => {
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    abortedRef.current = true;
+    if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
   }, []);
 
-  // Try the next candidate in the list; schedule retry if none left yet
+  const processLyricsData = useCallback((data: any) => {
+    if (data?.syncedLyrics) {
+      const lines = parseLrc(data.syncedLyrics);
+      setSyncedLines(lines);
+      setLyricsState('synced');
+      saveToCache('synced', lines, '');
+    } else if (data?.plainLyrics) {
+      setPlainLyrics(data.plainLyrics);
+      setLyricsState('plain');
+      saveToCache('plain', [], data.plainLyrics);
+    } else {
+      setLyricsState('none');
+      saveToCache('none', [], '');
+    }
+  }, [saveToCache]);
+
+  // Supabase fallback: walk lrclib candidates with retry
   const tryNextCandidate = useCallback(async () => {
-    if (isFetchingRef.current) return;
+    if (isFetchingRef.current || abortedRef.current) return;
+    if (duration > 0 && position >= duration * 0.85) {
+      clearRetry();
+      setLyricsState('none');
+      saveToCache('none', [], '');
+      return;
+    }
 
     const candidates = candidatesRef.current;
     const idx = candidateIndexRef.current;
 
-    // Past 85% of duration — give up
-    if (duration > 0 && position >= duration * 0.85) {
-      clearRetry();
-      setLyricsState('none');
-      return;
-    }
-
     if (idx >= candidates.length) {
-      // All candidates exhausted for this cycle — retry full list again in 2s
       candidateIndexRef.current = 0;
       retryTimerRef.current = setTimeout(tryNextCandidate, 2000);
       return;
@@ -176,50 +170,83 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
 
     try {
       const data = await queryLrclib(artist, track);
+      if (abortedRef.current) return;
       if (data) {
         clearRetry();
         processLyricsData(data);
       } else {
-        // This candidate failed — try next immediately
         isFetchingRef.current = false;
         tryNextCandidate();
       }
     } catch (_) {
       isFetchingRef.current = false;
-      tryNextCandidate();
+      if (!abortedRef.current) tryNextCandidate();
     }
-
     isFetchingRef.current = false;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration, position, processLyricsData, clearRetry]);
+  }, [duration, position, processLyricsData, clearRetry, saveToCache]);
 
-  // Start fetching when activeID changes (song starts)
-  const startFetch = useCallback(() => {
-    const key = `${song.id}::${song.title}`;
-    if (fetchedForRef.current === key) return;
-    fetchedForRef.current = key;
+  // Main fetch — YouTube goes via /api/lyrics, Supabase falls back to lrclib directly
+  const startFetch = useCallback(async () => {
+    // Check session cache first
+    const cached = lyricsSessionCache.get(songCacheKey);
+    if (cached && cached.state !== 'idle') {
+      setLyricsState(cached.state);
+      setSyncedLines(cached.syncedLines);
+      setPlainLyrics(cached.plainLyrics);
+      return;
+    }
 
-    clearRetry();
+    abortedRef.current = false;
     isFetchingRef.current = false;
     candidateIndexRef.current = 0;
-    candidatesRef.current = buildCandidates(song.title, song.author ?? '');
-
     setLyricsState('loading');
     setSyncedLines([]);
     setPlainLyrics('');
     setActiveLine(0);
 
-    tryNextCandidate();
-  }, [song.id, song.title, song.author, clearRetry, tryNextCandidate]);
+    if (song.source === 'youtube' && song.youtube_video_id) {
+      // Fast path: worker has already cached this during extraction
+      try {
+        const res = await fetch(`/api/lyrics?videoId=${song.youtube_video_id}`);
+        if (abortedRef.current) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.found !== false) {
+            processLyricsData(data);
+            return;
+          }
+        }
+      } catch (_) {}
 
-  // Reset + start fetch when song changes
+      if (abortedRef.current) return;
+
+      // Worker miss — fall back to lrclib directly with candidate loop
+      candidatesRef.current = buildCandidates(song.title, song.author ?? '');
+      tryNextCandidate();
+    } else {
+      // Supabase song — lrclib directly
+      candidatesRef.current = buildCandidates(song.title, song.author ?? '');
+      tryNextCandidate();
+    }
+  }, [song, songCacheKey, processLyricsData, tryNextCandidate]);
+
+  // Trigger on mount (song.id keyed from ExpandedPlayer so this always runs fresh)
   useEffect(() => {
-    fetchedForRef.current = '';
-    setFlipped(false);
     startFetch();
-    return () => clearRetry();
+    return () => { clearRetry(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [song.id]);
+  }, []);
+
+  // 85% cutoff
+  useEffect(() => {
+    if (lyricsState !== 'loading' && lyricsState !== 'idle') return;
+    if (duration > 0 && position >= duration * 0.85) {
+      clearRetry();
+      setLyricsState('none');
+      saveToCache('none', [], '');
+    }
+  }, [position, duration, lyricsState, clearRetry, saveToCache]);
 
   // Active line tracking
   useEffect(() => {
@@ -232,21 +259,11 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
     setActiveLine(idx);
   }, [position, syncedLines, lyricsState]);
 
-  // Auto-scroll to active line
+  // Auto-scroll
   useEffect(() => {
-    if (flipped && lyricsState === 'synced') {
+    if (flipped && lyricsState === 'synced')
       activeLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
   }, [activeLine, flipped, lyricsState]);
-
-  // If lyrics failed and retry is still running — stop at 85%
-  useEffect(() => {
-    if (lyricsState !== 'loading' && lyricsState !== 'idle') return;
-    if (duration > 0 && position >= duration * 0.85) {
-      clearRetry();
-      if (lyricsState === 'loading') setLyricsState('none');
-    }
-  }, [position, duration, lyricsState, clearRetry]);
 
   const renderLyricsContent = () => {
     if (lyricsState === 'loading' || lyricsState === 'idle') {
@@ -277,12 +294,8 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
         </div>
       );
     }
-
     return (
-      <div
-        ref={scrollContainerRef}
-        className="overflow-y-auto h-full px-6 py-20 space-y-6 scrollbar-hide"
-      >
+      <div ref={scrollContainerRef} className="overflow-y-auto h-full px-6 py-20 space-y-6 scrollbar-hide">
         {syncedLines.map((line, i) => (
           <p
             key={i}
@@ -320,41 +333,27 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
             transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
         >
-          {/* Front — album art */}
+          {/* Front */}
           <div
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-            className="absolute inset-0 rounded-none border border-red-900/20 overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+            className="absolute inset-0 border border-red-900/20 overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]"
           >
-            <Image
-              fill
-              src={imageUrl ?? '/images/likedit.png'}
-              alt={song.title}
+            <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
               className="object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700"
-              sizes="280px"
-              unoptimized
-              priority
-            />
+              sizes="280px" unoptimized priority />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
-            {/* Small indicator dot — green if lyrics ready, amber if loading, red if none */}
             <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${
               lyricsState === 'synced' || lyricsState === 'plain' ? 'bg-green-500' :
-              lyricsState === 'none' ? 'bg-red-600' :
-              'bg-amber-400 animate-pulse'
+              lyricsState === 'none' ? 'bg-red-600' : 'bg-amber-400 animate-pulse'
             }`} />
           </div>
 
-          {/* Back — lyrics */}
+          {/* Back */}
           <div
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-            }}
-            className="absolute inset-0 rounded-none bg-neutral-950 border border-red-600/30 shadow-[0_0_40px_rgba(239,68,68,0.1)] overflow-hidden"
+            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            className="absolute inset-0 bg-neutral-950 border border-red-600/30 shadow-[0_0_40px_rgba(239,68,68,0.1)] overflow-hidden"
           >
-            <div className="absolute top-2 left-2 font-mono text-[8px] text-red-600/20 uppercase">
-              LYRIC_STREAM_V3.0
-            </div>
+            <div className="absolute top-2 left-2 font-mono text-[8px] text-red-600/20 uppercase">LYRIC_STREAM_V3.0</div>
             <div className="absolute bottom-2 right-2 font-mono text-[8px] text-red-600/20 uppercase">
               {String(song.id).slice(0, 8)}
             </div>
@@ -363,10 +362,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
         </div>
       </div>
 
-      <button
-        onClick={() => setFlipped(f => !f)}
-        className="group flex flex-col items-center"
-      >
+      <button onClick={() => setFlipped(f => !f)} className="group flex flex-col items-center">
         <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-[0.3em] group-hover:text-red-500 transition-colors">
           {flipped ? 'RETURN_TO_VISUAL' : 'ACCESS_LYRIC_CORE'}
         </p>
