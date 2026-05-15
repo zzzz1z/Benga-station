@@ -317,58 +317,30 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             stopPhraseCycle();
             clearStuckTimers();
         };
-    }, [query]);
+    }, [query, scheduleStuckCheck]);
 
-const handlePlay = async (result: YTResult) => {
-  if (!user) { authModal.onOpen('sign_up'); return; }
-  if (loadingId === result.videoId) return;
-  if (unavailableIds.has(result.videoId)) return;
-  if (failedIds.has(`yt_${result.videoId}`)) return;
+    const handlePlay = async (result: YTResult) => {
+        if (!user) { authModal.onOpen('sign_up'); return; }
+        if (loadingId === result.videoId) return;
+        if (unavailableIds.has(result.videoId)) return;
+        if (failedIds.has(`yt_${result.videoId}`)) return;
 
-  if (!readyIds.has(result.videoId)) {
-    setLoadingId(result.videoId);
-    const success = await preExtract(result.videoId);
-    setLoadingId(null);
-    if (success) {
-      availableIdsRef.current.add(result.videoId);
-      setReadyIds(prev => new Set([...prev, result.videoId]));
-    } else {
-      setUnavailableIds(prev => new Set([...prev, result.videoId]));
-      return;
-    }
-  }
-
-  const targetId = `yt_${result.videoId}`;
-
-  // Only use current search results as the queue — never bleed store songs in
-  const baseSongs = results
-    .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
-    .map(r => ({
-      id: `yt_${r.videoId}`,
-      user_id: 'youtube',
-      author: r.artist,
-      title: r.title,
-      song_path: r.videoId,
-      image_path: r.thumbnail,
-      source: 'youtube' as const,
-      youtube_video_id: r.videoId,
-    }));
-
-  player.setQueue(baseSongs as any, targetId);
-  setPlayingId(result.videoId);
-};
-        const { ids } = usePlayer.getState();
-        if (ids.includes(targetId)) {
-            player.setId(targetId);
-            setPlayingId(result.videoId);
-            return;
+        if (!readyIds.has(result.videoId)) {
+            setLoadingId(result.videoId);
+            const success = await preExtract(result.videoId);
+            setLoadingId(null);
+            if (success) {
+                availableIdsRef.current.add(result.videoId);
+                setReadyIds(prev => new Set([...prev, result.videoId]));
+            } else {
+                setUnavailableIds(prev => new Set([...prev, result.videoId]));
+                return;
+            }
         }
 
-        const currentSongs = usePlayer.getState().songs;
-        const appendedSongs = Object.values(currentSongs).filter(
-            s => !results.some(r => `yt_${r.videoId}` === (s.youtube_video_id ? `yt_${s.youtube_video_id}` : String(s.id)))
-        );
+        const targetId = `yt_${result.videoId}`;
 
+        // Only search results become the queue — no store bleed
         const baseSongs = results
             .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
             .map(r => ({
@@ -382,8 +354,7 @@ const handlePlay = async (result: YTResult) => {
                 youtube_video_id: r.videoId,
             }));
 
-        const allSongs = [...baseSongs, ...appendedSongs];
-        player.setQueue(allSongs as any, targetId);
+        player.setQueue(baseSongs as any, targetId);
         setPlayingId(result.videoId);
     };
 
@@ -430,13 +401,11 @@ const handlePlay = async (result: YTResult) => {
 
             <div className="flex flex-col w-full px-6 gap-y-1">
                 {results.map((result) => (
-                    <div 
-                        key={result.videoId} 
+                    <div
+                        key={result.videoId}
                         className="group relative border-b border-white/5 last:border-0"
                     >
-                        {/* Hover selection line */}
                         <div className="absolute left-[-24px] top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        
                         <YTSearchItem
                             result={result}
                             onPlay={handlePlay}
