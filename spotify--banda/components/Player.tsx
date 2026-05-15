@@ -91,6 +91,8 @@ const Player = () => {
   const isPlayingRef = useRef(false);
   const skipOnErrorRef = useRef(false);
   const endedFiredRef = useRef(false);
+  // Track whether we INTEND to be playing — survives across song transitions
+  const shouldBePlayingRef = useRef(false);
 
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -149,7 +151,14 @@ const Player = () => {
     audio.onplay = () => { setIsPlaying(true); setIsLoading(false); };
     audio.onpause = () => { if (audio.src) setIsPlaying(false); };
     audio.onwaiting = () => setIsLoading(true);
-    audio.oncanplay = () => setIsLoading(false);
+    audio.oncanplay = () => {
+      setIsLoading(false);
+      // KEY FIX: if we should be playing but iOS stalled us during song
+      // transition (locked screen / backgrounded), force play here
+      if (shouldBePlayingRef.current && audio.paused) {
+        safePlay(audio).catch(() => {});
+      }
+    };
 
     audio.onerror = () => {
       if (!audio.src || !skipOnErrorRef.current) return;
@@ -185,6 +194,20 @@ const Player = () => {
       }
     }, 2000);
 
+    // Stuck check for backgrounded/locked screen transitions
+    // If shouldBePlayingRef is true and audio is paused with a src, try to resume
+    const backgroundStuckInterval = setInterval(async () => {
+      if (
+        shouldBePlayingRef.current &&
+        audio.paused &&
+        audio.src &&
+        audio.readyState >= 3 // HAVE_FUTURE_DATA
+      ) {
+        await unlockAudioContext();
+        audio.play().catch(() => {});
+      }
+    }, 3000);
+
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
       if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 &&
@@ -196,6 +219,7 @@ const Player = () => {
 
     return () => {
       clearInterval(stuckInterval);
+      clearInterval(backgroundStuckInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       audio.pause();
       audio.src = '';
@@ -249,7 +273,14 @@ const Player = () => {
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
-      }).catch(() => { setIsLoading(false); });
+        // Mark that we intend to be playing
+        shouldBePlayingRef.current = true;
+      }).catch(() => {
+        setIsLoading(false);
+        // Even if safePlay throws, we still intend to play —
+        // the backgroundStuckInterval will retry
+        shouldBePlayingRef.current = true;
+      });
     }, 100);
 
     return () => {
@@ -274,7 +305,13 @@ const Player = () => {
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
-    isPlaying ? audio.pause() : safePlay(audio).catch(() => {});
+    if (isPlaying) {
+      audio.pause();
+      shouldBePlayingRef.current = false;
+    } else {
+      safePlay(audio).catch(() => {});
+      shouldBePlayingRef.current = true;
+    }
   };
 
   const handleNext = () => playerRef.current.playNext();
@@ -301,8 +338,14 @@ const Player = () => {
     isPlaying,
     (song ?? {}) as Song,
     audioRef,
-    () => { audioRef.current && safePlay(audioRef.current).catch(() => {}); },
-    () => { audioRef.current?.pause(); }
+    () => {
+      safePlay(audioRef.current!).catch(() => {});
+      shouldBePlayingRef.current = true;
+    },
+    () => {
+      audioRef.current?.pause();
+      shouldBePlayingRef.current = false;
+    }
   );
 
   if (!isMounted) return null;

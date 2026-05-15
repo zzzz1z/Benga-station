@@ -36,11 +36,13 @@ const useMediaSession = (
   const onPlayRef = useRef(onPlay);
   const onPauseRef = useRef(onPause);
   const isPlayingRef = useRef(isPlaying);
+  const songRef = useRef(song);
 
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { onPlayRef.current = onPlay; }, [onPlay]);
   useEffect(() => { onPauseRef.current = onPause; }, [onPause]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { songRef.current = song; }, [song]);
 
   const reassertHandlers = () => {
     if (!("mediaSession" in navigator)) return;
@@ -81,6 +83,18 @@ const useMediaSession = (
         });
       } catch {}
     });
+
+    navigator.mediaSession.setActionHandler("seekbackward", async (details) => {
+      if (!audio) return;
+      await unlockAudioContext();
+      audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
+    });
+
+    navigator.mediaSession.setActionHandler("seekforward", async (details) => {
+      if (!audio) return;
+      await unlockAudioContext();
+      audio.currentTime = Math.min(audio.duration, audio.currentTime + (details.seekOffset ?? 10));
+    });
   };
 
   useEffect(() => {
@@ -88,9 +102,6 @@ const useMediaSession = (
     if (!song?.title) return;
 
     const artworkUrl = getArtworkUrl(song);
-
-    // Cache-bust so iOS treats each song change as a new image —
-    // without this, iOS reuses the cached artwork from the previous song
     const cacheBustedUrl = artworkUrl
       ? `${artworkUrl}${artworkUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`
       : '';
@@ -105,10 +116,8 @@ const useMediaSession = (
         ]
       : [];
 
-    // Clear first — forces iOS to drop the previous artwork before setting new one
     navigator.mediaSession.metadata = null;
 
-    // Small delay lets iOS process the null before we set the new metadata
     const t = setTimeout(() => {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: song.title,
@@ -127,6 +136,8 @@ const useMediaSession = (
       navigator.mediaSession.setActionHandler("previoustrack", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
+      navigator.mediaSession.setActionHandler("seekbackward", null);
+      navigator.mediaSession.setActionHandler("seekforward", null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song]);
@@ -178,9 +189,20 @@ const useMediaSession = (
       }, 800);
     };
 
+    // KEY FIX: when a new song starts loading while backgrounded/locked,
+    // iOS won't fire onplay automatically. We listen for canplay and
+    // force play if we know we should be playing but aren't.
+    const handleCanPlay = async () => {
+      if (isPlayingRef.current && audio.paused && audio.src) {
+        await unlockAudioContext();
+        audio.play().catch(() => {});
+      }
+    };
+
     audio.addEventListener("timeupdate", updatePosition);
     audio.addEventListener("loadedmetadata", updatePosition);
     audio.addEventListener("stalled", handleStalled);
+    audio.addEventListener("canplay", handleCanPlay);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("pageshow", handlePageShow);
 
@@ -188,6 +210,7 @@ const useMediaSession = (
       audio.removeEventListener("timeupdate", updatePosition);
       audio.removeEventListener("loadedmetadata", updatePosition);
       audio.removeEventListener("stalled", handleStalled);
+      audio.removeEventListener("canplay", handleCanPlay);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pageshow", handlePageShow);
     };
