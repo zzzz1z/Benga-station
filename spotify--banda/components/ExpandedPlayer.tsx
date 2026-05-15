@@ -98,19 +98,6 @@ const QueueRow = ({
   );
 };
 
-// Fire-and-forget warm for queue jumps
-const warmFromIndex = (ids: string[], fromIndex: number, count = 3) => {
-  const toWarm = ids.slice(fromIndex, fromIndex + count)
-    .filter(id => id.startsWith('yt_'))
-    .map(id => id.replace('yt_', ''));
-  if (toWarm.length === 0) return;
-  fetch('/api/warm-batch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoIds: toWarm }),
-  }).catch(() => {});
-};
-
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
@@ -228,13 +215,20 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIds(newIds);
   }, [ids, setIds]);
 
-  // Queue row click — optimistic setId + warm ahead
+  // Queue row tap — fire preextract then jump immediately (no await, worker handles dedup)
   const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
-    // Warm clicked + next 2 fire-and-forget
-    warmFromIndex(ids, globalIndex, 3);
-    // Optimistically jump
+
+    if (clickedId.startsWith('yt_')) {
+      const videoId = clickedId.slice(3);
+      fetch('/api/preextract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
+      }).catch(() => {});
+    }
+
     setId(clickedId);
   }, [ids, setId]);
 
@@ -264,23 +258,20 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   })).filter(r => !!r.song);
 
   return (
-// Remove onTouchStart/Move/End from the outer <div className="fixed inset-0 ...">
-// Change it to:
-<div className="fixed inset-0 z-50 bg-neutral-900 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-neutral-900 flex flex-col">
 
-  {/* Drag handle — ONLY this zone triggers swipe-down-to-close */}
-  <div
-    className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
-    onTouchStart={handleTouchStart}
-    onTouchMove={handleTouchMove}
-    onTouchEnd={handleTouchEnd}
-  >
-    <div className="w-10 h-1 rounded-full bg-neutral-600" />
-  </div>
+      {/* Drag handle — only this zone triggers swipe-down-to-close */}
+      <div
+        className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="w-10 h-1 rounded-full bg-neutral-600" />
+      </div>
 
-  {/* Rest of content — no touch handlers */}
-  <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
-    ...
+      <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
+
         <div className="flex items-center justify-between pt-[30px] flex-shrink-0">
           <button onClick={onClose} className="text-white p-2 -ml-2">
             <IoChevronDown size={26} />
@@ -295,7 +286,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         </div>
 
         <div className="flex justify-center flex-shrink-0">
-<LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
+          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
         </div>
 
         <div className="flex items-center justify-between flex-shrink-0">

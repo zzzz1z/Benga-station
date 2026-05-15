@@ -40,13 +40,12 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// Extract yt_ videoIds and fire warm-batch, split into priority + rest
-const warmIds = (ids: string[]) => {
+const preExtractQueue = (ids: string[]) => {
   const videoIds = ids
     .filter(id => id.startsWith('yt_'))
     .map(id => id.slice(3));
   if (!videoIds.length) return;
-  fetch('/api/warm-batch', {
+  fetch('/api/preextract-queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoIds }),
@@ -93,18 +92,28 @@ const usePlayer = create<PlayerStore>((set, get) => ({
 
   setId: (id) => {
     set({ activeID: id });
-    const { ids } = get();
-    const idx = ids.indexOf(id);
-    // Warm current + next 2
-    warmIds([id, ids[idx + 1], ids[idx + 2]].filter(Boolean) as string[]);
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: id, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: id,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   setIds: (ids) => {
     set({ ids });
     const s = get();
-    saveToSession({ ids, originalIds: s.originalIds, songs: s.songs, activeID: s.activeID, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: s.activeID,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   setQueue: (songs, startId) => {
@@ -113,23 +122,20 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       acc[getSongPlayerId(song)] = song;
       return acc;
     }, {});
-    const ids      = songs.map(getSongPlayerId);
+    const ids = songs.map(getSongPlayerId);
     const activeID = startId ?? ids[0];
     const { shuffleOn, repeatMode } = get();
 
     let finalIds = ids;
     if (shuffleOn) {
       const rest = ids.filter(id => id !== activeID);
-      finalIds   = [activeID, ...shuffleArray(rest)];
+      finalIds = [activeID, ...shuffleArray(rest)];
     }
 
     set({ ids: finalIds, originalIds: ids, songs: songMap, activeID });
 
-    // Warm: first 3 immediately (priority), rest after 500ms (background)
-    warmIds(finalIds.slice(0, 3));
-    if (finalIds.length > 3) {
-      setTimeout(() => warmIds(finalIds.slice(3)), 500);
-    }
+    // Preextract entire queue on the worker — fire and forget
+    preExtractQueue(finalIds);
 
     saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode });
   },
@@ -138,7 +144,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     if (!songs.length) return;
     const { ids: currentIds, songs: currentSongs, originalIds } = get();
     const existingSet = new Set(currentIds);
-    const newSongs    = songs.filter(s => !existingSet.has(getSongPlayerId(s)));
+    const newSongs = songs.filter(s => !existingSet.has(getSongPlayerId(s)));
     if (!newSongs.length) return;
 
     const addedMap = newSongs.reduce<Record<string, Song>>((acc, song) => {
@@ -146,12 +152,23 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       return acc;
     }, {});
 
-    const newIds         = [...currentIds, ...newSongs.map(getSongPlayerId)];
+    const newIds = [...currentIds, ...newSongs.map(getSongPlayerId)];
     const newOriginalIds = [...originalIds, ...newSongs.map(getSongPlayerId)];
 
     set({ songs: { ...currentSongs, ...addedMap }, ids: newIds, originalIds: newOriginalIds });
+
+    // Preextract newly appended songs too
+    preExtractQueue(newSongs.map(getSongPlayerId));
+
     const s = get();
-    saveToSession({ ids: newIds, originalIds: newOriginalIds, songs: s.songs, activeID: s.activeID, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: newIds,
+      originalIds: newOriginalIds,
+      songs: s.songs,
+      activeID: s.activeID,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   reset: () => {
@@ -161,52 +178,74 @@ const usePlayer = create<PlayerStore>((set, get) => ({
 
   markFailed: (id) => {
     set(state => ({
-      failedIds:   new Set([...state.failedIds, id]),
-      ids:         state.ids.filter(i => i !== id),
+      failedIds: new Set([...state.failedIds, id]),
+      ids: state.ids.filter(i => i !== id),
       originalIds: state.originalIds.filter(i => i !== id),
     }));
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: s.activeID, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: s.activeID,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   setShuffleOn: (value) => {
     const { ids, originalIds, activeID } = get();
 
     if (value) {
-      // Save the current order as original before shuffling
       const preShuffleIds = [...ids];
-      const rest          = ids.filter(id => id !== activeID);
-      const shuffled      = activeID ? [activeID, ...shuffleArray(rest)] : shuffleArray(ids);
+      const rest = ids.filter(id => id !== activeID);
+      const shuffled = activeID ? [activeID, ...shuffleArray(rest)] : shuffleArray(ids);
 
       set({ shuffleOn: true, ids: shuffled, originalIds: preShuffleIds });
 
-      // Warm full shuffled queue — priority first, rest background
-      warmIds(shuffled.slice(0, 3));
-      if (shuffled.length > 3) setTimeout(() => warmIds(shuffled.slice(3)), 500);
+      // Preextract full shuffled queue
+      preExtractQueue(shuffled);
 
       const s = get();
-      saveToSession({ ids: shuffled, originalIds: preShuffleIds, songs: s.songs, activeID: s.activeID, shuffleOn: true, repeatMode: s.repeatMode });
-
+      saveToSession({
+        ids: shuffled,
+        originalIds: preShuffleIds,
+        songs: s.songs,
+        activeID: s.activeID,
+        shuffleOn: true,
+        repeatMode: s.repeatMode,
+      });
     } else {
-      // Restore original order but keep already-played songs in history
-      const currentIdx       = ids.indexOf(activeID ?? '');
-      // Everything up to and including current = played history in shuffled order
-      const played           = currentIdx >= 0 ? ids.slice(0, currentIdx + 1) : (activeID ? [activeID] : []);
-      const playedSet        = new Set(played);
-      // Remaining songs restored to original order, minus already played
+      const currentIdx = ids.indexOf(activeID ?? '');
+      const played = currentIdx >= 0 ? ids.slice(0, currentIdx + 1) : (activeID ? [activeID] : []);
+      const playedSet = new Set(played);
       const remainingOriginal = originalIds.filter(id => !playedSet.has(id));
-      const restored          = [...played, ...remainingOriginal];
+      const restored = [...played, ...remainingOriginal];
 
       set({ shuffleOn: false, ids: restored });
       const s = get();
-      saveToSession({ ids: restored, originalIds: s.originalIds, songs: s.songs, activeID: s.activeID, shuffleOn: false, repeatMode: s.repeatMode });
+      saveToSession({
+        ids: restored,
+        originalIds: s.originalIds,
+        songs: s.songs,
+        activeID: s.activeID,
+        shuffleOn: false,
+        repeatMode: s.repeatMode,
+      });
     }
   },
 
   setRepeatMode: (mode) => {
     set({ repeatMode: mode });
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: s.activeID, shuffleOn: s.shuffleOn, repeatMode: mode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: s.activeID,
+      shuffleOn: s.shuffleOn,
+      repeatMode: mode,
+    });
   },
 
   playNext: () => {
@@ -223,30 +262,49 @@ const usePlayer = create<PlayerStore>((set, get) => ({
 
     if (repeatMode === 'all') {
       const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
-      const nextId    = ids[nextIndex];
+      const nextId = ids[nextIndex];
       set({ activeID: nextId });
-      warmIds([nextId, ids[nextIndex + 1], ids[nextIndex + 2]].filter(Boolean) as string[]);
       const s = get();
-      saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: nextId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+      saveToSession({
+        ids: s.ids,
+        originalIds: s.originalIds,
+        songs: s.songs,
+        activeID: nextId,
+        shuffleOn: s.shuffleOn,
+        repeatMode: s.repeatMode,
+      });
       return;
     }
 
     if (currentIndex === -1 || currentIndex === ids.length - 1) return;
     const nextId = ids[currentIndex + 1];
     set({ activeID: nextId });
-    warmIds([nextId, ids[currentIndex + 2], ids[currentIndex + 3]].filter(Boolean) as string[]);
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: nextId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: nextId,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   playPrevious: () => {
     const { ids, activeID } = get();
     if (!ids.length || !activeID) return;
     const currentIndex = ids.indexOf(activeID);
-    const prevId       = currentIndex <= 0 ? activeID : ids[currentIndex - 1];
+    const prevId = currentIndex <= 0 ? activeID : ids[currentIndex - 1];
     set({ activeID: prevId });
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: prevId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: prevId,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   playRandom: () => {
@@ -257,9 +315,15 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     while (ids.length > 1 && ids[idx] === activeID);
     const randomId = ids[idx];
     set({ activeID: randomId });
-    warmIds([randomId, ids[idx + 1], ids[idx + 2], ids[idx + 3]].filter(Boolean) as string[]);
     const s = get();
-    saveToSession({ ids: s.ids, originalIds: s.originalIds, songs: s.songs, activeID: randomId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode });
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: randomId,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
   },
 
   hasPrevious: () => {

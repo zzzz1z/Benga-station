@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 
 const supabase = createClient();
 const MAX_WARM = 20;
-const LS_KEY = 'benga_top_video_ids'; // localStorage key for top played songs
+const LS_KEY = 'benga_top_video_ids';
 
 const GlobalWarmer = () => {
     const hasWarmed = useRef(false);
@@ -14,15 +14,14 @@ const GlobalWarmer = () => {
         if (hasWarmed.current) return;
         hasWarmed.current = true;
 
-        // ── Step 1: Fire instantly from localStorage (before auth resolves) ──
-        // This covers returning users — their top songs are already known locally.
+        // Step 1: Fire instantly from localStorage (before auth resolves)
         try {
             const cached = localStorage.getItem(LS_KEY);
             if (cached) {
                 const ids: string[] = JSON.parse(cached);
                 if (Array.isArray(ids) && ids.length > 0) {
-                    console.log(`[GlobalWarmer] instant warm ${ids.length} songs from localStorage`);
-                    fetch('/api/warm-batch', {
+                    console.log(`[GlobalWarmer] instant preextract ${ids.length} songs from localStorage`);
+                    fetch('/api/preextract-queue', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ videoIds: ids }),
@@ -31,25 +30,22 @@ const GlobalWarmer = () => {
             }
         } catch (_) {}
 
-        // ── Step 2: Auth + Supabase queries (runs in background) ──
-        // Queries play_history for user's top 5 most-played songs,
-        // then falls back to liked songs + playlist songs to fill remaining slots.
+        // Step 2: Auth + Supabase queries (runs in background)
         const warmLibrary = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
             const videoIds = new Set<string>();
 
-            // 2a. Top played songs from play_history (most played first)
+            // 2a. Top played songs from play_history
             const { data: topPlayed } = await supabase
                 .from('play_history')
                 .select('video_id')
                 .eq('user_id', user.id)
                 .order('played_at', { ascending: false })
-                .limit(50); // fetch 50, deduplicate to get true top 5
+                .limit(50);
 
             if (topPlayed) {
-                // Count plays per video_id to rank them
                 const counts: Record<string, number> = {};
                 topPlayed.forEach((row: any) => {
                     counts[row.video_id] = (counts[row.video_id] ?? 0) + 1;
@@ -61,7 +57,7 @@ const GlobalWarmer = () => {
                 sorted.forEach(id => videoIds.add(id));
             }
 
-            // 2b. Liked songs to fill remaining slots
+            // 2b. Liked songs
             if (videoIds.size < MAX_WARM) {
                 const { data: liked } = await supabase
                     .from('Músicas_Favoritas')
@@ -75,7 +71,7 @@ const GlobalWarmer = () => {
                 });
             }
 
-            // 2c. Playlist songs to fill remaining slots
+            // 2c. Playlist songs
             if (videoIds.size < MAX_WARM) {
                 const { data: playlists } = await supabase
                     .from('Playlists')
@@ -94,17 +90,15 @@ const GlobalWarmer = () => {
 
             const ids = Array.from(videoIds).slice(0, MAX_WARM);
 
-            // ── Step 3: Save top 5 to localStorage for next app open ──
-            // Only save the top-played ones (first 5), not the full warm batch.
+            // Save top 5 to localStorage for next app open
             try {
                 const top5 = ids.slice(0, 5);
                 localStorage.setItem(LS_KEY, JSON.stringify(top5));
             } catch (_) {}
 
-            console.log(`[GlobalWarmer] warming ${ids.length} songs from Supabase`);
+            console.log(`[GlobalWarmer] preextracting ${ids.length} songs from Supabase`);
 
-            // Fire warm-batch — worker deduplicates already-warm songs
-            fetch('/api/warm-batch', {
+            fetch('/api/preextract-queue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ videoIds: ids }),

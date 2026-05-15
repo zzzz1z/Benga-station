@@ -49,7 +49,6 @@ const isNative = () =>
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
 
-  // Rehydrate from sessionStorage on mount (fixes iOS background reset)
   useEffect(() => {
     const saved = loadFromSession();
     if (saved && saved.activeID && saved.ids.length > 0) {
@@ -112,6 +111,31 @@ const Player = () => {
     }
   }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Priority window preextract when active song changes
+  useEffect(() => {
+    if (!activeID) return;
+    const { ids } = usePlayer.getState();
+    const currentIdx = ids.indexOf(activeID);
+    if (currentIdx === -1) return;
+
+    const window = [
+      ...ids.slice(Math.max(0, currentIdx - 3), currentIdx),
+      ...ids.slice(currentIdx + 1, currentIdx + 6),
+    ]
+      .filter(id => id.startsWith('yt_'))
+      .map(id => id.slice(3));
+
+    if (!window.length) return;
+
+    window.forEach(videoId => {
+      fetch('/api/preextract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
+      }).catch(() => {});
+    });
+  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const audio = new Audio();
     if (!isNative()) audio.crossOrigin = 'anonymous';
@@ -163,7 +187,8 @@ const Player = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
-      if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 && audio.paused && isPlayingRef.current) {
+      if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 &&
+        audio.paused && isPlayingRef.current) {
         handleEnded();
       }
     };
@@ -242,7 +267,9 @@ const Player = () => {
     }
   }, [playCount]);
 
-  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume; }, [volume]);
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
 
   const handlePlay = () => {
     const audio = audioRef.current;
