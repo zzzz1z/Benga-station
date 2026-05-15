@@ -15,7 +15,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useCallback } from "react";
 import LyricsFlipCard from "./LyricsFlipCard";
-import OfflineButton from "./OfflineButton";
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -40,17 +39,9 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// ── QueueRow ──────────────────────────────────────────────────────────────────
-
 const QueueRow = ({
-  song,
-  label,
-  isCurrent,
-  dimmed,
-  dragging,
-  onDragStart,
-  onClick,
-  onRemove,
+  song, label, isCurrent, dimmed, dragging,
+  onDragStart, onClick, onRemove,
 }: {
   song: Song;
   label?: string;
@@ -69,7 +60,6 @@ const QueueRow = ({
         ${dragging ? 'opacity-40 bg-white/5' : ''}
         ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50' : 'hover:bg-white/5 cursor-pointer'}`}
     >
-      {/* Drag handle — only on non-current rows */}
       {!isCurrent && onDragStart ? (
         <div
           className="text-neutral-600 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 px-1"
@@ -82,16 +72,9 @@ const QueueRow = ({
       ) : (
         <div className="w-6 flex-shrink-0" />
       )}
-
       <div className="relative w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
-        <Image
-          fill
-          src={imageUrl ?? '/images/likedit.png'}
-          alt={song.title}
-          className="object-cover"
-          sizes="32px"
-          unoptimized
-        />
+        <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
+          className="object-cover" sizes="32px" unoptimized />
       </div>
       <div className="flex flex-col min-w-0 flex-1">
         <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>
@@ -105,12 +88,9 @@ const QueueRow = ({
           {label}
         </span>
       )}
-      {/* Remove button for non-current queue items */}
       {!isCurrent && onRemove && (
-        <button
-          onClick={onRemove}
-          className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1"
-        >
+        <button onClick={onRemove}
+          className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1">
           <MdClose size={12} />
         </button>
       )}
@@ -118,7 +98,18 @@ const QueueRow = ({
   );
 };
 
-// ── ExpandedPlayer ────────────────────────────────────────────────────────────
+// Fire-and-forget warm for queue jumps
+const warmFromIndex = (ids: string[], fromIndex: number, count = 3) => {
+  const toWarm = ids.slice(fromIndex, fromIndex + count)
+    .filter(id => id.startsWith('yt_'))
+    .map(id => id.replace('yt_', ''));
+  if (toWarm.length === 0) return;
+  fetch('/api/warm-batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoIds: toWarm }),
+  }).catch(() => {});
+};
 
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
@@ -141,12 +132,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [queueExpanded, setQueueExpanded] = useState(false);
 
-  // ── drag-to-reorder state ──
-  const dragIndexRef = useRef<number | null>(null);   // which ids[] index is being dragged
+  const dragIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const rowHeightRef = useRef(52); // approximate px per row
+  const rowHeightRef = useRef(52);
   const dragStartYRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -159,9 +149,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s)
     : [];
 
-  // ── player drag (swipe down to close) ──
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Don't intercept if a queue drag is active
     if (draggingIndex !== null) return;
     touchStartY.current = e.touches[0].clientY;
     setIsDragging(true);
@@ -178,7 +166,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = null;
   };
 
-  // ── queue reorder ──
   const startQueueDrag = useCallback((globalIndex: number, clientY: number) => {
     dragIndexRef.current = globalIndex;
     dragOverIndexRef.current = globalIndex;
@@ -214,12 +201,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setDragOverIndex(null);
   }, [ids, setIds]);
 
-  // Attach window listeners while dragging (mouse + touch)
   const handleDragHandleDown = useCallback((globalIndex: number, e: React.TouchEvent | React.MouseEvent) => {
     e.stopPropagation();
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     startQueueDrag(globalIndex, clientY);
-
     const onMove = (ev: MouseEvent | TouchEvent) => {
       const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
       moveQueueDrag(y);
@@ -243,6 +228,16 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIds(newIds);
   }, [ids, setIds]);
 
+  // Queue row click — optimistic setId + warm ahead
+  const handleQueueRowClick = useCallback((globalIndex: number) => {
+    const clickedId = ids[globalIndex];
+    if (!clickedId) return;
+    // Warm clicked + next 2 fire-and-forget
+    warmFromIndex(ids, globalIndex, 3);
+    // Optimistically jump
+    setId(clickedId);
+  }, [ids, setId]);
+
   const handleNext = () => {
     if (repeatMode === 'one') { onSeek(0); return; }
     onNext();
@@ -261,8 +256,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   };
 
   const hasQueue = history.length > 0 || upcoming.length > 0;
-
-  // Build full queue list for expanded view
   const allQueueRows = ids.map((id, i) => ({
     song: songs[id],
     globalIndex: i,
@@ -281,15 +274,12 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Drag pill */}
       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
         <div className="w-10 h-1 rounded-full bg-neutral-600" />
       </div>
 
-      {/* Scrollable content */}
       <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
 
-        {/* Top bar */}
         <div className="flex items-center justify-between pt-[30px] flex-shrink-0">
           <button onClick={onClose} className="text-white p-2 -ml-2">
             <IoChevronDown size={26} />
@@ -303,12 +293,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </button>
         </div>
 
-        {/* Flip card */}
         <div className="flex justify-center flex-shrink-0">
-          <LyricsFlipCard song={song} position={position} />
-        </div>
+<LyricsFlipCard song={song} position={position} duration={duration} />        </div>
 
-        {/* Title + like + offline */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
             <p className="text-white text-xl font-bold truncate">{song.title}</p>
@@ -319,7 +306,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </div>
         </div>
 
-        {/* Seek bar */}
         <div className="flex-shrink-0">
           <MusicSlider value={position} onChange={onSeek} max={duration} />
           <div className="flex justify-between mt-1 px-1">
@@ -328,7 +314,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </div>
         </div>
 
-        {/* Playback controls */}
         <div className="flex items-center justify-center gap-x-10 flex-shrink-0">
           <AiFillStepBackward onClick={onPrevious} size={34}
             className="text-neutral-400 cursor-pointer hover:text-white transition" />
@@ -340,7 +325,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
 
-        {/* Shuffle + Repeat */}
         <div className="flex items-center justify-center gap-x-12 flex-shrink-0">
           <button
             onClick={() => setShuffleOn(!shuffleOn)}
@@ -349,7 +333,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <TbArrowsShuffle size={24} />
             <span className="text-[10px]">Aleatório</span>
           </button>
-
           <button
             onClick={cycleRepeat}
             className={`flex flex-col items-center gap-y-1 transition ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
@@ -361,7 +344,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </button>
         </div>
 
-        {/* Queue panel */}
         {hasQueue && (
           <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
             <button
@@ -372,31 +354,25 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                 Fila de reprodução
               </span>
               <div className="flex items-center gap-x-2">
-                <span className="text-[10px] text-neutral-600">
-                  {ids.length} músicas
-                </span>
+                <span className="text-[10px] text-neutral-600">{ids.length} músicas</span>
                 {queueExpanded ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
               </div>
             </button>
 
-            {/* Collapsed preview */}
             {!queueExpanded && (
               <div className="pb-2">
                 {history.slice(-1).map((s, i) => (
                   <QueueRow key={`prev-hist-${i}`} song={s} dimmed
-                    onClick={() => { const pid = ids[currentIndex - 1]; if (pid) setId(pid); }}
-                  />
+                    onClick={() => handleQueueRowClick(currentIndex - 1)} />
                 ))}
                 <QueueRow song={song} isCurrent label="▶" />
                 {upcoming.slice(0, 1).map((s, i) => (
                   <QueueRow key={`prev-up-${i}`} song={s}
-                    onClick={() => { const pid = ids[currentIndex + 1]; if (pid) setId(pid); }}
-                  />
+                    onClick={() => handleQueueRowClick(currentIndex + 1)} />
                 ))}
               </div>
             )}
 
-            {/* Expanded — full drag-to-reorder list */}
             {queueExpanded && (
               <div ref={containerRef} className="pb-2 max-h-72 overflow-y-auto">
                 {allQueueRows.map(({ song: s, globalIndex, isCurrent, isPast }) => (
@@ -409,14 +385,13 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                     label={isCurrent ? '▶' : undefined}
                     onDragStart={!isCurrent ? (e) => handleDragHandleDown(globalIndex, e) : undefined}
                     onRemove={!isCurrent ? (e) => removeFromQueue(globalIndex, e) : undefined}
-                    onClick={!isCurrent ? () => setId(ids[globalIndex]) : undefined}
+                    onClick={!isCurrent ? () => handleQueueRowClick(globalIndex) : undefined}
                   />
                 ))}
               </div>
             )}
           </div>
         )}
-
       </div>
     </div>
   );

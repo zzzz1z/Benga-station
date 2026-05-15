@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import useLoadSongUrl from "@/hooks/useLoadSongUrl";
-import usePlayer from "@/hooks/usePlayer";
+import usePlayer, { loadFromSession } from "@/hooks/usePlayer";
 import useMediaSession from "@/hooks/useMediaSession";
 import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
@@ -42,39 +42,28 @@ const recordPlayEvent = (videoId: string) => {
   }).catch(() => {});
 };
 
-const preWarmAround = (activePlayerId: string) => {
-  const { ids } = usePlayer.getState();
-
-  const activeIdStr = String(activePlayerId);
-  const currentIndex = ids.findIndex(id => String(id) === activeIdStr);
-  if (currentIndex === -1) return;
-
-  const neighbours = [
-    ids[currentIndex + 1],
-    ids[currentIndex + 2],
-    ids[currentIndex - 1],
-  ].filter(Boolean) as string[];
-
-  const videoIds = neighbours
-    .filter(id => id.startsWith('yt_'))
-    .map(id => id.replace('yt_', ''));
-
-  if (videoIds.length === 0) return;
-
-  fetch('/api/warm-batch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoIds }),
-  }).catch(() => {});
-};
-
 const isNative = () =>
   typeof (window as any).Capacitor !== 'undefined' &&
   (window as any).Capacitor.isNativePlatform();
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+
+  // Rehydrate from sessionStorage on mount (fixes iOS background reset)
+  useEffect(() => {
+    const saved = loadFromSession();
+    if (saved && saved.activeID && saved.ids.length > 0) {
+      usePlayer.setState({
+        ids: saved.ids,
+        originalIds: saved.originalIds ?? saved.ids,
+        songs: saved.songs,
+        activeID: saved.activeID,
+        shuffleOn: saved.shuffleOn,
+        repeatMode: saved.repeatMode,
+      });
+    }
+    setIsMounted(true);
+  }, []);
 
   const player = usePlayer();
   const playerRef = useRef(player);
@@ -114,9 +103,9 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
+  // Record play event when activeID changes
   useEffect(() => {
     if (!activeID) return;
-    preWarmAround(String(activeID));
     const s = songsMap[activeID];
     if (s?.source === 'youtube' && s?.youtube_video_id) {
       recordPlayEvent(s.youtube_video_id);
@@ -161,12 +150,10 @@ const Player = () => {
       if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
       if (isPlayingRef.current) {
         const dur = audio.duration;
-        // Catch silence-after-end: currentTime at or past duration
         if (dur > 0 && audio.currentTime >= dur - 0.3) {
           if (!endedFiredRef.current) handleEnded();
           return;
         }
-        // Catch genuinely stuck stream
         if (audio.currentTime === lastTime && audio.currentTime > 0) {
           audio.play().catch(() => {});
         }
@@ -198,46 +185,35 @@ const Player = () => {
     skipOnErrorRef.current = false;
     setIsLoading(!!songUrl);
     setIsPlaying(false);
-    setDuration(0); // reset duration immediately on song change
+    setDuration(0);
 
     audio.pause();
     audio.src = '';
     delete audio.dataset.retried;
-
-    // Remove any previous metadata listener before adding a new one
     audio.onloadedmetadata = null;
-
     audio.load();
 
     if (!songUrl) return;
 
-// iOS WebView fires loadedmetadata twice — once with a wrong duration,
-// then again with the correct one. We wait for a stable value.
-let metaDuration = 0;
-let metaStableTimer: ReturnType<typeof setTimeout>;
+    let metaDuration = 0;
+    let metaStableTimer: ReturnType<typeof setTimeout>;
 
-const onMeta = () => {
-  const reported = audio.duration;
-  if (!reported || !isFinite(reported)) return;
-
-  // If this is the first fire, record it and wait briefly
-  // to see if a second (corrected) event comes in
-  if (metaDuration === 0) {
-    metaDuration = reported;
-    metaStableTimer = setTimeout(() => {
-      // No second event came — use what we have
-      setDuration(audio.duration);
+    const onMeta = () => {
+      const reported = audio.duration;
+      if (!reported || !isFinite(reported)) return;
+      if (metaDuration === 0) {
+        metaDuration = reported;
+        metaStableTimer = setTimeout(() => {
+          setDuration(audio.duration);
+          audio.removeEventListener('loadedmetadata', onMeta);
+        }, 800);
+        return;
+      }
+      clearTimeout(metaStableTimer);
+      setDuration(reported);
       audio.removeEventListener('loadedmetadata', onMeta);
-    }, 800);
-    return;
-  }
-
-  // Second event fired — use the latest value (the correct one)
-  clearTimeout(metaStableTimer);
-  setDuration(reported);
-  audio.removeEventListener('loadedmetadata', onMeta);
-};
-audio.addEventListener('loadedmetadata', onMeta);
+    };
+    audio.addEventListener('loadedmetadata', onMeta);
 
     const timer = setTimeout(() => {
       skipOnErrorRef.current = true;
@@ -251,11 +227,11 @@ audio.addEventListener('loadedmetadata', onMeta);
       }).catch(() => { setIsLoading(false); });
     }, 100);
 
-   return () => {
-  clearTimeout(timer);
-  clearTimeout(metaStableTimer);  // add this
-  audio.removeEventListener('loadedmetadata', onMeta);
-};
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(metaStableTimer!);
+      audio.removeEventListener('loadedmetadata', onMeta);
+    };
   }, [songUrl]);
 
   useEffect(() => {

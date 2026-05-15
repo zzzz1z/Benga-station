@@ -13,18 +13,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid video ID' }, { status: 400 });
   }
 
-  try {
-    // 1. TRIGGER THE WORKER (Don't 'await' the full response body)
-    // We send the fetch but we don't wait for the worker to finish the extract
-    fetch(`${WORKER_URL}/extract/${videoId}`, {
-      headers: { 'x-worker-secret': WORKER_SECRET! },
-    }).catch(err => console.error("Background extraction failed:", err));
+  if (!WORKER_URL) {
+    return NextResponse.json({ error: 'Worker not configured' }, { status: 500 });
+  }
 
-    // 2. RESPOND IMMEDIATELY TO THE FRONTEND
-    // This stops the 502 error because the connection is closed successfully
-    return NextResponse.json({ ok: true, message: 'Extraction started' });
-    
+  try {
+    const res = await fetch(`${WORKER_URL}/extract/${videoId}`, {
+      headers: { 'x-worker-secret': WORKER_SECRET! },
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!res.ok) {
+      return NextResponse.json({ ok: false, error: 'Extraction failed' }, { status: 200 });
+    }
+
+    const data = await res.json();
+    if (!data?.url) {
+      return NextResponse.json({ ok: false, error: 'No URL returned' }, { status: 200 });
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Trigger failed' }, { status: 500 });
+    // Timeout or network error — mark as unavailable
+    return NextResponse.json({ ok: false, error: err.message }, { status: 200 });
   }
 }
