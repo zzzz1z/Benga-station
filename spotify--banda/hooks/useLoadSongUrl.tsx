@@ -14,8 +14,6 @@ const useLoadSongUrl = (song: Song) => {
     let cancelled = false;
 
     if (song.source === 'youtube' && song.youtube_video_id) {
-      // Fetch the resolved CDN URL — browser streams directly from YouTube CDN
-      // no bytes proxied through Vercel
       fetch(`/api/youtube/stream?videoId=${song.youtube_video_id}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {

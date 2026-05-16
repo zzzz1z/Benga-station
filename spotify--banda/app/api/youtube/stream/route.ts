@@ -23,10 +23,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Resolution failed' }, { status: 503 });
 
     const data = await res.json();
-    if (!data?.url)
-      return NextResponse.json({ error: 'No URL returned' }, { status: 503 });
+    if (!data?.streamUrl)
+      return NextResponse.json({ error: 'No stream URL' }, { status: 503 });
 
-    return NextResponse.json({ url: data.url, duration: data.duration });
+    return NextResponse.json({ url: data.streamUrl });
   } catch (err: any) {
     console.error('[stream route] error:', err.message);
     return NextResponse.json({ error: 'Stream failed' }, { status: 503 });
