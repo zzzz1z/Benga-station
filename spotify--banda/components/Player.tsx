@@ -130,7 +130,6 @@ const Player = () => {
   }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // crossOrigin removed — YouTube CDN URLs don't support CORS
     const audio = new Audio();
     audioRef.current = audio;
 
@@ -183,7 +182,6 @@ const Player = () => {
       }
     }, 2000);
 
-    // Background stuck check — handles locked screen / backgrounded transitions
     const backgroundStuckInterval = setInterval(async () => {
       if (
         shouldBePlayingRef.current &&
@@ -339,7 +337,12 @@ const Player = () => {
 
   return (
     <>
-      {isExpanded && <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />}
+      {isExpanded && (
+        <ExpandedPlayer
+          {...sharedProps}
+          onClose={() => setIsExpanded(false)}
+        />
+      )}
       <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] pb-[30px] border-t border-red-900/40 px-4 z-[40]">
         <PlayerContent {...sharedProps} onExpand={() => setIsExpanded(true)} />
       </div>

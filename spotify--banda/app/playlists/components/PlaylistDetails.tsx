@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import Header from '@/components/Header';
 import Image from 'next/image';
 import { Playlist } from '@/types';
 import MediaItem from '@/components/MediaItem';
@@ -15,6 +14,7 @@ import EditPlaylist from './EditPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
+import { usePageTransition } from '@/hooks/PageTransitionProvider';
 
 const supabase = createClient();
 
@@ -27,7 +27,6 @@ const getSongPlayerId = (song: any): string => {
   return String(song.id);
 };
 
-// Skeleton row
 const SkeletonRow = () => (
   <div className="flex items-center gap-x-3 px-2 py-2 animate-pulse">
     <div className="w-10 h-10 rounded bg-neutral-800 flex-shrink-0" />
@@ -48,13 +47,14 @@ const PlaylistDetails: React.FC = () => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
+  const { startLoading, stopLoading } = usePageTransition();
 
   const fetchPlaylist = async () => {
     if (!id) { setLoading(false); setSongsLoading(false); return; }
 
     setError(null);
+    startLoading();
 
-    // Fetch playlist metadata and songs in parallel
     const [playlistRes, songRes] = await Promise.all([
       supabase.from('Playlists').select('*').eq('id', id).maybeSingle(),
       supabase.from('playlist_songs').select('Songs(*)').eq('playlist_id', id),
@@ -65,27 +65,27 @@ const PlaylistDetails: React.FC = () => {
       setError('Playlist não encontrada.');
       setLoading(false);
       setSongsLoading(false);
+      stopLoading();
       return;
     }
 
-    // Show header immediately once playlist metadata loads
     setPlaylist(playlistRes.data);
     setLoading(false);
 
     if (songRes.error) {
       console.error('Error fetching songs:', songRes.error);
       setSongsLoading(false);
+      stopLoading();
       return;
     }
 
     const fetchedSongs = (songRes.data ?? []).map((item: any) => item.Songs).filter(Boolean);
     setSongs(fetchedSongs);
     setSongsLoading(false);
+    stopLoading();
 
-    // Update playlist object with songs for child components
     setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
 
-    // Preextract all YouTube songs in background — no await
     const ytIds = fetchedSongs
       .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
       .map((s: any) => s.youtube_video_id);
@@ -136,7 +136,6 @@ const PlaylistDetails: React.FC = () => {
     }
   };
 
-  // Error state
   if (error) return (
     <div className="p-20 text-white flex flex-col gap-y-4">
       <p>{error}</p>
@@ -144,7 +143,6 @@ const PlaylistDetails: React.FC = () => {
     </div>
   );
 
-  // Full skeleton while playlist metadata loads
   if (loading) return (
     <div className="bg-neutral-900 rounded-lg h-full w-full pt-[65px] overflow-hidden overflow-y-auto">
       <div className="p-6 animate-pulse flex flex-col gap-y-6">
@@ -165,9 +163,8 @@ const PlaylistDetails: React.FC = () => {
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full pt-[65px] overflow-hidden overflow-y-auto relative">
 
-      <Header className="relative overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none z-0"
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none z-0"
           style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }}
         />
         <div className="absolute top-0 left-0 right-0 h-px z-10"
@@ -237,7 +234,7 @@ const PlaylistDetails: React.FC = () => {
 
         <div className="absolute bottom-0 left-0 right-0 h-px"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
-      </Header>
+      </div>
 
       <div className="flex justify-center md:justify-start items-center gap-4 px-8 py-6">
         <PlaySongsFromPlaylist songs={songs} />
@@ -249,7 +246,6 @@ const PlaylistDetails: React.FC = () => {
 
       <div className="px-6 pb-24">
         {songsLoading ? (
-          // Song list skeleton while songs load in background
           <ul className="flex flex-col gap-y-1">
             {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}
           </ul>

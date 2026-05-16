@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation";
 import { BiSearch } from "react-icons/bi";
 import { HiHome } from "react-icons/hi";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
@@ -8,7 +7,6 @@ import { twMerge } from "tailwind-merge";
 import useAuthModal from "@/hooks/useAuthModal";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/useUser";
-import Button from "./Botão";
 import { FaUserAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
 import usePlayer from "@/hooks/usePlayer";
@@ -16,17 +14,17 @@ import { SlPlaylist } from "react-icons/sl";
 import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { AiOutlineFileAdd } from "react-icons/ai";
-import { MdWifiOff } from "react-icons/md";
+import { usePageTransition } from "@/hooks/PageTransitionProvider";
 
 interface HeaderProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }
 
 const BUTTON_CUT = "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)";
 
 const Header: React.FC<HeaderProps> = ({ children, className }) => {
-  const router = useRouter();
+  const { navigate, goBack, goForward } = usePageTransition();
   const authModal = useAuthModal();
   const player = usePlayer();
   const { user, userDetails } = useUser();
@@ -64,12 +62,12 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex gap-x-2 items-center">
-          <button type="button" onClick={() => router.back()}
+          <button type="button" onClick={goBack}
             className="flex items-center justify-center bg-black/40 border border-red-500/30 hover:border-red-500 transition-all p-1"
             style={{ clipPath: BUTTON_CUT }}>
             <RxCaretLeft className="text-white" size={35} />
           </button>
-          <button type="button" onClick={() => router.forward()}
+          <button type="button" onClick={goForward}
             className="flex items-center justify-center bg-black/40 border border-red-500/30 hover:border-red-500 transition-all p-1"
             style={{ clipPath: BUTTON_CUT }}>
             <RxCaretRight className="text-white" size={35} />
@@ -89,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             <button
               key={i}
               type="button"
-              onClick={() => router.push(item.path)}
+              onClick={() => navigate(item.path)}
               className="p-2 bg-neutral-800 border border-red-500/20 text-white flex items-center justify-center hover:bg-red-500/20 transition-all"
               style={{ clipPath: BUTTON_CUT }}
             >
@@ -110,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         <div className="flex justify-between items-center gap-x-4">
           {user ? (
             <div className="flex gap-x-4 items-center">
-              <button onClick={() => router.push("/account")}
+              <button onClick={() => navigate("/account")}
                 className="bg-white p-2 flex items-center justify-center transition hover:scale-105 active:scale-95"
                 style={{ clipPath: BUTTON_CUT }}>
                 <FaUserAlt className="text-black" />
@@ -137,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         </div>
       </div>
 
-      <div className="relative z-20">{children}</div>
+      {children && <div className="relative z-20">{children}</div>}
     </div>
   );
 };

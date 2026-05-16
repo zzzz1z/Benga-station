@@ -13,7 +13,7 @@ import { MdDragHandle, MdClose } from "react-icons/md";
 import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import LyricsFlipCard from "./LyricsFlipCard";
 
 interface ExpandedPlayerProps {
@@ -114,10 +114,51 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setId = usePlayer(s => s.setId);
   const setIds = usePlayer(s => s.setIds);
 
+  // Animation state: 'entering' | 'visible' | 'leaving'
+  const [animState, setAnimState] = useState<'entering' | 'visible' | 'leaving'>('entering');
+
+  useEffect(() => {
+    // Trigger enter animation on mount
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimState('visible'));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setAnimState('leaving');
+    setTimeout(() => onClose(), 380);
+  }, [onClose]);
+
+  // Swipe-down-to-close state
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [queueExpanded, setQueueExpanded] = useState(false);
+  const isDraggingDown = useRef(false);
+
+  const handleTopBarTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    isDraggingDown.current = false;
+  };
+
+  const handleTopBarTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) {
+      isDraggingDown.current = true;
+      setDragY(delta);
+    }
+  };
+
+  const handleTopBarTouchEnd = () => {
+    if (dragY > 100) {
+      setDragY(0);
+      handleClose();
+    } else {
+      setDragY(0);
+    }
+    touchStartY.current = null;
+    isDraggingDown.current = false;
+  };
 
   const dragIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
@@ -126,6 +167,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const rowHeightRef = useRef(52);
   const dragStartYRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [queueExpanded, setQueueExpanded] = useState(false);
 
   const currentIndex = activeID ? ids.findIndex(id => id === activeID) : -1;
 
@@ -135,23 +177,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const upcoming: Song[] = currentIndex !== -1 && currentIndex < ids.length - 1
     ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s)
     : [];
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (draggingIndex !== null) return;
-    touchStartY.current = e.touches[0].clientY;
-    setIsDragging(true);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current === null || draggingIndex !== null) return;
-    const delta = e.touches[0].clientY - touchStartY.current;
-    if (delta > 0) setDragY(delta);
-  };
-  const handleTouchEnd = () => {
-    if (dragY > 100) onClose();
-    setDragY(0);
-    setIsDragging(false);
-    touchStartY.current = null;
-  };
 
   const startQueueDrag = useCallback((globalIndex: number, clientY: number) => {
     dragIndexRef.current = globalIndex;
@@ -215,7 +240,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIds(newIds);
   }, [ids, setIds]);
 
-  // Queue row tap — fire preextract then jump immediately (no await, worker handles dedup)
   const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
@@ -257,33 +281,67 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     isPast: i < currentIndex,
   })).filter(r => !!r.song);
 
+  // Compute slide-up / slide-down transform
+  const slideY = animState === 'entering'
+    ? '100%'
+    : animState === 'leaving'
+      ? '100%'
+      : dragY > 0
+        ? `${dragY}px`
+        : '0%';
+
+  const opacity = animState === 'entering' ? 0 : animState === 'leaving' ? 0 : 1;
+
+  const isAnimating = animState !== 'visible' || dragY > 0;
+
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-900 flex flex-col">
-
-      {/* Drag handle — only this zone triggers swipe-down-to-close */}
+    <div
+      className="fixed inset-0 z-50 bg-neutral-900 flex flex-col"
+      style={{
+        transform: `translateY(${slideY})`,
+        opacity,
+        transition: isAnimating && dragY === 0
+          ? 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease'
+          : dragY > 0
+            ? 'none'
+            : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease',
+        willChange: 'transform, opacity',
+      }}
+    >
+      {/* Top drag zone — drag handle pill + "A tocar agora" bar, entire zone closes on swipe down */}
       <div
-        className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="flex-shrink-0 select-none touch-none"
+        onTouchStart={handleTopBarTouchStart}
+        onTouchMove={handleTopBarTouchMove}
+        onTouchEnd={handleTopBarTouchEnd}
       >
-        <div className="w-10 h-1 rounded-full bg-neutral-600" />
-      </div>
+        {/* Drag pill */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-neutral-600" />
+        </div>
 
-      <div className="flex flex-col flex-1 px-6 pt-2 pb-8 gap-y-5 overflow-y-auto">
-
-        <div className="flex items-center justify-between pt-[30px] flex-shrink-0">
-          <button onClick={onClose} className="text-white p-2 -ml-2">
+        {/* "A tocar agora" bar */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <button
+            onClick={handleClose}
+            className="text-white p-2 -ml-2"
+            onTouchStart={e => e.stopPropagation()}
+          >
             <IoChevronDown size={26} />
           </button>
-          <p className="text-white text-sm font-medium">A tocar agora</p>
+          <p className="text-white text-sm font-medium select-none">A tocar agora</p>
           <button
-            onClick={() => { router.push(`/songs/${song.id}`); onClose(); }}
+            onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
             className="text-neutral-400 hover:text-white transition p-2 -mr-2"
+            onTouchStart={e => e.stopPropagation()}
           >
             <AiOutlineInfoCircle size={22} />
           </button>
         </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex flex-col flex-1 px-6 pb-8 gap-y-5 overflow-y-auto">
 
         <div className="flex justify-center flex-shrink-0">
           <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
