@@ -27,119 +27,94 @@ const GlitchOverlay = ({ active }: { active: boolean }) => {
   return (
     <div
       className="fixed inset-0 z-[9999] pointer-events-none overflow-hidden"
-      style={{ animation: 'glitch-container 0.35s ease-out forwards' }}
+      style={{ animation: 'glitch-container 0.22s ease-out forwards' }}
     >
       <div className="absolute inset-0"
-        style={{ background: 'rgba(239,68,68,0.15)', animation: 'glitch-flash 0.35s ease-out forwards' }} />
+        style={{ background: 'rgba(239,68,68,0.12)', animation: 'glitch-flash 0.22s ease-out forwards' }} />
 
       <div className="absolute inset-0"
         style={{
-          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(239,68,68,0.08) 2px, rgba(239,68,68,0.08) 4px)',
-          animation: 'glitch-scanlines 0.35s ease-out forwards',
+          background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(239,68,68,0.07) 2px, rgba(239,68,68,0.07) 4px)',
+          animation: 'glitch-scanlines 0.22s ease-out forwards',
         }} />
 
       <div className="absolute left-0 right-0"
-        style={{ height: '3px', top: '23%', background: 'rgba(239,68,68,0.9)', animation: 'glitch-line1 0.35s ease-out forwards', boxShadow: '0 0 8px rgba(239,68,68,0.8)' }} />
+        style={{ height: '2px', top: '23%', background: 'rgba(239,68,68,0.9)', animation: 'glitch-line1 0.22s ease-out forwards', boxShadow: '0 0 6px rgba(239,68,68,0.8)' }} />
 
       <div className="absolute left-0 right-0"
-        style={{ height: '2px', top: '67%', background: 'rgba(239,68,68,0.7)', animation: 'glitch-line2 0.35s ease-out forwards', boxShadow: '0 0 6px rgba(239,68,68,0.6)' }} />
-
-      <div className="absolute left-0 right-0"
-        style={{ height: '40px', top: '40%', background: 'rgba(239,68,68,0.06)', animation: 'glitch-block 0.35s ease-out forwards', mixBlendMode: 'screen' }} />
+        style={{ height: '1px', top: '67%', background: 'rgba(239,68,68,0.6)', animation: 'glitch-line2 0.22s ease-out forwards', boxShadow: '0 0 4px rgba(239,68,68,0.5)' }} />
 
       <div className="absolute top-0 left-0 right-0"
-        style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(239,68,68,1), transparent)', animation: 'glitch-beam 0.35s ease-out forwards', boxShadow: '0 0 12px rgba(239,68,68,1)' }} />
+        style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(239,68,68,1), transparent)', animation: 'glitch-beam 0.22s ease-out forwards', boxShadow: '0 0 10px rgba(239,68,68,1)' }} />
 
       <style>{`
         @keyframes glitch-container {
           0%   { opacity: 1; }
-          80%  { opacity: 1; }
+          70%  { opacity: 1; }
           100% { opacity: 0; }
         }
         @keyframes glitch-flash {
           0%   { opacity: 0; }
-          10%  { opacity: 1; }
-          30%  { opacity: 0.3; }
-          50%  { opacity: 0.8; }
-          70%  { opacity: 0.1; }
+          8%   { opacity: 1; }
+          40%  { opacity: 0.2; }
+          60%  { opacity: 0.6; }
           100% { opacity: 0; }
         }
         @keyframes glitch-scanlines {
           0%   { opacity: 0; transform: translateY(0); }
-          20%  { opacity: 1; }
-          60%  { opacity: 0.6; transform: translateY(-4px); }
-          100% { opacity: 0; transform: translateY(-8px); }
+          15%  { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-6px); }
         }
         @keyframes glitch-line1 {
-          0%   { opacity: 0; transform: translateX(0) scaleX(1); }
-          15%  { opacity: 1; transform: translateX(-20px) scaleX(1.1); }
-          35%  { opacity: 0.8; transform: translateX(30px) scaleX(0.9); }
-          55%  { opacity: 1; transform: translateX(-10px) scaleX(1); }
+          0%   { opacity: 0; transform: translateX(0); }
+          10%  { opacity: 1; transform: translateX(-14px); }
+          30%  { opacity: 0.7; transform: translateX(20px); }
+          60%  { opacity: 0.5; transform: translateX(-6px); }
           100% { opacity: 0; transform: translateX(0); }
         }
         @keyframes glitch-line2 {
           0%   { opacity: 0; transform: translateX(0); }
-          20%  { opacity: 0.9; transform: translateX(40px); }
-          40%  { opacity: 0.5; transform: translateX(-15px); }
-          60%  { opacity: 1; transform: translateX(10px); }
-          100% { opacity: 0; transform: translateX(0); }
-        }
-        @keyframes glitch-block {
-          0%   { opacity: 0; transform: translateX(0) skewX(0deg); }
-          20%  { opacity: 1; transform: translateX(-8px) skewX(-2deg); }
-          40%  { opacity: 0.6; transform: translateX(12px) skewX(1deg); }
-          60%  { opacity: 0.8; transform: translateX(-4px) skewX(0deg); }
+          15%  { opacity: 0.8; transform: translateX(28px); }
+          50%  { opacity: 0.4; transform: translateX(-10px); }
           100% { opacity: 0; transform: translateX(0); }
         }
         @keyframes glitch-beam {
-          0%   { opacity: 0; transform: scaleX(0); }
-          20%  { opacity: 1; transform: scaleX(1); }
-          60%  { opacity: 0.7; }
-          100% { opacity: 0; transform: scaleX(1); }
+          0%   { opacity: 0; transform: scaleX(0); transform-origin: left; }
+          15%  { opacity: 1; transform: scaleX(1); }
+          70%  { opacity: 0.6; }
+          100% { opacity: 0; }
         }
       `}</style>
     </div>
   );
 };
 
-// ─── Loading overlay (subtle scanline pulse, stays until stopLoading) ─────────
+// ─── Loading overlay (subtle scanline pulse) ──────────────────────────────────
 const LoadingOverlay = ({ active }: { active: boolean }) => (
   <div
     className="fixed inset-0 z-[9998] pointer-events-none overflow-hidden"
     style={{
       opacity: active ? 1 : 0,
-      transition: active ? 'opacity 0.15s ease-in' : 'opacity 0.4s ease-out',
+      transition: active ? 'opacity 0.1s ease-in' : 'opacity 0.35s ease-out',
     }}
   >
-    {/* Faint scanlines */}
     <div
       className="absolute inset-0"
       style={{
-        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.025) 3px, rgba(239,68,68,0.025) 4px)',
+        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.022) 3px, rgba(239,68,68,0.022) 4px)',
         animation: active ? 'loading-scanlines 3s linear infinite' : 'none',
       }}
     />
-
-    {/* Top progress beam — sweeps left-to-right indefinitely */}
-    <div
-      className="absolute top-0 left-0 right-0"
-      style={{ height: '2px', overflow: 'hidden' }}
-    >
+    <div className="absolute top-0 left-0 right-0" style={{ height: '2px', overflow: 'hidden' }}>
       <div
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '100%',
+          position: 'absolute', top: 0, left: 0, right: 0, height: '100%',
           background: 'linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.8) 40%, rgba(239,68,68,1) 50%, rgba(239,68,68,0.8) 60%, transparent 100%)',
-          animation: active ? 'loading-beam 1.6s ease-in-out infinite' : 'none',
+          animation: active ? 'loading-beam 1.4s ease-in-out infinite' : 'none',
           boxShadow: '0 0 8px rgba(239,68,68,0.9)',
         }}
       />
     </div>
-
-    {/* Bottom edge glow */}
     <div
       className="absolute bottom-0 left-0 right-0"
       style={{
@@ -148,21 +123,17 @@ const LoadingOverlay = ({ active }: { active: boolean }) => (
         animation: active ? 'loading-bottom 2.4s ease-in-out infinite' : 'none',
       }}
     />
-
-    {/* Occasional horizontal glitch tick — fires every ~2s */}
     {active && (
       <div
         className="absolute left-0 right-0"
         style={{
-          height: '1px',
-          top: '35%',
+          height: '1px', top: '35%',
           background: 'rgba(239,68,68,0.5)',
           animation: 'loading-tick 2.2s ease-in-out infinite',
           boxShadow: '0 0 4px rgba(239,68,68,0.4)',
         }}
       />
     )}
-
     <style>{`
       @keyframes loading-scanlines {
         0%   { transform: translateY(0); }
@@ -192,33 +163,31 @@ export const PageTransitionProvider = ({ children }: { children: React.ReactNode
   const [glitchActive, setGlitchActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const pendingNav = useRef<{ type: 'push' | 'back' | 'forward'; href?: string } | null>(null);
-  const loadingDepth = useRef(0); // tracks nested startLoading calls
+  const loadingDepth = useRef(0);
 
   const triggerGlitch = useCallback((nav: typeof pendingNav.current) => {
     if (glitchActive) return;
     pendingNav.current = nav;
+
+    // Navigate immediately — glitch plays on top, doesn't block routing
+    if (nav?.type === 'push' && nav.href) router.push(nav.href);
+    else if (nav?.type === 'back') router.back();
+    else if (nav?.type === 'forward') router.forward();
+    pendingNav.current = null;
+
     setGlitchActive(true);
-  }, [glitchActive]);
+  }, [glitchActive, router]);
 
   useEffect(() => {
     if (!glitchActive) return;
-    const navTimer = setTimeout(() => {
-      const nav = pendingNav.current;
-      if (!nav) return;
-      if (nav.type === 'push' && nav.href) router.push(nav.href);
-      else if (nav.type === 'back') router.back();
-      else if (nav.type === 'forward') router.forward();
-      pendingNav.current = null;
-    }, 120);
-    const clearTimer = setTimeout(() => setGlitchActive(false), 380);
-    return () => { clearTimeout(navTimer); clearTimeout(clearTimer); };
-  }, [glitchActive, router]);
+    const clearTimer = setTimeout(() => setGlitchActive(false), 240);
+    return () => clearTimeout(clearTimer);
+  }, [glitchActive]);
 
-  const navigate    = useCallback((href: string) => triggerGlitch({ type: 'push', href }), [triggerGlitch]);
-  const goBack      = useCallback(() => triggerGlitch({ type: 'back' }),    [triggerGlitch]);
-  const goForward   = useCallback(() => triggerGlitch({ type: 'forward' }), [triggerGlitch]);
+  const navigate  = useCallback((href: string) => triggerGlitch({ type: 'push', href }), [triggerGlitch]);
+  const goBack    = useCallback(() => triggerGlitch({ type: 'back' }),    [triggerGlitch]);
+  const goForward = useCallback(() => triggerGlitch({ type: 'forward' }), [triggerGlitch]);
 
-  // Loading API — supports nested calls (multiple components loading simultaneously)
   const startLoading = useCallback(() => {
     loadingDepth.current += 1;
     setIsLoading(true);

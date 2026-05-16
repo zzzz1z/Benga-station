@@ -161,7 +161,7 @@ const PlaylistDetails: React.FC = () => {
   if (!playlist) return <div className="p-20 text-white">Playlist não encontrada.</div>;
 
   return (
-    <div className="bg-neutral-900 rounded-lg h-full w-full pt-[65px] overflow-hidden overflow-y-auto relative">
+    <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative">
 
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none z-0"
