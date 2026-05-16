@@ -11,23 +11,14 @@ const useLoadSongUrl = (song: Song) => {
     setUrl('');
     if (!song?.id) return;
 
-    let cancelled = false;
-
     if (song.source === 'youtube' && song.youtube_video_id) {
-      fetch(`/api/youtube/stream?videoId=${song.youtube_video_id}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (!cancelled && data?.url) setUrl(data.url);
-        })
-        .catch(() => {});
+      setUrl(`/api/youtube/stream?videoId=${song.youtube_video_id}`);
     } else if (song.song_path) {
       const { data } = supabase.storage
         .from('musicas')
         .getPublicUrl(song.song_path);
       if (data?.publicUrl) setUrl(data.publicUrl);
     }
-
-    return () => { cancelled = true; };
   }, [song?.id, song?.source, song?.youtube_video_id, song?.song_path]);
 
   return url;

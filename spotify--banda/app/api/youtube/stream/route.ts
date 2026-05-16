@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const maxDuration = 15;
+export const maxDuration = 60;
 export const preferredRegion = 'cdg1';
 
 const WORKER_URL = process.env.YT_WORKER_URL!;
@@ -13,22 +13,36 @@ export async function GET(request: Request) {
   if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId))
     return NextResponse.json({ error: 'Invalid video ID' }, { status: 400 });
 
+  const range = request.headers.get('range') || 'bytes=0-';
+
   try {
-    const res = await fetch(`${WORKER_URL}/resolve/${videoId}`, {
-      headers: { 'x-worker-secret': WORKER_SECRET },
-      signal: AbortSignal.timeout(12000),
+    const workerRes = await fetch(`${WORKER_URL}/stream/${videoId}`, {
+      headers: {
+        'x-worker-secret': WORKER_SECRET,
+        'Range': range,
+      },
+      signal: AbortSignal.timeout(55000),
     });
 
-    if (!res.ok)
-      return NextResponse.json({ error: 'Resolution failed' }, { status: 503 });
+    if (!workerRes.ok && workerRes.status !== 206) {
+      return NextResponse.json({ error: 'Stream unavailable' }, { status: 503 });
+    }
 
-    const data = await res.json();
-    if (!data?.streamUrl)
-      return NextResponse.json({ error: 'No stream URL' }, { status: 503 });
+    const headers = new Headers({
+      'Content-Type': workerRes.headers.get('Content-Type') || 'audio/mp4',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+    });
 
-    return NextResponse.json({ url: data.streamUrl });
+    const cr = workerRes.headers.get('Content-Range');
+    const cl = workerRes.headers.get('Content-Length');
+    if (cr) headers.set('Content-Range', cr);
+    if (cl) headers.set('Content-Length', cl);
+
+    return new NextResponse(workerRes.body, { status: workerRes.status, headers });
   } catch (err: any) {
-    console.error('[stream route] error:', err.message);
+    console.error('Stream proxy error:', err.message);
     return NextResponse.json({ error: 'Stream failed' }, { status: 503 });
   }
 }
