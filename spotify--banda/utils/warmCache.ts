@@ -1,16 +1,12 @@
-// utils/warmCache.ts — add a helper so both callers go through one place
-export const warmedVideos = new Set<string>();
-
+// warmCache.ts — replaced with preextract-queue, no more one-by-one delays
 export function scheduleWarm(videoIds: string[]) {
-    const toWarm = videoIds.filter(id => !warmedVideos.has(id));
-    toWarm.forEach(id => warmedVideos.add(id)); // mark before fetch to prevent races
-    toWarm.forEach((videoId, i) => {
-        setTimeout(() => {
-            fetch('/api/preextract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videoId }),
-            }).catch(() => {});
-        }, i * 300);
-    });
+  if (!videoIds.length) return;
+  const valid = videoIds.filter(id => /^[a-zA-Z0-9_-]{11}$/.test(id));
+  if (!valid.length) return;
+
+  fetch('/api/preextract-queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoIds: valid }),
+  }).catch(() => {});
 }

@@ -5,29 +5,34 @@ import { createClient } from "@/utils/supabase/client";
 const supabase = createClient();
 
 const useLoadSongUrl = (song: Song) => {
-    const [url, setUrl] = useState('');
+  const [url, setUrl] = useState('');
 
-    useEffect(() => {
-        // 1. Immediately clear the URL when the song ID changes 
-        // to prevent the player from trying to play the previous song's URL.
-        setUrl(''); 
+  useEffect(() => {
+    setUrl('');
+    if (!song?.id) return;
 
-        if (!song?.id) return;
+    let cancelled = false;
 
-        if (song.source === 'youtube' && song.youtube_video_id) {
-            setUrl(`/api/youtube/stream?videoId=${song.youtube_video_id}`);
-        } else if (song.song_path) {
-            const { data } = supabase.storage
-                .from('musicas')
-                .getPublicUrl(song.song_path);
-            
-            if (data?.publicUrl) {
-                setUrl(data.publicUrl);
-            }
-        }
-    }, [song?.id, song?.source, song?.youtube_video_id, song?.song_path]);
+    if (song.source === 'youtube' && song.youtube_video_id) {
+      // Fetch the resolved CDN URL — browser streams directly from YouTube CDN
+      // no bytes proxied through Vercel
+      fetch(`/api/youtube/stream?videoId=${song.youtube_video_id}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (!cancelled && data?.url) setUrl(data.url);
+        })
+        .catch(() => {});
+    } else if (song.song_path) {
+      const { data } = supabase.storage
+        .from('musicas')
+        .getPublicUrl(song.song_path);
+      if (data?.publicUrl) setUrl(data.publicUrl);
+    }
 
-    return url;
+    return () => { cancelled = true; };
+  }, [song?.id, song?.source, song?.youtube_video_id, song?.song_path]);
+
+  return url;
 };
 
 export default useLoadSongUrl;

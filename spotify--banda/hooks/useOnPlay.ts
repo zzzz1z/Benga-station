@@ -19,27 +19,6 @@ const preExtractSong = async (videoId: string): Promise<void> => {
   } catch {}
 };
 
-const warmAround = (songs: Song[], activeId: string) => {
-  const currentIndex = songs.findIndex(s => getSongPlayerId(s) === activeId);
-  if (currentIndex === -1) return;
-
-  const targets = [
-    songs[currentIndex],
-    songs[currentIndex + 1],
-    songs[currentIndex + 2],
-    songs[currentIndex - 1],
-  ].filter((s): s is Song => !!s && s.source === 'youtube' && !!s.youtube_video_id);
-
-  const videoIds = [...new Set(targets.map(s => s.youtube_video_id!))];
-  if (!videoIds.length) return;
-
-  fetch('/api/warm-batch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoIds }),
-  }).catch(() => {});
-};
-
 const useOnPlay = (defaultSongs?: Song[]) => {
   const player = usePlayer();
   const authModal = useAuthModal();
@@ -54,13 +33,11 @@ const useOnPlay = (defaultSongs?: Song[]) => {
 
     const tappedSong = songs.find(s => getSongPlayerId(s) === id);
 
-    // Preextract the tapped song first — blocks until worker confirms ready
+    // Preextract tapped song first — with Redis URL caching this is usually
+    // a cache hit and returns in < 1 second
     if (tappedSong?.source === 'youtube' && tappedSong.youtube_video_id) {
       await preExtractSong(tappedSong.youtube_video_id);
     }
-
-    // Warm neighbours fire and forget
-    warmAround(songs, id);
 
     player.setQueue(songs, id);
   };

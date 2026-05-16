@@ -42,10 +42,6 @@ const recordPlayEvent = (videoId: string) => {
   }).catch(() => {});
 };
 
-const isNative = () =>
-  typeof (window as any).Capacitor !== 'undefined' &&
-  (window as any).Capacitor.isNativePlatform();
-
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -68,33 +64,32 @@ const Player = () => {
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
 
-  const activeID = usePlayer(state => state.activeID);
-  const playCount = usePlayer(state => state.playCount);
-  const songsMap = usePlayer(state => state.songs);
+  const activeID   = usePlayer(state => state.activeID);
+  const playCount  = usePlayer(state => state.playCount);
+  const songsMap   = usePlayer(state => state.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
-  const songFromStore = activeID ? songsMap[activeID] : null;
+  const songFromStore   = activeID ? songsMap[activeID] : null;
   if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
   const song = songFromStore ?? lastGoodSongRef.current;
 
-  const songUrl = useLoadSongUrl((song ?? {}) as Song);
+  const songUrl  = useLoadSongUrl((song ?? {}) as Song);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [duration, setDuration] = useState(0);
-  const [position, setPosition] = useState(0);
+  const [volume,    setVolume]    = useState(1);
+  const [duration,  setDuration]  = useState(0);
+  const [position,  setPosition]  = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const volumeRef = useRef(1);
-  const isPlayingRef = useRef(false);
-  const skipOnErrorRef = useRef(false);
-  const endedFiredRef = useRef(false);
-  // Track whether we INTEND to be playing — survives across song transitions
+  const volumeRef          = useRef(1);
+  const isPlayingRef       = useRef(false);
+  const skipOnErrorRef     = useRef(false);
+  const endedFiredRef      = useRef(false);
   const shouldBePlayingRef = useRef(false);
 
-  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   const handleEnded = () => {
@@ -104,18 +99,14 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // Record play event when activeID changes
+  // Record play event + priority window preextract on song change
   useEffect(() => {
     if (!activeID) return;
     const s = songsMap[activeID];
     if (s?.source === 'youtube' && s?.youtube_video_id) {
       recordPlayEvent(s.youtube_video_id);
     }
-  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Priority window preextract when active song changes
-  useEffect(() => {
-    if (!activeID) return;
     const { ids } = usePlayer.getState();
     const currentIdx = ids.indexOf(activeID);
     if (currentIdx === -1) return;
@@ -139,22 +130,20 @@ const Player = () => {
   }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    // crossOrigin removed — YouTube CDN URLs don't support CORS
     const audio = new Audio();
-    if (!isNative()) audio.crossOrigin = 'anonymous';
     audioRef.current = audio;
 
     let lastTime = 0;
     let stuckInterval: NodeJS.Timeout;
 
     audio.ontimeupdate = () => { setPosition(audio.currentTime); };
-    audio.onended = handleEnded;
-    audio.onplay = () => { setIsPlaying(true); setIsLoading(false); };
-    audio.onpause = () => { if (audio.src) setIsPlaying(false); };
-    audio.onwaiting = () => setIsLoading(true);
-    audio.oncanplay = () => {
+    audio.onended      = handleEnded;
+    audio.onplay       = () => { setIsPlaying(true); setIsLoading(false); };
+    audio.onpause      = () => { if (audio.src) setIsPlaying(false); };
+    audio.onwaiting    = () => setIsLoading(true);
+    audio.oncanplay    = () => {
       setIsLoading(false);
-      // KEY FIX: if we should be playing but iOS stalled us during song
-      // transition (locked screen / backgrounded), force play here
       if (shouldBePlayingRef.current && audio.paused) {
         safePlay(audio).catch(() => {});
       }
@@ -194,14 +183,13 @@ const Player = () => {
       }
     }, 2000);
 
-    // Stuck check for backgrounded/locked screen transitions
-    // If shouldBePlayingRef is true and audio is paused with a src, try to resume
+    // Background stuck check — handles locked screen / backgrounded transitions
     const backgroundStuckInterval = setInterval(async () => {
       if (
         shouldBePlayingRef.current &&
         audio.paused &&
         audio.src &&
-        audio.readyState >= 3 // HAVE_FUTURE_DATA
+        audio.readyState >= 3
       ) {
         await unlockAudioContext();
         audio.play().catch(() => {});
@@ -273,12 +261,9 @@ const Player = () => {
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
-        // Mark that we intend to be playing
         shouldBePlayingRef.current = true;
       }).catch(() => {
         setIsLoading(false);
-        // Even if safePlay throws, we still intend to play —
-        // the backgroundStuckInterval will retry
         shouldBePlayingRef.current = true;
       });
     }, 100);
@@ -314,7 +299,7 @@ const Player = () => {
     }
   };
 
-  const handleNext = () => playerRef.current.playNext();
+  const handleNext     = () => playerRef.current.playNext();
   const handlePrevious = () => {
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) {
@@ -338,14 +323,8 @@ const Player = () => {
     isPlaying,
     (song ?? {}) as Song,
     audioRef,
-    () => {
-      safePlay(audioRef.current!).catch(() => {});
-      shouldBePlayingRef.current = true;
-    },
-    () => {
-      audioRef.current?.pause();
-      shouldBePlayingRef.current = false;
-    }
+    () => { safePlay(audioRef.current!).catch(() => {}); shouldBePlayingRef.current = true;  },
+    () => { audioRef.current?.pause();                    shouldBePlayingRef.current = false; }
   );
 
   if (!isMounted) return null;
