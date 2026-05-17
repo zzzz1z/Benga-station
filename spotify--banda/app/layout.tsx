@@ -22,10 +22,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <UserProvider>
           <PageTransitionProvider>
             <SessionProvider>
+              <GlobalWarmer />
               <RefreshProvider>
                 <PlaylistProvider>
                   <ModalProvider />
-                  <GlobalWarmer />
+                  
                   <SideBar>
                     {children}
                   </SideBar>
