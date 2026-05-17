@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
 import useAuthModal from "@/hooks/useAuthModal";
 import useUploadModal from "@/hooks/useUploadModal";
 import { useUser } from "@/hooks/useUser";
@@ -9,61 +7,13 @@ import { Playlist } from "@/types";
 import { AiOutlinePlus } from "react-icons/ai";
 import { TbPlaylist } from "react-icons/tb";
 import PlaylistItem from "@/app/playlists/components/PlaylistsItem";
-
-const supabase = createClient();
+import { usePlaylists } from "@/hooks/usePlaylists";
 
 const Biblioteca = () => {
   const authModal = useAuthModal();
   const uploadModal = useUploadModal();
   const { user, userDetails } = useUser();
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-
-  const fetchPlaylists = useCallback(async () => {
-    if (!user?.id) return;
-
-    const { data, error } = await supabase
-      .from("Playlists")
-      .select("*, playlist_songs(Songs(*))")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error || !data) return;
-
-    setPlaylists(
-      data.map((playlist: any) => ({
-        ...playlist,
-        songs: (playlist.playlist_songs ?? [])
-          .map((ps: any) => ps.Songs)
-          .filter(Boolean),
-      }))
-    );
-  }, [user?.id]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
-
-  // Realtime — watch for any change to this user's playlists
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel(`biblioteca-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "Playlists",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => fetchPlaylists()
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id, fetchPlaylists]);
+  const { playlists } = usePlaylists();
 
   const onClick = () => {
     if (!user) return authModal.onOpen("sign_up");

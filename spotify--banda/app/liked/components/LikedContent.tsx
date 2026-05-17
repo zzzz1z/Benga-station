@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import LikedButton from "@/components/LikedButton";
 import MediaItem from "@/components/MediaItem";
@@ -6,8 +6,12 @@ import useOnPlay from "@/hooks/useOnPlay";
 import { useUser } from "@/hooks/useUser";
 import { Song } from "@/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { BounceLoader } from "react-spinners";
+import { useRefresh } from "@/hooks/useRefresh";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 interface LikedContentProps {
     songs: Song[];
@@ -18,19 +22,37 @@ const getSongPlayerId = (song: Song): string =>
         ? `yt_${song.youtube_video_id}`
         : String(song.id);
 
-const LikedContent: React.FC<LikedContentProps> = ({ songs }) => {
+const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
     const router = useRouter();
     const { isLoading, user } = useUser();
-    const onPlay = useOnPlay(songs);
+    const [songs, setSongs] = useState<Song[]>(initialSongs);
     const [mounted, setMounted] = useState(false);
+    const { refreshKey } = useRefresh();
+    const onPlay = useOnPlay(songs);
 
     useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
-        if (!isLoading && !user) {
-            router.replace('/');
-        }
+        if (!isLoading && !user) router.replace('/');
     }, [isLoading, user, router]);
+
+    const fetchSongs = useCallback(async () => {
+        if (!user?.id) return;
+        const { data, error } = await supabase
+            .from('liked_songs')
+            .select('Songs(*)')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (!error && data) {
+            setSongs(data.map((item: any) => item.Songs).filter(Boolean));
+        }
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (refreshKey === 0) return;
+        fetchSongs();
+    }, [refreshKey]);
 
     if (!mounted || isLoading) {
         return (

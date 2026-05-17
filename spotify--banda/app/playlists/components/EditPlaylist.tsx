@@ -5,9 +5,10 @@ import { useForm, FieldValues, SubmitHandler } from 'react-hook-form';
 import { createClient } from '@/utils/supabase/client';
 import { Playlist } from '@/types';
 import { MdEdit } from 'react-icons/md';
-import Modal from '@/components/Modal'; // Ensure path matches your Modal component
-import Input from '@/components/Input'; // Ensure path matches your Input component
+import Modal from '@/components/Modal';
+import Input from '@/components/Input';
 import toast from 'react-hot-toast';
+import { usePlaylists } from '@/hooks/usePlaylists';
 
 interface EditPlaylistProps {
     data: Playlist;
@@ -18,8 +19,9 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const supabase = createClient();
+    const { refreshPlaylists } = usePlaylists();
 
-    const { register, handleSubmit, reset } = useForm<FieldValues>({
+    const { register, handleSubmit } = useForm<FieldValues>({
         defaultValues: {
             title: data.title,
             description: data.description || '',
@@ -27,29 +29,24 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
     });
 
     const onChange = (open: boolean) => {
-        if (!open) {
-            setIsOpen(false);
-        }
+        if (!open) setIsOpen(false);
     };
 
     const onSubmit: SubmitHandler<FieldValues> = async (values) => {
         try {
             setIsLoading(true);
-
             const { error } = await supabase
                 .from('Playlists')
-                .update({
-                    title: values.title,
-                    description: values.description,
-                })
+                .update({ title: values.title, description: values.description })
                 .eq('id', data.id);
 
             if (error) throw error;
 
             toast.success('Playlist atualizada!');
+            await refreshPlaylists();
             onUpdate();
             setIsOpen(false);
-        } catch (error) {
+        } catch {
             toast.error('Erro ao atualizar playlist.');
         } finally {
             setIsLoading(false);
@@ -58,7 +55,7 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
 
     return (
         <div>
-            <button 
+            <button
                 onClick={() => setIsOpen(true)}
                 className="hover:text-white transition text-neutral-400"
             >

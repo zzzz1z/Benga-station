@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
 import { usePageTransition } from '@/hooks/PageTransitionProvider';
+import { useRefresh } from '@/hooks/useRefresh';
 
 const supabase = createClient();
 
@@ -48,8 +49,8 @@ const PlaylistDetails: React.FC = () => {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
   const { startLoading, stopLoading } = usePageTransition();
-  // Track whether stopLoading has been called so we never double-call it
   const loadingActiveRef = useRef(false);
+  const { refreshKey } = useRefresh();
 
   const safeStopLoading = () => {
     if (loadingActiveRef.current) {
@@ -58,7 +59,7 @@ const PlaylistDetails: React.FC = () => {
     }
   };
 
-  const fetchPlaylist = async () => {
+  const fetchPlaylist = useCallback(async () => {
     if (!id) {
       setLoading(false);
       setSongsLoading(false);
@@ -76,7 +77,6 @@ const PlaylistDetails: React.FC = () => {
       ]);
 
       if (playlistRes.error) {
-        console.error('Error fetching playlist:', playlistRes.error);
         setError('Playlist não encontrada.');
         setLoading(false);
         setSongsLoading(false);
@@ -88,7 +88,6 @@ const PlaylistDetails: React.FC = () => {
       setLoading(false);
 
       if (songRes.error) {
-        console.error('Error fetching songs:', songRes.error);
         setSongsLoading(false);
         safeStopLoading();
         return;
@@ -112,22 +111,24 @@ const PlaylistDetails: React.FC = () => {
           body: JSON.stringify({ videoIds: ytIds }),
         }).catch(() => {});
       }
-    } catch (err) {
-      console.error('Unexpected error:', err);
+    } catch {
       setError('Erro inesperado.');
       setLoading(false);
       setSongsLoading(false);
       safeStopLoading();
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchPlaylist();
-    // On unmount, always stop the loading overlay so it never gets stuck
-    return () => {
-      safeStopLoading();
-    };
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { safeStopLoading(); };
+  }, [id]);
+
+  // Respond to floating refresh button
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    fetchPlaylist();
+  }, [refreshKey]);
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,7 +189,6 @@ const PlaylistDetails: React.FC = () => {
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative">
-
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none z-0"
           style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }}
@@ -198,7 +198,6 @@ const PlaylistDetails: React.FC = () => {
 
         <div className="mt-20 relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-x-8 px-6">
-
             <div
               className="relative h-56 w-56 md:h-64 md:w-64 group flex-shrink-0 cursor-pointer transition-transform active:scale-95"
               onClick={() => coverInputRef.current?.click()}

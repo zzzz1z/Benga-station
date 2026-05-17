@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { HiSignal } from 'react-icons/hi2';
 import usePlayer from '@/hooks/usePlayer';
+import { usePlaylists } from '@/hooks/usePlaylists';
+import { useRefresh } from '@/hooks/useRefresh';
 
 export function markDataStale() {
   if (typeof window !== 'undefined') {
@@ -15,8 +17,11 @@ const FloatingRefreshButton = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { activeID } = usePlayer();
+  const { refreshPlaylists } = usePlaylists();
+  const { triggerRefresh } = useRefresh();
   const [isStale, setIsStale] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
   const [changeCount, setChangeCount] = useState(0);
 
   const bottomClass = activeID ? 'bottom-28 md:bottom-24' : 'bottom-6';
@@ -38,12 +43,16 @@ const FloatingRefreshButton = () => {
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
+    await refreshPlaylists();
+    triggerRefresh();
     router.refresh();
     await new Promise(r => setTimeout(r, 800));
     setIsStale(false);
     setChangeCount(0);
     setIsRefreshing(false);
-  }, [isRefreshing, router]);
+    setRefreshed(true);
+    setTimeout(() => setRefreshed(false), 1500);
+  }, [isRefreshing, router, refreshPlaylists, triggerRefresh]);
 
   return (
     <button
@@ -61,24 +70,35 @@ const FloatingRefreshButton = () => {
       <div
         className={`
           relative flex items-center justify-center w-10 h-10
-          border border-red-900/60 bg-neutral-950
-          ${isStale ? 'border-red-500/80' : ''}
+          border bg-neutral-950 transition-all duration-300
+          ${isStale ? 'border-red-500/80' : refreshed ? 'border-green-500/80' : 'border-red-900/60'}
         `}
         style={{
           clipPath: 'polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))',
-          boxShadow: isStale ? '0 0 16px rgba(239,68,68,0.4)' : 'none',
+          boxShadow: isStale
+            ? '0 0 16px rgba(239,68,68,0.4)'
+            : refreshed
+            ? '0 0 16px rgba(74,222,128,0.4)'
+            : 'none',
         }}
       >
         <HiSignal
           size={16}
           className={`
             transition-colors duration-300
-            ${isRefreshing ? 'text-red-400 animate-pulse' : isStale ? 'text-red-500' : 'text-neutral-500'}
+            ${isRefreshing ? 'text-red-400 animate-pulse'
+              : refreshed ? 'text-green-400'
+              : isStale ? 'text-red-500'
+              : 'text-neutral-500'}
           `}
         />
 
         {isStale && !isRefreshing && (
-          <span className="absolute inset-0 rounded-none border border-red-500/40 animate-ping" />
+          <span className="absolute inset-0 border border-red-500/40 animate-ping" />
+        )}
+
+        {refreshed && (
+          <span className="absolute inset-0 border border-green-500/40 animate-ping" />
         )}
 
         {isStale && changeCount > 0 && (
@@ -91,13 +111,15 @@ const FloatingRefreshButton = () => {
         )}
       </div>
 
-      {isStale && (
+      {(isStale || refreshed) && (
         <div className="absolute right-12 top-1/2 -translate-y-1/2 whitespace-nowrap">
           <span
-            className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-neutral-950 border border-red-900/40 px-2 py-1"
+            className={`text-[9px] font-black uppercase tracking-widest bg-neutral-950 border px-2 py-1 ${
+              refreshed ? 'text-green-400 border-green-900/40' : 'text-red-400 border-red-900/40'
+            }`}
             style={{ clipPath: 'polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)' }}
           >
-            Atualizar
+            {refreshed ? '✓ Atualizado' : 'Atualizar'}
           </span>
         </div>
       )}

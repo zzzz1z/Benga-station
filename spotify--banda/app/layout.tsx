@@ -9,14 +9,12 @@ import SideBar from '@/components/SideBar';
 import { SessionProvider } from '@/providers/SessionContext';
 import { PageTransitionProvider } from '@/hooks/PageTransitionProvider';
 import FloatingRefreshButton from '@/components/FloatingRefreshButton';
+import { PlaylistProvider } from '@/hooks/usePlaylists';
+import { RefreshProvider } from '@/hooks/useRefresh';
 
 const font = Figtree({ subsets: ['latin'] });
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={font.className}>
@@ -24,14 +22,17 @@ export default async function RootLayout({
         <UserProvider>
           <PageTransitionProvider>
             <SessionProvider>
-              <ModalProvider />
-              <GlobalWarmer />
-              <SideBar>
-                {children}
-              </SideBar>
-              <Player />
-              <FloatingRefreshButton />
-
+              <RefreshProvider>
+                <PlaylistProvider>
+                  <ModalProvider />
+                  <GlobalWarmer />
+                  <SideBar>
+                    {children}
+                  </SideBar>
+                  <Player />
+                  <FloatingRefreshButton />
+                </PlaylistProvider>
+              </RefreshProvider>
             </SessionProvider>
           </PageTransitionProvider>
         </UserProvider>
