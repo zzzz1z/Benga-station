@@ -48,59 +48,85 @@ const PlaylistDetails: React.FC = () => {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
   const { startLoading, stopLoading } = usePageTransition();
+  // Track whether stopLoading has been called so we never double-call it
+  const loadingActiveRef = useRef(false);
+
+  const safeStopLoading = () => {
+    if (loadingActiveRef.current) {
+      loadingActiveRef.current = false;
+      stopLoading();
+    }
+  };
 
   const fetchPlaylist = async () => {
-    if (!id) { setLoading(false); setSongsLoading(false); return; }
-
-    setError(null);
-    startLoading();
-
-    const [playlistRes, songRes] = await Promise.all([
-      supabase.from('Playlists').select('*').eq('id', id).maybeSingle(),
-      supabase.from('playlist_songs').select('Songs(*)').eq('playlist_id', id),
-    ]);
-
-    if (playlistRes.error) {
-      console.error('Error fetching playlist:', playlistRes.error);
-      setError('Playlist não encontrada.');
+    if (!id) {
       setLoading(false);
       setSongsLoading(false);
-      stopLoading();
       return;
     }
 
-    setPlaylist(playlistRes.data);
-    setLoading(false);
+    setError(null);
+    loadingActiveRef.current = true;
+    startLoading();
 
-    if (songRes.error) {
-      console.error('Error fetching songs:', songRes.error);
+    try {
+      const [playlistRes, songRes] = await Promise.all([
+        supabase.from('Playlists').select('*').eq('id', id).maybeSingle(),
+        supabase.from('playlist_songs').select('Songs(*)').eq('playlist_id', id),
+      ]);
+
+      if (playlistRes.error) {
+        console.error('Error fetching playlist:', playlistRes.error);
+        setError('Playlist não encontrada.');
+        setLoading(false);
+        setSongsLoading(false);
+        safeStopLoading();
+        return;
+      }
+
+      setPlaylist(playlistRes.data);
+      setLoading(false);
+
+      if (songRes.error) {
+        console.error('Error fetching songs:', songRes.error);
+        setSongsLoading(false);
+        safeStopLoading();
+        return;
+      }
+
+      const fetchedSongs = (songRes.data ?? []).map((item: any) => item.Songs).filter(Boolean);
+      setSongs(fetchedSongs);
       setSongsLoading(false);
-      stopLoading();
-      return;
-    }
+      safeStopLoading();
 
-    const fetchedSongs = (songRes.data ?? []).map((item: any) => item.Songs).filter(Boolean);
-    setSongs(fetchedSongs);
-    setSongsLoading(false);
-    stopLoading();
+      setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
 
-    setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
+      const ytIds = fetchedSongs
+        .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
+        .map((s: any) => s.youtube_video_id);
 
-    const ytIds = fetchedSongs
-      .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
-      .map((s: any) => s.youtube_video_id);
-
-    if (ytIds.length) {
-      fetch('/api/preextract-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds: ytIds }),
-      }).catch(() => {});
+      if (ytIds.length) {
+        fetch('/api/preextract-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoIds: ytIds }),
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Erro inesperado.');
+      setLoading(false);
+      setSongsLoading(false);
+      safeStopLoading();
     }
   };
 
   useEffect(() => {
     fetchPlaylist();
+    // On unmount, always stop the loading overlay so it never gets stuck
+    return () => {
+      safeStopLoading();
+    };
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
