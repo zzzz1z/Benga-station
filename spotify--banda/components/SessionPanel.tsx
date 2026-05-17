@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useUser } from '@/hooks/useUser';
 import { SessionMember } from '@/hooks/useSession';
 import Image from 'next/image';
@@ -35,7 +36,6 @@ const MemberCard = ({
 
   return (
     <div className="flex items-center gap-x-3 py-2 px-3 border border-red-900/20 bg-neutral-900/60 relative group">
-      {/* Avatar */}
       <div
         className="relative h-9 w-9 flex-shrink-0 overflow-hidden border border-red-900/40"
         style={{ clipPath: 'polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)' }}
@@ -66,7 +66,6 @@ const MemberCard = ({
         </span>
       </div>
 
-      {/* Permission toggle — only visible to host, not for self */}
       {isSessionHost && !isMe && onTogglePermission && (
         <button
           onClick={() => onTogglePermission(member.userId, !member.isHost)}
@@ -83,17 +82,28 @@ const MemberCard = ({
   );
 };
 
-const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
+const PanelContent: React.FC<SessionPanelProps> = ({ onClose }) => {
   const { user } = useUser();
   const { session, isConnecting, error, createSession, joinSession, leave, grantPermission } = useSessionContext();
   const [joinCode, setJoinCode] = useState('');
   const [view, setView] = useState<'home' | 'join'>('home');
 
+  // Lock body scroll while open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const handleCreate = async () => {
     const code = await createSession();
-    if (code) {
-      toast.success('Sessão criada!');
-    }
+    if (code) toast.success('Sessão criada!');
   };
 
   const handleJoin = async () => {
@@ -111,8 +121,7 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
 
   const handleCopyLink = () => {
     if (!session?.code) return;
-    const url = `${window.location.origin}/session/${session.code}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${session.code}`);
     toast.success('Link copiado!');
   };
 
@@ -129,24 +138,28 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-end md:items-center justify-center"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    // Full-screen overlay — outside all player/sidebar stacking contexts
+    <div className="fixed inset-0 z-[999] flex items-end md:items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      {/* Panel — no clipPath on outer wrapper, no overflow-hidden */}
+      {/* Panel */}
       <div
         className="relative z-10 w-full md:w-[440px] md:max-h-[85vh] bg-neutral-950 border border-red-900/40 flex flex-col"
         style={{
           boxShadow: '0 0 40px rgba(239,68,68,0.15), 0 0 1px rgba(239,68,68,0.4)',
         }}
+        // Stop clicks inside the panel from closing it
+        onClick={e => e.stopPropagation()}
       >
-        {/* Top accent line */}
-        <div className="h-px w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
+        {/* Top accent */}
+        <div className="h-px w-full flex-shrink-0"
+          style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
 
-        {/* Header — fixed, never scrolls away */}
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
           <div className="flex items-center gap-x-2">
             <HiSignal size={18} className="text-red-500" />
@@ -160,10 +173,8 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
         {/* Scrollable body */}
         <div className="px-5 pb-6 flex flex-col gap-y-4 overflow-y-auto flex-1">
 
-          {/* ── ACTIVE SESSION ── */}
           {session ? (
             <>
-              {/* Session code + share */}
               <div className="border border-red-900/30 bg-red-900/5 p-4 flex flex-col gap-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -187,7 +198,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                     </button>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-x-2">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-[10px] font-mono text-red-400/80 uppercase tracking-widest">
@@ -196,7 +206,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* Members */}
               <div>
                 <div className="flex items-center gap-x-2 mb-2">
                   <IoPeople size={14} className="text-red-500/60" />
@@ -223,25 +232,21 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                 </p>
               )}
 
-              {/* Leave */}
               <button
                 onClick={handleLeave}
-                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition text-xs font-black uppercase tracking-widest mt-auto"
+                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition text-xs font-black uppercase tracking-widest"
               >
                 <IoLogOut size={16} />
                 {session.isHost && session.members.length > 1 ? 'Transferir e Sair' : 'Sair da Sessão'}
               </button>
             </>
-
           ) : (
             <>
-              {/* ── NO SESSION — create or join ── */}
               {view === 'home' && (
                 <div className="flex flex-col gap-y-3">
                   <p className="text-neutral-400 text-xs leading-relaxed">
                     Ouve música em sincronia com os teus amigos em tempo real.
                   </p>
-
                   <button
                     onClick={handleCreate}
                     disabled={isConnecting}
@@ -255,7 +260,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                       </span>
                     ) : '+ Criar Sessão'}
                   </button>
-
                   <button
                     onClick={() => setView('join')}
                     className="w-full py-3 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition font-black uppercase tracking-widest text-sm"
@@ -274,7 +278,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                   >
                     ← Voltar
                   </button>
-
                   <div className="flex flex-col gap-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
                       Código ou Link
@@ -288,7 +291,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
                       onKeyDown={e => e.key === 'Enter' && handleJoin()}
                     />
                   </div>
-
                   <button
                     onClick={handleJoin}
                     disabled={isConnecting || !joinCode.trim()}
@@ -315,10 +317,22 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
         </div>
 
         {/* Bottom accent */}
-        <div className="h-px w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
+        <div className="h-px w-full flex-shrink-0"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
       </div>
     </div>
   );
+};
+
+// Portal wrapper — renders outside the player DOM tree entirely
+const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(<PanelContent onClose={onClose} />, document.body);
 };
 
 export default SessionPanel;
