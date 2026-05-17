@@ -4,10 +4,12 @@ import PageContent from "./components/PageContent";
 import getSongs from "@/actions/getSongs";
 import { HiLightningBolt, HiSparkles, HiDatabase } from "react-icons/hi";
 
-export const dynamic = 'force-dynamic';
+// Revalidate every 60 seconds instead of force-dynamic
+// Home songs aren't per-user so they can be cached
+export const revalidate = 60;
 
 export default async function Home() {
-  const allSongs = await getSongs();
+  const { songs: allSongs } = await getSongs('', 0);
 
   const trendingSongs = allSongs.slice(0, 15);
   const newReleases = [...allSongs].reverse().slice(0, 15);
