@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { markDataStale } from "./FloatingRefreshButton";
 
 const supabase = createClient();
 
@@ -77,6 +78,8 @@ const AuthModal = () => {
 
             toast.success("Login bem-sucedido!");
             authModal.onClose();
+            markDataStale();
+            
             router.refresh();
         } catch (error) {
             toast.error("Ocorreu um erro. Tente novamente.");
@@ -137,6 +140,7 @@ const AuthModal = () => {
                         console.error("Erro ao inserir conta:", insertError);
                     }
                 }
+                markDataStale();
 
                 router.refresh();
                 authModal.onClose();

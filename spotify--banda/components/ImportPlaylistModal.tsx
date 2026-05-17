@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { IoClose } from 'react-icons/io5';
 import { FaSpotify, FaYoutube } from 'react-icons/fa';
 import { useImportPlaylist } from '@/hooks/useImportPlaylist';
+import { markDataStale } from './FloatingRefreshButton';
 
 interface ImportPlaylistModalProps {
   isOpen: boolean;
@@ -46,6 +47,8 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
   const handleDone = () => {
     if (state.playlistId) {
       router.push(`/playlists/${state.playlistId}`);
+      markDataStale();
+
       router.refresh();
     }
     onClose();

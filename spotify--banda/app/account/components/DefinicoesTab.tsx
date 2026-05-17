@@ -9,6 +9,7 @@ import useAdminModal from '@/hooks/useAdminModal';
 import toast from 'react-hot-toast';
 import { CiLock } from 'react-icons/ci';
 import ButtonUploadOrChange from './ButtonUploadOrChange';
+import { markDataStale } from '@/components/FloatingRefreshButton';
 
 const supabase = createClient();
 
@@ -36,6 +37,7 @@ const DefinicoesTab = () => {
             toast.error('Erro ao atualizar informações.');
         } else {
             toast.success('Informações atualizadas!');
+            markDataStale();
             router.refresh();
         }
         setLoadingInfo(false);

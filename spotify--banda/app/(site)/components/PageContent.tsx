@@ -7,10 +7,11 @@ import { useUser } from "@/hooks/useUser";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useMemo } from "react";
 import { HiFire } from "react-icons/hi";
+import { useQueueExtender } from "@/hooks/useQueueExtender";
 
 interface PageContentProps {
-  songs: Song[];       // displayed songs (sliced/randomized)
-  allSongs: Song[];    // full list used as queue source
+  songs: Song[];
+  allSongs: Song[];
 }
 
 const getSongPlayerId = (song: Song): string =>
@@ -23,6 +24,9 @@ const PageContent: React.FC<PageContentProps> = ({ songs, allSongs }) => {
   const { user } = useUser();
   const authModal = useAuthModal();
 
+  // Silently extend queue when running low
+  useQueueExtender({ enabled: true });
+
   const displayed = useMemo(() =>
     [...songs].sort(() => Math.random() - 0.5).slice(0, 8),
     [songs]
@@ -34,18 +38,13 @@ const PageContent: React.FC<PageContentProps> = ({ songs, allSongs }) => {
     const clickedId = getSongPlayerId(song);
     const { ids, activeID } = usePlayer.getState();
 
-    // Already playing this song — do nothing
     if (activeID === clickedId) return;
 
     if (ids.length > 0) {
-      // Queue exists — append if not present and jump to it
       const alreadyInQueue = ids.includes(clickedId);
-      if (!alreadyInQueue) {
-        player.appendToQueue([song]);
-      }
+      if (!alreadyInQueue) player.appendToQueue([song]);
       player.setId(clickedId);
     } else {
-      // No queue — set full allSongs as queue starting at clicked song
       player.setQueue(allSongs, clickedId);
     }
   };

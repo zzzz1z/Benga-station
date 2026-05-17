@@ -8,6 +8,7 @@ import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
 import { Song } from '@/types';
 import { useRouter } from 'next/navigation';
+import { markDataStale } from '@/components/FloatingRefreshButton';
 
 const supabase = createClient();
 
@@ -75,6 +76,8 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
 
       setSelectedSongIds([]);
       toast('Músicas adicionadas à playlist');
+      markDataStale();
+      
       router.refresh();
       onClose?.();
     } catch (error) {

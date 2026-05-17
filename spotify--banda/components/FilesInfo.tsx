@@ -8,6 +8,7 @@ import uniqid from "uniqid";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
 import { useRouter } from "next/navigation";
+import { markDataStale } from "./FloatingRefreshButton";
 
 const supabase = createClient();
 
@@ -145,11 +146,15 @@ const FilesInfo: React.FC = () => {
     if (failed.length === 0) {
       toast.success(`${total} música${total > 1 ? 's' : ''} enviada${total > 1 ? 's' : ''} com sucesso!`);
       setLocalFiles([]);
+      markDataStale();
+      
       router.refresh();
     } else if (succeeded > 0) {
       toast.success(`${succeeded} enviada${succeeded > 1 ? 's' : ''} com sucesso.`);
       toast.error(`Falhou: ${failed.join(', ')}`);
       setLocalFiles((prev) => prev.filter((f) => failed.includes(f.title)));
+      markDataStale();
+
       router.refresh();
     } else {
       toast.error("Todos os uploads falharam.");

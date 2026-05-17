@@ -24,6 +24,7 @@ interface PlayerStore {
   markFailed: (id: string) => void;
   setShuffleOn: (value: boolean) => void;
   setRepeatMode: (mode: RepeatMode) => void;
+  
 }
 
 const getSongPlayerId = (song: Song): string =>

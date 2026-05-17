@@ -4,7 +4,6 @@ import Image from "next/image";
 import getPlaylists from "@/actions/getPlaylists";
 import ImportPlaylistButton from "@/components/ImportPlaylistButton";
 
-export const dynamic = 'force-dynamic';
 
 const Liked = async () => {
   const playlist = await getPlaylists();

@@ -3,6 +3,8 @@ import SettingsContent from "./components/SettingsContent";
 import getLikedSongs from "@/actions/getLikedSongs";
 import getPlaylists from "@/actions/getPlaylists";
 
+export const dynamic = 'force-dynamic';
+
 const Account = async () => {
     const [likedSongs, playlists] = await Promise.all([
         getLikedSongs(),

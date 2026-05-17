@@ -1,9 +1,11 @@
 'use client';
 
+import { markDataStale } from '@/components/FloatingRefreshButton';
 import { useUser } from '@/hooks/useUser';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 const supabase = createClient();
 
@@ -33,9 +35,11 @@ const Settingsview = () => {
 
     if (error) {
       console.error('Erro ao atualizar nomes:', error);
-      alert('Erro ao atualizar nomes.');
+      toast.error('Erro ao atualizar nomes.');
     } else {
-      alert('Nomes atualizados com sucesso!');
+      toast.success('Nomes atualizados com sucesso!');
+      markDataStale();
+      
       router.refresh();
     }
 

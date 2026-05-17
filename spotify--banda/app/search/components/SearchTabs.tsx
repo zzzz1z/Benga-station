@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import SearchContent from './SearchContent';
 import YTSearchContent from '@/components/YTSearchContent';
 import { Song } from '@/types';
+import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 
 interface SearchTabsProps {
   title: string;
@@ -12,9 +13,13 @@ interface SearchTabsProps {
   triggerYT?: boolean;
 }
 
+const TABS = ['library', 'youtube'] as const;
+type Tab = typeof TABS[number];
+
 const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, hasMore, triggerYT }) => {
-  const [tab, setTab] = useState<'library' | 'youtube'>('library');
+  const [tab, setTab] = useState<Tab>('library');
   const [submittedQuery, setSubmittedQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (triggerYT && title.trim().length >= 2) {
@@ -23,9 +28,21 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, hasMore, triggerY
     }
   }, [triggerYT, title]);
 
+  const onSwipeLeft = useCallback(() => {
+    setTab('youtube');
+    if (title.trim().length >= 2) setSubmittedQuery(title.trim());
+  }, [title]);
+
+  const onSwipeRight = useCallback(() => {
+    setTab('library');
+  }, []);
+
+  useSwipeTabs(containerRef, { onSwipeLeft, onSwipeRight });
+
   return (
-    <>
-      <div className="flex gap-x-4 px-6 mb-8 mt-4">
+    <div ref={containerRef} className="flex flex-col h-full">
+      {/* Tab bar */}
+      <div className="flex gap-x-4 px-6 mb-8 mt-4 flex-shrink-0">
         <button
           onClick={() => setTab('library')}
           className={`
@@ -39,7 +56,10 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, hasMore, triggerY
           [ Local_Files ]
         </button>
         <button
-          onClick={() => setTab('youtube')}
+          onClick={() => {
+            setTab('youtube');
+            if (title.trim().length >= 2) setSubmittedQuery(title.trim());
+          }}
           className={`
             relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
             ${tab === 'youtube'
@@ -50,14 +70,22 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, hasMore, triggerY
         >
           [ Global_YT ]
         </button>
+
+        {/* Swipe hint — mobile only, fades after first render */}
+        <span className="ml-auto text-[9px] text-neutral-700 font-mono uppercase tracking-widest self-center md:hidden">
+          ← desliza →
+        </span>
       </div>
 
-      {tab === 'youtube' ? (
-        <YTSearchContent query={submittedQuery} />
-      ) : (
-        <SearchContent songs={songs} hasMore={hasMore} query={title} />
-      )}
-    </>
+      {/* Content */}
+      <div className="flex-1">
+        {tab === 'youtube' ? (
+          <YTSearchContent query={submittedQuery} />
+        ) : (
+          <SearchContent songs={songs} hasMore={hasMore} query={title} />
+        )}
+      </div>
+    </div>
   );
 };
 

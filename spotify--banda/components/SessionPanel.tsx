@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/hooks/useUser';
 import { SessionMember } from '@/hooks/useSession';
 import Image from 'next/image';
@@ -34,10 +34,12 @@ const MemberCard = ({
     .toUpperCase();
 
   return (
-    <div className="flex items-center gap-x-3 py-2 px-3 rounded-none border border-red-900/20 bg-neutral-900/60 relative group">
+    <div className="flex items-center gap-x-3 py-2 px-3 border border-red-900/20 bg-neutral-900/60 relative group">
       {/* Avatar */}
-      <div className="relative h-9 w-9 flex-shrink-0 overflow-hidden border border-red-900/40"
-        style={{ clipPath: 'polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)' }}>
+      <div
+        className="relative h-9 w-9 flex-shrink-0 overflow-hidden border border-red-900/40"
+        style={{ clipPath: 'polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)' }}
+      >
         {member.avatarUrl ? (
           <Image fill src={member.avatarUrl} alt={member.fullName} className="object-cover" sizes="36px" unoptimized />
         ) : (
@@ -56,8 +58,10 @@ const MemberCard = ({
             <span className="text-[9px] text-red-400 font-mono uppercase tracking-widest">EU</span>
           )}
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-widest"
-          style={{ color: member.isHost ? '#f87171' : '#525252' }}>
+        <span
+          className="text-[10px] font-mono uppercase tracking-widest"
+          style={{ color: member.isHost ? '#f87171' : '#525252' }}
+        >
           {member.isHost ? '◆ CO-HOST' : '● OUVINTE'}
         </span>
       </div>
@@ -84,12 +88,10 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
   const { session, isConnecting, error, createSession, joinSession, leave, grantPermission } = useSessionContext();
   const [joinCode, setJoinCode] = useState('');
   const [view, setView] = useState<'home' | 'join'>('home');
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
 
   const handleCreate = async () => {
     const code = await createSession();
     if (code) {
-      setCreatedCode(code);
       toast.success('Sessão criada!');
     }
   };
@@ -116,7 +118,6 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
 
   const handleLeave = async () => {
     await leave();
-    setCreatedCode(null);
     setJoinCode('');
     toast('Saíste da sessão.', { icon: '👋' });
   };
@@ -128,24 +129,25 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end md:items-center justify-center"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-
+    <div
+      className="fixed inset-0 z-[90] flex items-end md:items-center justify-center"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
-      <div className="relative z-10 w-full md:w-[420px] bg-neutral-950 border border-red-900/40 md:rounded-none overflow-hidden"
+      {/* Panel — no clipPath on outer wrapper, no overflow-hidden */}
+      <div
+        className="relative z-10 w-full md:w-[440px] md:max-h-[85vh] bg-neutral-950 border border-red-900/40 flex flex-col"
         style={{
           boxShadow: '0 0 40px rgba(239,68,68,0.15), 0 0 1px rgba(239,68,68,0.4)',
-          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)',
-        }}>
+        }}
+      >
+        {/* Top accent line */}
+        <div className="h-px w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
 
-        {/* Top accent */}
-        <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4">
+        {/* Header — fixed, never scrolls away */}
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
           <div className="flex items-center gap-x-2">
             <HiSignal size={18} className="text-red-500" />
             <span className="text-white font-black uppercase tracking-widest text-sm">Sessão Conjunta</span>
@@ -155,9 +157,10 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
           </button>
         </div>
 
-        <div className="px-5 pb-6 flex flex-col gap-y-4">
+        {/* Scrollable body */}
+        <div className="px-5 pb-6 flex flex-col gap-y-4 overflow-y-auto flex-1">
 
-          {/* ACTIVE SESSION */}
+          {/* ── ACTIVE SESSION ── */}
           {session ? (
             <>
               {/* Session code + share */}
@@ -223,15 +226,16 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
               {/* Leave */}
               <button
                 onClick={handleLeave}
-                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition text-xs font-black uppercase tracking-widest"
+                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition text-xs font-black uppercase tracking-widest mt-auto"
               >
                 <IoLogOut size={16} />
                 {session.isHost && session.members.length > 1 ? 'Transferir e Sair' : 'Sair da Sessão'}
               </button>
             </>
+
           ) : (
             <>
-              {/* NO SESSION — create or join */}
+              {/* ── NO SESSION — create or join ── */}
               {view === 'home' && (
                 <div className="flex flex-col gap-y-3">
                   <p className="text-neutral-400 text-xs leading-relaxed">
@@ -311,7 +315,7 @@ const SessionPanel: React.FC<SessionPanelProps> = ({ onClose }) => {
         </div>
 
         {/* Bottom accent */}
-        <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
+        <div className="h-px w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
       </div>
     </div>
   );

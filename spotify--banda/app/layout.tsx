@@ -8,6 +8,7 @@ import UserProvider from '@/providers/userProvider';
 import SideBar from '@/components/SideBar';
 import { SessionProvider } from '@/providers/SessionContext';
 import { PageTransitionProvider } from '@/hooks/PageTransitionProvider';
+import FloatingRefreshButton from '@/components/FloatingRefreshButton';
 
 const font = Figtree({ subsets: ['latin'] });
 
@@ -29,6 +30,8 @@ export default async function RootLayout({
                 {children}
               </SideBar>
               <Player />
+              <FloatingRefreshButton />
+
             </SessionProvider>
           </PageTransitionProvider>
         </UserProvider>
