@@ -6,6 +6,7 @@ import ToasterProvider from '@/hooks/ToasterProvider';
 import ModalProvider from '@/providers/ModalProvider';
 import UserProvider from '@/providers/userProvider';
 import SideBar from '@/components/SideBar';
+import { SessionProvider } from '@/providers/SessionContext';
 import { PageTransitionProvider } from '@/hooks/PageTransitionProvider';
 
 const font = Figtree({ subsets: ['latin'] });
@@ -21,12 +22,14 @@ export default async function RootLayout({
         <ToasterProvider />
         <UserProvider>
           <PageTransitionProvider>
-            <ModalProvider />
-            <GlobalWarmer />
-            <SideBar>
-              {children}
-            </SideBar>
-            <Player />
+            <SessionProvider>
+              <ModalProvider />
+              <GlobalWarmer />
+              <SideBar>
+                {children}
+              </SideBar>
+              <Player />
+            </SessionProvider>
           </PageTransitionProvider>
         </UserProvider>
       </body>

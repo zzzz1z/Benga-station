@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import useLoadSongUrl from "@/hooks/useLoadSongUrl";
 import usePlayer, { loadFromSession } from "@/hooks/usePlayer";
 import useMediaSession from "@/hooks/useMediaSession";
 import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
+import { useSessionContext } from "@/providers/SessionContext";
 
 let audioCtx: AudioContext | null = null;
 
@@ -91,6 +92,40 @@ const Player = () => {
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
+  // ── Session integration ──
+  const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
+  const sessionRef = useRef(session);
+  useEffect(() => { sessionRef.current = session; }, [session]);
+
+  // Register this player's controls with the session context
+  useEffect(() => {
+    registerPlayer({ audioRef, setIsPlaying, setPosition });
+  }, [registerPlayer]);
+
+  // Broadcast playback state whenever it changes (only if canControl)
+  const broadcastCurrentState = useCallback(() => {
+    if (!sessionRef.current?.canControl) return;
+    const audio = audioRef.current;
+    broadcastState({
+      activeID: usePlayer.getState().activeID ?? null,
+      isPlaying: !!(audio && !audio.paused),
+      position: audio?.currentTime ?? 0,
+      timestamp: Date.now(),
+    });
+  }, [broadcastState]);
+
+  // Broadcast queue when it changes (only host)
+  const prevQueueRef = useRef<string>('');
+  useEffect(() => {
+    const { ids, songs: songMap, activeID: aid } = usePlayer.getState();
+    const key = ids.join(',') + (aid ?? '');
+    if (key === prevQueueRef.current) return;
+    prevQueueRef.current = key;
+    if (sessionRef.current?.isHost) {
+      broadcastQueue(ids, songMap, aid ?? '');
+    }
+  });
 
   const handleEnded = () => {
     if (endedFiredRef.current) return;
@@ -260,6 +295,7 @@ const Player = () => {
         setIsPlaying(true);
         setPosition(0);
         shouldBePlayingRef.current = true;
+        broadcastCurrentState();
       }).catch(() => {
         setIsLoading(false);
         shouldBePlayingRef.current = true;
@@ -288,6 +324,9 @@ const Player = () => {
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
+    // Guests without permission can't control
+    if (session && !session.canControl) return;
+
     if (isPlaying) {
       audio.pause();
       shouldBePlayingRef.current = false;
@@ -295,10 +334,18 @@ const Player = () => {
       safePlay(audio).catch(() => {});
       shouldBePlayingRef.current = true;
     }
+    // Broadcast after a tick so state has updated
+    setTimeout(broadcastCurrentState, 50);
   };
 
-  const handleNext     = () => playerRef.current.playNext();
+  const handleNext = () => {
+    if (session && !session.canControl) return;
+    playerRef.current.playNext();
+    setTimeout(broadcastCurrentState, 200);
+  };
+
   const handlePrevious = () => {
+    if (session && !session.canControl) return;
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
@@ -306,12 +353,15 @@ const Player = () => {
     } else {
       playerRef.current.playPrevious();
     }
+    setTimeout(broadcastCurrentState, 200);
   };
 
   const handleSeek = (value: number) => {
+    if (session && !session.canControl) return;
     if (audioRef.current) {
       audioRef.current.currentTime = value;
       setPosition(value);
+      broadcastCurrentState();
     }
   };
 
@@ -321,8 +371,8 @@ const Player = () => {
     isPlaying,
     (song ?? {}) as Song,
     audioRef,
-    () => { safePlay(audioRef.current!).catch(() => {}); shouldBePlayingRef.current = true;  },
-    () => { audioRef.current?.pause();                    shouldBePlayingRef.current = false; }
+    () => { safePlay(audioRef.current!).catch(() => {}); shouldBePlayingRef.current = true; setTimeout(broadcastCurrentState, 50); },
+    () => { audioRef.current?.pause(); shouldBePlayingRef.current = false; setTimeout(broadcastCurrentState, 50); }
   );
 
   if (!isMounted) return null;
@@ -344,7 +394,11 @@ const Player = () => {
         />
       )}
       <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] pb-[30px] border-t border-red-900/40 px-4 z-[40]">
-        <PlayerContent {...sharedProps} onExpand={() => setIsExpanded(true)} />
+        <PlayerContent
+          {...sharedProps}
+          onExpand={() => setIsExpanded(true)}
+          session={session}
+        />
       </div>
     </>
   );
