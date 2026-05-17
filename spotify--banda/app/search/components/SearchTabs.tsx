@@ -8,10 +8,11 @@ import { Song } from '@/types';
 interface SearchTabsProps {
   title: string;
   songs: Song[];
+  hasMore: boolean;
   triggerYT?: boolean;
 }
 
-const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, triggerYT }) => {
+const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, hasMore, triggerYT }) => {
   const [tab, setTab] = useState<'library' | 'youtube'>('library');
   const [submittedQuery, setSubmittedQuery] = useState('');
 
@@ -29,8 +30,8 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, triggerYT }) => {
           onClick={() => setTab('library')}
           className={`
             relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
-            ${tab === 'library' 
-              ? 'text-white border-b-2 border-red-600' 
+            ${tab === 'library'
+              ? 'text-white border-b-2 border-red-600'
               : 'text-neutral-500 hover:text-white border-b-2 border-transparent'
             }
           `}
@@ -41,8 +42,8 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, triggerYT }) => {
           onClick={() => setTab('youtube')}
           className={`
             relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
-            ${tab === 'youtube' 
-              ? 'text-red-500 border-b-2 border-red-500' 
+            ${tab === 'youtube'
+              ? 'text-red-500 border-b-2 border-red-500'
               : 'text-neutral-500 hover:text-white border-b-2 border-transparent'
             }
           `}
@@ -54,7 +55,7 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs, triggerYT }) => {
       {tab === 'youtube' ? (
         <YTSearchContent query={submittedQuery} />
       ) : (
-        <SearchContent songs={songs} />
+        <SearchContent songs={songs} hasMore={hasMore} query={title} />
       )}
     </>
   );

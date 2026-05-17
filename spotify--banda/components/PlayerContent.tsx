@@ -60,7 +60,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
   const SessionButton = ({ small = false }: { small?: boolean }) => (
     <button
       onClick={() => setShowSession(true)}
-      className={`relative flex items-center gap-x-1 border transition ${
+      className={`relative flex items-center gap-x-1 border transition flex-shrink-0 ${
         session
           ? 'border-red-500/60 text-red-400 bg-red-900/10 hover:bg-red-900/20'
           : 'border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900/40'
@@ -87,7 +87,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
         {/* Guest lock banner */}
         {isGuest && (
-          <div className="absolute top-0 left-0 right-0 flex justify-center">
+          <div className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none">
             <div className="bg-red-900/30 border-x border-b border-red-900/40 px-3 py-0.5">
               <span className="text-[9px] font-mono text-red-400/80 uppercase tracking-widest">
                 ● Sessão ao vivo · Só o host controla
@@ -96,129 +96,78 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           </div>
         )}
 
-        {/* ── MOBILE LAYOUT ── */}
+        {/* ── MOBILE ── */}
         <div className="flex md:hidden flex-col h-full justify-between py-2">
           <div className="flex items-center gap-x-3 flex-1 min-w-0">
-            {/* Album art */}
-            <div
-              onClick={onExpand}
-              className="relative h-12 w-12 flex-shrink-0 border border-red-900/50 overflow-hidden cursor-pointer"
-            >
-              <Image
-                fill
-                src={imageUrl ?? '/images/likedit.png'}
-                alt={song.title}
-                className="object-cover"
-                sizes="48px"
-                unoptimized
-              />
+            <div onClick={onExpand} className="relative h-12 w-12 flex-shrink-0 border border-red-900/50 overflow-hidden cursor-pointer">
+              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title} className="object-cover" sizes="48px" unoptimized />
             </div>
-
-            {/* Title + author */}
-            <div
-              onClick={onExpand}
-              className="flex flex-col min-w-0 flex-1 cursor-pointer"
-            >
-              <p className="text-white text-sm font-black uppercase tracking-tighter truncate leading-tight">
-                {song.title}
-              </p>
-              <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">
-                {song.author}
-              </p>
+            <div onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer">
+              <p className="text-white text-sm font-black uppercase tracking-tighter truncate leading-tight">{song.title}</p>
+              <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
             </div>
-
-            {/* Controls + session */}
             <div className="flex items-center gap-x-1.5 flex-shrink-0">
               <SessionButton small />
-              <AiFillStepBackward
-                onClick={onPrevious}
-                size={20}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`}
-              />
-              <div
-                onClick={onPlay}
-                className={`flex items-center justify-center h-9 w-9 border border-red-600/40 bg-red-600/5 transition ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer hover:bg-red-600/20'}`}
-              >
+              <AiFillStepBackward onClick={onPrevious} size={20}
+                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`} />
+              <div onClick={onPlay}
+                className={`flex items-center justify-center h-9 w-9 border border-red-600/40 bg-red-600/5 transition ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer hover:bg-red-600/20'}`}>
                 {renderPlayButton(20)}
               </div>
-              <AiFillStepForward
-                onClick={onNext}
-                size={20}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`}
-              />
+              <AiFillStepForward onClick={onNext} size={20}
+                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`} />
             </div>
           </div>
-
           <div className="w-full pt-1">
             <MusicSlider value={position} onChange={onSeek} max={duration} />
           </div>
         </div>
 
-        {/* ── DESKTOP LAYOUT ── */}
-        <div className="hidden md:grid grid-cols-3 items-center w-full">
-          {/* Song info */}
-          <div className="flex items-center space-x-4 min-w-0">
-            <div
-              onClick={onExpand}
-              className="cursor-pointer flex items-center gap-x-3 flex-1 min-w-0 group"
-            >
-              <div className="relative h-14 w-14 flex-shrink-0 rounded-none border border-red-900/50 overflow-hidden">
-                <Image
-                  fill
-                  src={imageUrl ?? '/images/likedit.png'}
-                  alt={song.title}
-                  className="object-cover grayscale-[0.3] group-hover:grayscale-0 transition"
-                  sizes="56px"
-                  unoptimized
-                />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <p className="text-white text-sm font-black uppercase tracking-tighter truncate">
-                  {song.title}
-                </p>
-                <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">
-                  {song.author}
-                </p>
-              </div>
+        {/* ── DESKTOP ── */}
+        <div className="hidden md:flex flex-row items-center w-full h-full px-2">
+
+          {/* LEFT — song info, takes up remaining space */}
+          <div className="flex items-center gap-x-3 flex-1 min-w-0 overflow-hidden">
+            <div onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
+              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
+                className="object-cover grayscale-[0.3] group-hover:grayscale-0 transition" sizes="52px" unoptimized />
             </div>
-            <LikedButton songId={String(song.id)} />
+            <div onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer overflow-hidden">
+              <p className="text-white text-sm font-black uppercase tracking-tighter truncate">{song.title}</p>
+              <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
+            </div>
+            <div className="flex-shrink-0">
+              <LikedButton songId={String(song.id)} />
+            </div>
           </div>
 
-          {/* Center controls */}
-          <div className="flex flex-col items-center justify-center w-full">
-            <div className="flex justify-center items-center gap-8 mb-1">
-              <AiFillStepBackward
-                onClick={onPrevious}
-                size={24}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`}
-              />
-              <div
-                onClick={onPlay}
-                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 transition shadow-[0_0_10px_rgba(239,68,68,0.1)] ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer hover:bg-red-600/20'}`}
-              >
-                {renderPlayButton(24)}
+          {/* CENTER — transport + seek, fixed width */}
+          <div className="flex flex-col items-center justify-center flex-shrink-0 w-[340px] xl:w-[420px] mx-6 gap-y-1.5">
+            <div className="flex items-center gap-x-7">
+              <AiFillStepBackward onClick={onPrevious} size={22}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 hover:text-red-500 cursor-pointer'}`} />
+              <div onClick={onPlay}
+                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer hover:bg-red-600/20'}`}>
+                {renderPlayButton(22)}
               </div>
-              <AiFillStepForward
-                onClick={onNext}
-                size={24}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`}
-              />
+              <AiFillStepForward onClick={onNext} size={22}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 hover:text-red-500 cursor-pointer'}`} />
             </div>
-            <div className="w-full max-w-[400px]">
+            <div className="w-full">
               <MusicSlider value={position} onChange={onSeek} max={duration} />
             </div>
           </div>
 
-          {/* Volume + session */}
-          <div className="flex justify-end items-center pr-4 gap-x-3 ml-auto">
+          {/* RIGHT — session + volume, fixed width */}
+          <div className="flex items-center justify-end gap-x-3 flex-1 min-w-0">
             <SessionButton />
-            <VolumeIcon
-              onClick={onToggleMute}
-              className="text-neutral-500 hover:text-red-500 cursor-pointer transition"
-              size={24}
-            />
-            <Slider value={volume} onChange={onVolumeChange} />
+            <VolumeIcon onClick={onToggleMute}
+              className="text-neutral-500 hover:text-red-500 cursor-pointer transition flex-shrink-0" size={20} />
+            <div className="w-28 flex-shrink-0">
+              <Slider value={volume} onChange={onVolumeChange} />
+            </div>
           </div>
+
         </div>
       </div>
     </>

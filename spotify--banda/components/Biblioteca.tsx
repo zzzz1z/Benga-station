@@ -9,12 +9,10 @@ import { TbPlaylist } from "react-icons/tb"
 import PlaylistItem from "@/app/playlists/components/PlaylistsItem"
 
 interface BibliotecaProps {
-  songs: any;
   playlists: any;
 }
 
 const Biblioteca: React.FC<BibliotecaProps> = ({
-  songs,
   playlists
 }) => {
   const authModal = useAuthModal();
@@ -49,9 +47,6 @@ const Biblioteca: React.FC<BibliotecaProps> = ({
 
       <div className="flex flex-col gap-y-2 mt-4 px-3">
         <div>
-          {songs.map((item: Playlist) => (
-            <PlaylistItem key={item.id} data={item} />
-          ))}
           {playlists.map((item: Playlist) => (
             <PlaylistItem key={item.id} data={item} />
           ))}
