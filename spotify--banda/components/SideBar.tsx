@@ -9,9 +9,10 @@ import { BiSearch } from "react-icons/bi";
 import { FcLike } from "react-icons/fc";
 import { SlPlaylist } from "react-icons/sl";
 import { MdWifiOff } from "react-icons/md";
-import { Playlist } from "@/types";
+import { Playlist, Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
 import Box from "./Box";
+import SideBarItem from "./SideBarItem";
 import Biblioteca from "./Biblioteca";
 import { twMerge } from "tailwind-merge";
 
@@ -54,8 +55,13 @@ const SideBar: React.FC<SidebarProps> = ({ children }) => {
   return (
     <div className={twMerge(`flex h-full`, player.activeID && "h-[calc(100%-80px)]")}>
       <div className="hidden md:flex flex-col gap-y-2 bg-black h-full w-[300px] p-2">
+        <Box className="flex flex-col gap-y4 px-5 py-4">
+          {routes.map((item) => (
+            <SideBarItem key={item.label} {...item} />
+          ))}
+        </Box>
         <Box className="overflow-y-auto h-full">
-          <Biblioteca playlists={userPlaylists}/>
+          <Biblioteca playlists={userPlaylists} />
         </Box>
       </div>
       <main className="h-full flex-1 overflow-y-auto py-2">{children}</main>
