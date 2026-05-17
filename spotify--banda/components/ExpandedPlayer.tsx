@@ -8,7 +8,7 @@ import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import { TbRepeat, TbRepeatOnce, TbArrowsShuffle, TbArrowsRightLeft } from "react-icons/tb";
+import { TbRepeat, TbRepeatOnce, TbArrowsShuffle } from "react-icons/tb";
 import { MdDragHandle, MdClose } from "react-icons/md";
 import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
@@ -30,8 +30,6 @@ interface ExpandedPlayerProps {
   onVolumeChange: (value: number) => void;
   onToggleMute: () => void;
   onClose: () => void;
-  crossfadeEnabled: boolean;
-  onToggleCrossfade: () => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -103,23 +101,24 @@ const QueueRow = ({
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
-  crossfadeEnabled, onToggleCrossfade,
 }) => {
   const router = useRouter();
 
-  const ids        = usePlayer(s => s.ids);
-  const songs      = usePlayer(s => s.songs);
-  const activeID   = usePlayer(s => s.activeID);
-  const shuffleOn  = usePlayer(s => s.shuffleOn);
+  const ids = usePlayer(s => s.ids);
+  const songs = usePlayer(s => s.songs);
+  const activeID = usePlayer(s => s.activeID);
+  const shuffleOn = usePlayer(s => s.shuffleOn);
   const repeatMode = usePlayer(s => s.repeatMode);
-  const setShuffleOn  = usePlayer(s => s.setShuffleOn);
+  const setShuffleOn = usePlayer(s => s.setShuffleOn);
   const setRepeatMode = usePlayer(s => s.setRepeatMode);
-  const setId  = usePlayer(s => s.setId);
+  const setId = usePlayer(s => s.setId);
   const setIds = usePlayer(s => s.setIds);
 
+  // Animation state: 'entering' | 'visible' | 'leaving'
   const [animState, setAnimState] = useState<'entering' | 'visible' | 'leaving'>('entering');
 
   useEffect(() => {
+    // Trigger enter animation on mount
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(() => setAnimState('visible'));
     });
@@ -131,6 +130,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setTimeout(() => onClose(), 380);
   }, [onClose]);
 
+  // Swipe-down-to-close state
   const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const isDraggingDown = useRef(false);
@@ -150,19 +150,23 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   };
 
   const handleTopBarTouchEnd = () => {
-    if (dragY > 100) { setDragY(0); handleClose(); }
-    else setDragY(0);
+    if (dragY > 100) {
+      setDragY(0);
+      handleClose();
+    } else {
+      setDragY(0);
+    }
     touchStartY.current = null;
     isDraggingDown.current = false;
   };
 
-  const dragIndexRef     = useRef<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const rowHeightRef  = useRef(52);
+  const rowHeightRef = useRef(52);
   const dragStartYRef = useRef(0);
-  const containerRef  = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [queueExpanded, setQueueExpanded] = useState(false);
 
   const currentIndex = activeID ? ids.findIndex(id => id === activeID) : -1;
@@ -196,7 +200,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const endQueueDrag = useCallback(() => {
     if (dragIndexRef.current === null || dragOverIndexRef.current === null) return;
     const from = dragIndexRef.current;
-    const to   = dragOverIndexRef.current;
+    const to = dragOverIndexRef.current;
     if (from !== to) {
       const newIds = [...ids];
       const [moved] = newIds.splice(from, 1);
@@ -239,6 +243,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
+
     if (clickedId.startsWith('yt_')) {
       const videoId = clickedId.slice(3);
       fetch('/api/preextract', {
@@ -247,6 +252,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         body: JSON.stringify({ videoId }),
       }).catch(() => {});
     }
+
     setId(clickedId);
   }, [ids, setId]);
 
@@ -269,16 +275,23 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
   const hasQueue = history.length > 0 || upcoming.length > 0;
   const allQueueRows = ids.map((id, i) => ({
-    song: songs[id], globalIndex: i,
+    song: songs[id],
+    globalIndex: i,
     isCurrent: id === activeID,
     isPast: i < currentIndex,
   })).filter(r => !!r.song);
 
-  const slideY = animState === 'entering' ? '100%'
-    : animState === 'leaving' ? '100%'
-    : dragY > 0 ? `${dragY}px` : '0%';
+  // Compute slide-up / slide-down transform
+  const slideY = animState === 'entering'
+    ? '100%'
+    : animState === 'leaving'
+      ? '100%'
+      : dragY > 0
+        ? `${dragY}px`
+        : '0%';
 
   const opacity = animState === 'entering' ? 0 : animState === 'leaving' ? 0 : 1;
+
   const isAnimating = animState !== 'visible' || dragY > 0;
 
   return (
@@ -289,23 +302,31 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         opacity,
         transition: isAnimating && dragY === 0
           ? 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease'
-          : dragY > 0 ? 'none'
-          : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease',
+          : dragY > 0
+            ? 'none'
+            : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease',
         willChange: 'transform, opacity',
       }}
     >
-      {/* Top drag zone */}
+      {/* Top drag zone — drag handle pill + "A tocar agora" bar, entire zone closes on swipe down */}
       <div
         className="flex-shrink-0 select-none touch-none"
         onTouchStart={handleTopBarTouchStart}
         onTouchMove={handleTopBarTouchMove}
         onTouchEnd={handleTopBarTouchEnd}
       >
+        {/* Drag pill */}
         <div className="flex justify-center pt-8 pb-1">
           <div className="w-10 h-1 rounded-full bg-neutral-600" />
         </div>
+
+        {/* "A tocar agora" bar */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button onClick={handleClose} className="text-white p-2 -ml-2" onTouchStart={e => e.stopPropagation()}>
+          <button
+            onClick={handleClose}
+            className="text-white p-2 -ml-2"
+            onTouchStart={e => e.stopPropagation()}
+          >
             <IoChevronDown size={26} />
           </button>
           <p className="text-white text-sm font-medium select-none">A tocar agora</p>
@@ -355,8 +376,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
 
-        {/* Controls row — shuffle / repeat / crossfade */}
-        <div className="flex items-center justify-center gap-x-8 flex-shrink-0">
+        <div className="flex items-center justify-center gap-x-12 flex-shrink-0">
           <button
             onClick={() => setShuffleOn(!shuffleOn)}
             className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
@@ -373,13 +393,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               {repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir tudo' : 'Repetir uma'}
             </span>
           </button>
-          <button
-            onClick={onToggleCrossfade}
-            className={`flex flex-col items-center gap-y-1 transition ${crossfadeEnabled ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
-          >
-            <TbArrowsRightLeft size={24} />
-            <span className="text-[10px]">{crossfadeEnabled ? 'Crossfade on' : 'Crossfade'}</span>
-          </button>
         </div>
 
         {hasQueue && (
@@ -388,7 +401,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               onClick={() => setQueueExpanded(prev => !prev)}
               className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition"
             >
-              <span className="text-xs font-semibold uppercase tracking-widest">Fila de reprodução</span>
+              <span className="text-xs font-semibold uppercase tracking-widest">
+                Fila de reprodução
+              </span>
               <div className="flex items-center gap-x-2">
                 <span className="text-[10px] text-neutral-600">{ids.length} músicas</span>
                 {queueExpanded ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
