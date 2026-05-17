@@ -5,9 +5,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import { HiSignal } from 'react-icons/hi2';
 import usePlayer from '@/hooks/usePlayer';
 
-// Global event bus — fire this anywhere in the app when data changes
 export function markDataStale() {
-  window.dispatchEvent(new CustomEvent('benga:data-stale'));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('benga:data-stale'));
+  }
 }
 
 const FloatingRefreshButton = () => {
@@ -18,7 +19,6 @@ const FloatingRefreshButton = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [changeCount, setChangeCount] = useState(0);
 
-  // Position above player if a song is active
   const bottomClass = activeID ? 'bottom-28 md:bottom-24' : 'bottom-6';
 
   useEffect(() => {
@@ -30,7 +30,6 @@ const FloatingRefreshButton = () => {
     return () => window.removeEventListener('benga:data-stale', handler);
   }, []);
 
-  // Reset stale state on route change (fresh data loaded)
   useEffect(() => {
     setIsStale(false);
     setChangeCount(0);
@@ -40,7 +39,6 @@ const FloatingRefreshButton = () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     router.refresh();
-    // Give Next.js a moment then clear state
     await new Promise(r => setTimeout(r, 800));
     setIsStale(false);
     setChangeCount(0);
@@ -56,7 +54,7 @@ const FloatingRefreshButton = () => {
         ${bottomClass}
         ${isStale
           ? 'opacity-100 scale-100'
-          : 'opacity-20 scale-90 hover:opacity-60 hover:scale-95'
+          : 'opacity-40 scale-90 hover:opacity-70 hover:scale-95'
         }
       `}
     >
@@ -79,12 +77,10 @@ const FloatingRefreshButton = () => {
           `}
         />
 
-        {/* Pulsing ring when stale */}
         {isStale && !isRefreshing && (
           <span className="absolute inset-0 rounded-none border border-red-500/40 animate-ping" />
         )}
 
-        {/* Change count badge */}
         {isStale && changeCount > 0 && (
           <span
             className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-600 text-white text-[9px] font-black flex items-center justify-center"
@@ -95,7 +91,6 @@ const FloatingRefreshButton = () => {
         )}
       </div>
 
-      {/* Label — only when stale */}
       {isStale && (
         <div className="absolute right-12 top-1/2 -translate-y-1/2 whitespace-nowrap">
           <span

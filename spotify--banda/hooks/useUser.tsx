@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, useContext, useMemo } from 'react';
+import { useEffect, useState, createContext, useContext, useMemo, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { UserDetails } from '@/types';
@@ -10,6 +10,7 @@ type UserContextType = {
   user: User | null;
   userDetails: UserDetails | null;
   isLoading: boolean;
+  refreshUserDetails: () => Promise<void>;
 };
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -26,24 +27,20 @@ export const MyUserContextProvider = (props: Props) => {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAccessToken(session?.access_token ?? null);
       setIsLoadingUser(false);
     });
 
-    // Listen for auth changes
-const { data: { subscription } } = supabase.auth.onAuthStateChange(
-  (event, session) => {
-    // Ignore token refreshes — they don't change the user
-    if (event === 'TOKEN_REFRESHED') return;
-    
-    setUser(session?.user ?? null);
-    setAccessToken(session?.access_token ?? null);
-    setIsLoadingUser(false);
-  }
-);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'TOKEN_REFRESHED') return;
+        setUser(session?.user ?? null);
+        setAccessToken(session?.access_token ?? null);
+        setIsLoadingUser(false);
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -65,14 +62,25 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(
     }
   }, [user, isLoadingUser]);
 
+  const refreshUserDetails = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    if (data) setUserDetails(data as UserDetails);
+  }, [user]);
+
   const value = useMemo(
     () => ({
       accessToken,
       user,
       userDetails,
       isLoading: isLoadingUser || isLoadingData,
+      refreshUserDetails,
     }),
-    [accessToken, user, userDetails, isLoadingUser, isLoadingData]
+    [accessToken, user, userDetails, isLoadingUser, isLoadingData, refreshUserDetails]
   );
 
   return <UserContext.Provider value={value} {...props} />;

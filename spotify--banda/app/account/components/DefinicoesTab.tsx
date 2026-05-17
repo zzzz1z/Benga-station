@@ -1,4 +1,3 @@
-// app/account/components/DefinicoesTab.tsx
 'use client';
 
 import { useUser } from '@/hooks/useUser';
@@ -9,18 +8,16 @@ import useAdminModal from '@/hooks/useAdminModal';
 import toast from 'react-hot-toast';
 import { CiLock } from 'react-icons/ci';
 import ButtonUploadOrChange from './ButtonUploadOrChange';
-import { markDataStale } from '@/components/FloatingRefreshButton';
 
 const supabase = createClient();
 
 const DefinicoesTab = () => {
-    const { user, userDetails } = useUser();
+    const { user, userDetails, refreshUserDetails } = useUser();
     const router = useRouter();
     const adminModal = useAdminModal();
 
     const [firstName, setFirstName] = useState(userDetails?.first_name ?? '');
     const [lastName, setLastName] = useState(userDetails?.last_name ?? '');
-    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [loadingInfo, setLoadingInfo] = useState(false);
     const [loadingPassword, setLoadingPassword] = useState(false);
@@ -37,8 +34,7 @@ const DefinicoesTab = () => {
             toast.error('Erro ao atualizar informações.');
         } else {
             toast.success('Informações atualizadas!');
-            markDataStale();
-            router.refresh();
+            await refreshUserDetails();
         }
         setLoadingInfo(false);
     };
@@ -51,7 +47,6 @@ const DefinicoesTab = () => {
             toast.error('Erro ao atualizar password.');
         } else {
             toast.success('Password atualizada!');
-            setCurrentPassword('');
             setNewPassword('');
         }
         setLoadingPassword(false);
@@ -138,7 +133,7 @@ const DefinicoesTab = () => {
                 </h2>
                 <ButtonUploadOrChange
                     hasAvatar={true}
-                    onImageUpdate={() => router.refresh()}
+                    onImageUpdate={() => refreshUserDetails()}
                 />
             </div>
 
