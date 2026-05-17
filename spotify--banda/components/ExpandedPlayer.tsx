@@ -45,7 +45,11 @@ const QueueRow = ({
   song, label, isCurrent, dimmed, dragging,
   onDragStart, onClick, onRemove,
 }: {
-  song: Song; label?: string; isCurrent?: boolean; dimmed?: boolean; dragging?: boolean;
+  song: Song;
+  label?: string;
+  isCurrent?: boolean;
+  dimmed?: boolean;
+  dragging?: boolean;
   onDragStart?: (e: React.TouchEvent | React.MouseEvent) => void;
   onClick?: () => void;
   onRemove?: (e: React.MouseEvent) => void;
@@ -59,17 +63,25 @@ const QueueRow = ({
         ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50' : 'hover:bg-white/5 cursor-pointer'}`}
     >
       {!isCurrent && onDragStart ? (
-        <div className="text-neutral-600 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 px-1"
-          onMouseDown={onDragStart} onTouchStart={onDragStart} onClick={e => e.stopPropagation()}>
+        <div
+          className="text-neutral-600 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 px-1"
+          onMouseDown={onDragStart}
+          onTouchStart={onDragStart}
+          onClick={e => e.stopPropagation()}
+        >
           <MdDragHandle size={16} />
         </div>
-      ) : <div className="w-6 flex-shrink-0" />}
+      ) : (
+        <div className="w-6 flex-shrink-0" />
+      )}
       <div className="relative w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
         <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
           className="object-cover" sizes="32px" unoptimized />
       </div>
       <div className="flex flex-col min-w-0 flex-1">
-        <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>{song.title}</p>
+        <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>
+          {song.title}
+        </p>
         <p className="text-neutral-500 text-[10px] truncate">{song.author}</p>
       </div>
       {label && (
@@ -79,7 +91,8 @@ const QueueRow = ({
         </span>
       )}
       {!isCurrent && onRemove && (
-        <button onClick={onRemove} className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1">
+        <button onClick={onRemove}
+          className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1">
           <MdClose size={12} />
         </button>
       )}
@@ -105,8 +118,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setIds = usePlayer(s => s.setIds);
 
   const [animState, setAnimState] = useState<'entering' | 'visible' | 'leaving'>('entering');
+
   useEffect(() => {
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setAnimState('visible')));
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimState('visible'));
+    });
     return () => cancelAnimationFrame(raf);
   }, []);
 
@@ -115,7 +131,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setTimeout(() => onClose(), 380);
   }, [onClose]);
 
-  const touchStartY    = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const isDraggingDown = useRef(false);
 
@@ -123,13 +139,19 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     touchStartY.current = e.touches[0].clientY;
     isDraggingDown.current = false;
   };
+
   const handleTopBarTouchMove = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return;
     const delta = e.touches[0].clientY - touchStartY.current;
-    if (delta > 0) { isDraggingDown.current = true; setDragY(delta); }
+    if (delta > 0) {
+      isDraggingDown.current = true;
+      setDragY(delta);
+    }
   };
+
   const handleTopBarTouchEnd = () => {
-    if (dragY > 100) { setDragY(0); handleClose(); } else setDragY(0);
+    if (dragY > 100) { setDragY(0); handleClose(); }
+    else setDragY(0);
     touchStartY.current = null;
     isDraggingDown.current = false;
   };
@@ -144,42 +166,58 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const [queueExpanded, setQueueExpanded] = useState(false);
 
   const currentIndex = activeID ? ids.findIndex(id => id === activeID) : -1;
+
   const history: Song[] = currentIndex > 0
-    ? ids.slice(0, currentIndex).map(id => songs[id]).filter((s): s is Song => !!s) : [];
+    ? ids.slice(0, currentIndex).map(id => songs[id]).filter((s): s is Song => !!s)
+    : [];
   const upcoming: Song[] = currentIndex !== -1 && currentIndex < ids.length - 1
-    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s) : [];
+    ? ids.slice(currentIndex + 1).map(id => songs[id]).filter((s): s is Song => !!s)
+    : [];
 
   const startQueueDrag = useCallback((globalIndex: number, clientY: number) => {
-    dragIndexRef.current = globalIndex; dragOverIndexRef.current = globalIndex;
-    dragStartYRef.current = clientY; setDraggingIndex(globalIndex); setDragOverIndex(globalIndex);
+    dragIndexRef.current = globalIndex;
+    dragOverIndexRef.current = globalIndex;
+    dragStartYRef.current = clientY;
+    setDraggingIndex(globalIndex);
+    setDragOverIndex(globalIndex);
   }, []);
 
   const moveQueueDrag = useCallback((clientY: number) => {
     if (dragIndexRef.current === null) return;
-    const steps    = Math.round((clientY - dragStartYRef.current) / rowHeightRef.current);
+    const delta = clientY - dragStartYRef.current;
+    const steps = Math.round(delta / rowHeightRef.current);
     const newIndex = Math.max(0, Math.min(ids.length - 1, dragIndexRef.current + steps));
-    if (newIndex !== dragOverIndexRef.current) { dragOverIndexRef.current = newIndex; setDragOverIndex(newIndex); }
+    if (newIndex !== dragOverIndexRef.current) {
+      dragOverIndexRef.current = newIndex;
+      setDragOverIndex(newIndex);
+    }
   }, [ids.length]);
 
   const endQueueDrag = useCallback(() => {
     if (dragIndexRef.current === null || dragOverIndexRef.current === null) return;
-    const from = dragIndexRef.current, to = dragOverIndexRef.current;
+    const from = dragIndexRef.current;
+    const to   = dragOverIndexRef.current;
     if (from !== to) {
       const newIds = [...ids];
       const [moved] = newIds.splice(from, 1);
       newIds.splice(to, 0, moved);
       setIds(newIds);
     }
-    dragIndexRef.current = null; dragOverIndexRef.current = null;
-    setDraggingIndex(null); setDragOverIndex(null);
+    dragIndexRef.current = null;
+    dragOverIndexRef.current = null;
+    setDraggingIndex(null);
+    setDragOverIndex(null);
   }, [ids, setIds]);
 
   const handleDragHandleDown = useCallback((globalIndex: number, e: React.TouchEvent | React.MouseEvent) => {
     e.stopPropagation();
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     startQueueDrag(globalIndex, clientY);
-    const onMove = (ev: MouseEvent | TouchEvent) => moveQueueDrag('touches' in ev ? ev.touches[0].clientY : ev.clientY);
-    const onUp   = () => {
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY;
+      moveQueueDrag(y);
+    };
+    const onUp = () => {
       endQueueDrag();
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -194,44 +232,61 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
   const removeFromQueue = useCallback((globalIndex: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setIds(ids.filter((_, i) => i !== globalIndex));
+    const newIds = ids.filter((_, i) => i !== globalIndex);
+    setIds(newIds);
   }, [ids, setIds]);
 
   const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
     if (clickedId.startsWith('yt_')) {
+      const videoId = clickedId.slice(3);
       fetch('/api/preextract', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId: clickedId.slice(3) }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
       }).catch(() => {});
     }
     setId(clickedId);
   }, [ids, setId]);
 
-  const handleNext = () => { if (repeatMode === 'one') { onSeek(0); return; } onNext(); };
-  const cycleRepeat = () => setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
-  const RepeatIcon  = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
+  const handleNext = () => {
+    if (repeatMode === 'one') { onSeek(0); return; }
+    onNext();
+  };
+
+  const cycleRepeat = () =>
+    setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
+
+  const RepeatIcon = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
 
   const renderPlayButton = () => {
     if (isLoading) return <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />;
-    return isPlaying ? <BsPauseFill size={32} className="text-black" /> : <BsPlayFill size={32} className="text-black" />;
+    return isPlaying
+      ? <BsPauseFill size={32} className="text-black" />
+      : <BsPlayFill size={32} className="text-black" />;
   };
 
-  const hasQueue    = history.length > 0 || upcoming.length > 0;
+  const hasQueue = history.length > 0 || upcoming.length > 0;
   const allQueueRows = ids.map((id, i) => ({
-    song: songs[id], globalIndex: i, isCurrent: id === activeID, isPast: i < currentIndex,
+    song: songs[id], globalIndex: i,
+    isCurrent: id === activeID,
+    isPast: i < currentIndex,
   })).filter(r => !!r.song);
 
-  const slideY     = animState === 'entering' ? '100%' : animState === 'leaving' ? '100%' : dragY > 0 ? `${dragY}px` : '0%';
-  const opacity    = animState === 'entering' ? 0 : animState === 'leaving' ? 0 : 1;
+  const slideY = animState === 'entering' ? '100%'
+    : animState === 'leaving' ? '100%'
+    : dragY > 0 ? `${dragY}px` : '0%';
+
+  const opacity = animState === 'entering' ? 0 : animState === 'leaving' ? 0 : 1;
   const isAnimating = animState !== 'visible' || dragY > 0;
 
   return (
     <div
       className="fixed inset-0 z-50 bg-neutral-900 flex flex-col"
       style={{
-        transform: `translateY(${slideY})`, opacity,
+        transform: `translateY(${slideY})`,
+        opacity,
         transition: isAnimating && dragY === 0
           ? 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease'
           : dragY > 0 ? 'none'
@@ -240,8 +295,12 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       }}
     >
       {/* Top drag zone */}
-      <div className="flex-shrink-0 select-none touch-none"
-        onTouchStart={handleTopBarTouchStart} onTouchMove={handleTopBarTouchMove} onTouchEnd={handleTopBarTouchEnd}>
+      <div
+        className="flex-shrink-0 select-none touch-none"
+        onTouchStart={handleTopBarTouchStart}
+        onTouchMove={handleTopBarTouchMove}
+        onTouchEnd={handleTopBarTouchEnd}
+      >
         <div className="flex justify-center pt-8 pb-1">
           <div className="w-10 h-1 rounded-full bg-neutral-600" />
         </div>
@@ -250,9 +309,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <IoChevronDown size={26} />
           </button>
           <p className="text-white text-sm font-medium select-none">A tocar agora</p>
-          <button onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
+          <button
+            onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
             className="text-neutral-400 hover:text-white transition p-2 -mr-2"
-            onTouchStart={e => e.stopPropagation()}>
+            onTouchStart={e => e.stopPropagation()}
+          >
             <AiOutlineInfoCircle size={22} />
           </button>
         </div>
@@ -270,7 +331,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <p className="text-white text-xl font-bold truncate">{song.title}</p>
             <p className="text-neutral-400 text-sm truncate mt-0.5">{song.author}</p>
           </div>
-          <LikedButton songId={String(song.id)} />
+          <div className="flex items-center gap-x-3 flex-shrink-0">
+            <LikedButton songId={String(song.id)} />
+          </div>
         </div>
 
         <div className="flex-shrink-0">
@@ -292,22 +355,28 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             className="text-neutral-400 cursor-pointer hover:text-white transition" />
         </div>
 
-        {/* Shuffle / Repeat / Crossfade */}
+        {/* Controls row — shuffle / repeat / crossfade */}
         <div className="flex items-center justify-center gap-x-8 flex-shrink-0">
-          <button onClick={() => setShuffleOn(!shuffleOn)}
-            className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}>
+          <button
+            onClick={() => setShuffleOn(!shuffleOn)}
+            className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
+          >
             <TbArrowsShuffle size={24} />
             <span className="text-[10px]">Aleatório</span>
           </button>
-          <button onClick={cycleRepeat}
-            className={`flex flex-col items-center gap-y-1 transition ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}>
+          <button
+            onClick={cycleRepeat}
+            className={`flex flex-col items-center gap-y-1 transition ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
+          >
             <RepeatIcon size={24} />
             <span className="text-[10px]">
               {repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir tudo' : 'Repetir uma'}
             </span>
           </button>
-          <button onClick={onToggleCrossfade}
-            className={`flex flex-col items-center gap-y-1 transition ${crossfadeEnabled ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}>
+          <button
+            onClick={onToggleCrossfade}
+            className={`flex flex-col items-center gap-y-1 transition ${crossfadeEnabled ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}
+          >
             <TbArrowsRightLeft size={24} />
             <span className="text-[10px]">{crossfadeEnabled ? 'Crossfade on' : 'Crossfade'}</span>
           </button>
@@ -315,8 +384,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
         {hasQueue && (
           <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
-            <button onClick={() => setQueueExpanded(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition">
+            <button
+              onClick={() => setQueueExpanded(prev => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition"
+            >
               <span className="text-xs font-semibold uppercase tracking-widest">Fila de reprodução</span>
               <div className="flex items-center gap-x-2">
                 <span className="text-[10px] text-neutral-600">{ids.length} músicas</span>
@@ -327,11 +398,13 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             {!queueExpanded && (
               <div className="pb-2">
                 {history.slice(-1).map((s, i) => (
-                  <QueueRow key={`h-${i}`} song={s} dimmed onClick={() => handleQueueRowClick(currentIndex - 1)} />
+                  <QueueRow key={`prev-hist-${i}`} song={s} dimmed
+                    onClick={() => handleQueueRowClick(currentIndex - 1)} />
                 ))}
                 <QueueRow song={song} isCurrent label="▶" />
                 {upcoming.slice(0, 1).map((s, i) => (
-                  <QueueRow key={`u-${i}`} song={s} onClick={() => handleQueueRowClick(currentIndex + 1)} />
+                  <QueueRow key={`prev-up-${i}`} song={s}
+                    onClick={() => handleQueueRowClick(currentIndex + 1)} />
                 ))}
               </div>
             )}
@@ -340,8 +413,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               <div ref={containerRef} className="pb-2 max-h-72 overflow-y-auto">
                 {allQueueRows.map(({ song: s, globalIndex, isCurrent, isPast }) => (
                   <QueueRow
-                    key={`q-${globalIndex}`} song={s} isCurrent={isCurrent}
-                    dimmed={isPast && !isCurrent} dragging={draggingIndex === globalIndex}
+                    key={`q-${globalIndex}`}
+                    song={s}
+                    isCurrent={isCurrent}
+                    dimmed={isPast && !isCurrent}
+                    dragging={draggingIndex === globalIndex}
                     label={isCurrent ? '▶' : undefined}
                     onDragStart={!isCurrent ? (e) => handleDragHandleDown(globalIndex, e) : undefined}
                     onRemove={!isCurrent ? (e) => removeFromQueue(globalIndex, e) : undefined}
