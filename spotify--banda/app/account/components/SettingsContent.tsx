@@ -74,13 +74,15 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
                             style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))' }}
                         >
                             <ProfilePic />
-                        </div>
-                        
-             {/* Online indicator */}
+
+                             {/* Online indicator */}
                         <span
                             className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-neutral-900"
                             style={{ background: '#22c55e', boxShadow: '0 0 6px #22c55e' }}
                         />
+                        </div>
+                        
+            
                      
                     </div>
 
