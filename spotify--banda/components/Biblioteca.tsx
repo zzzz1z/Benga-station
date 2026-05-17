@@ -1,35 +1,31 @@
-"use client"
+"use client";
 
-import useAuthModal from "@/hooks/useAuthModal"
-import useUploadModal from "@/hooks/useUploadModal"
-import { useUser } from "@/hooks/useUser"
-import { Playlist } from "@/types"
-import { AiOutlinePlus } from "react-icons/ai"
-import { TbPlaylist } from "react-icons/tb"
-import PlaylistItem from "@/app/playlists/components/PlaylistsItem"
-import { createClient } from "@/utils/supabase/client"
-import { useEffect, useState } from "react"
-
-interface BibliotecaProps {
-  playlists: Playlist[];
-}
+import { useEffect, useState, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
+import useAuthModal from "@/hooks/useAuthModal";
+import useUploadModal from "@/hooks/useUploadModal";
+import { useUser } from "@/hooks/useUser";
+import { Playlist } from "@/types";
+import { AiOutlinePlus } from "react-icons/ai";
+import { TbPlaylist } from "react-icons/tb";
+import PlaylistItem from "@/app/playlists/components/PlaylistsItem";
 
 const supabase = createClient();
 
-const Biblioteca: React.FC<BibliotecaProps> = ({ playlists: initialPlaylists }) => {
+const Biblioteca = () => {
   const authModal = useAuthModal();
   const uploadModal = useUploadModal();
   const { user, userDetails } = useUser();
-  const [playlists, setPlaylists] = useState<Playlist[]>(initialPlaylists);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
-  const fetchPlaylists = async () => {
+  const fetchPlaylists = useCallback(async () => {
     if (!user?.id) return;
 
     const { data, error } = await supabase
-      .from('Playlists')
-      .select('*, playlist_songs(Songs(*))')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .from("Playlists")
+      .select("*, playlist_songs(Songs(*))")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
     if (error || !data) return;
 
@@ -41,51 +37,46 @@ const Biblioteca: React.FC<BibliotecaProps> = ({ playlists: initialPlaylists }) 
           .filter(Boolean),
       }))
     );
-  };
+  }, [user?.id]);
 
-  // Realtime subscription — fires on any insert/update/delete in Playlists
+  // Initial fetch
+  useEffect(() => {
+    fetchPlaylists();
+  }, [fetchPlaylists]);
+
+  // Realtime — watch for any change to this user's playlists
   useEffect(() => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`playlists-sidebar-${user.id}`)
+      .channel(`biblioteca-${user.id}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'Playlists',
+          event: "*",
+          schema: "public",
+          table: "Playlists",
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          // Any change — refetch
-          fetchPlaylists();
-        }
+        () => fetchPlaylists()
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
-
-  // Also refetch when user logs in
-  useEffect(() => {
-    if (user?.id) fetchPlaylists();
-  }, [user?.id]);
+  }, [user?.id, fetchPlaylists]);
 
   const onClick = () => {
-    if (!user) return authModal.onOpen('sign_up');
+    if (!user) return authModal.onOpen("sign_up");
     return uploadModal.onOpen();
   };
 
   return (
     <div className="flex flex-col">
-      {userDetails?.role === 'admin' && (
+      {userDetails?.role === "admin" && (
         <div className="flex items-center justify-between px-5 pt-4">
           <div className="inline-flex items-center gap-x-2">
             <TbPlaylist className="text-neutral-400" size={26} />
-            <p className="text-neutral-400 font-medium text-md flex-wrap">
-              Adicionar música
-            </p>
+            <p className="text-neutral-400 font-medium text-md">Adicionar música</p>
           </div>
           <AiOutlinePlus
             onClick={onClick}
@@ -96,11 +87,9 @@ const Biblioteca: React.FC<BibliotecaProps> = ({ playlists: initialPlaylists }) 
       )}
 
       <div className="flex flex-col gap-y-2 mt-4 px-3">
-        <div>
-          {playlists.map((item: Playlist) => (
-            <PlaylistItem key={item.id} data={item} />
-          ))}
-        </div>
+        {playlists.map((item: Playlist) => (
+          <PlaylistItem key={item.id} data={item} />
+        ))}
       </div>
     </div>
   );

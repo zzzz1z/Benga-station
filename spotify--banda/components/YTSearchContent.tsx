@@ -340,7 +340,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
         const targetId = `yt_${result.videoId}`;
 
-        // Only search results become the queue — no store bleed
         const baseSongs = results
             .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
             .map(r => ({
@@ -401,11 +400,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
             <div className="flex flex-col w-full px-6 gap-y-1">
                 {results.map((result) => (
-                    <div
-                        key={result.videoId}
-                        className="group relative border-b border-white/5 last:border-0"
-                    >
-                        <div className="absolute left-[-24px] top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div key={result.videoId} className="relative border-b border-white/5 last:border-0">
                         <YTSearchItem
                             result={result}
                             onPlay={handlePlay}

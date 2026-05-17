@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from "react";
-import MediaItem from "@/components/MediaItem";
-import useOnPlay from "@/hooks/useOnPlay";
-import { Song } from "@/types";
+import { useState, useCallback } from 'react';
+import MediaItem from '@/components/MediaItem';
+import useOnPlay from '@/hooks/useOnPlay';
+import { Song } from '@/types';
 
 interface SearchContentProps {
   songs: Song[];
@@ -16,7 +16,6 @@ const getSongPlayerId = (song: Song): string =>
     ? `yt_${song.youtube_video_id}`
     : String(song.id);
 
-// Luanda VHS skeleton row
 const LuandaSkeleton = ({ index }: { index: number }) => {
   const delays = ['0ms', '120ms', '240ms'];
   const goldFlicker = index % 3 === 0;
@@ -26,7 +25,6 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
       className="relative flex items-center gap-x-3 px-2 py-2 overflow-hidden"
       style={{ animationDelay: delays[index % 3] }}
     >
-      {/* Scan line sweep */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -35,8 +33,6 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
           animationDelay: delays[index % 3],
         }}
       />
-
-      {/* Glitch sweep overlay */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -45,8 +41,6 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
           animationDelay: delays[index % 3],
         }}
       />
-
-      {/* Album art skeleton */}
       <div
         className="w-10 h-10 flex-shrink-0 relative overflow-hidden"
         style={{
@@ -66,8 +60,6 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
           }}
         />
       </div>
-
-      {/* Text skeletons */}
       <div className="flex flex-col gap-y-1.5 flex-1">
         <div
           className="h-2.5 rounded-none relative overflow-hidden"
@@ -104,8 +96,6 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
           />
         </div>
       </div>
-
-      {/* Right dot */}
       <div
         className="w-1.5 h-1.5 flex-shrink-0 rounded-full"
         style={{
@@ -165,7 +155,6 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
 
   return (
     <>
-      {/* Keyframes injected once */}
       <style>{`
         @keyframes luanda-shimmer {
           0% { transform: translateX(-100%); }
@@ -200,14 +189,13 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
         {songs.map((song, i) => (
           <div
             key={song.id}
-            className="group relative border-b border-white/5 last:border-0"
+            className="relative border-b border-white/5 last:border-0"
             style={{
               animation: 'luanda-load-in 0.2s ease-out forwards',
               animationDelay: `${Math.min(i, 8) * 30}ms`,
               opacity: 0,
             }}
           >
-            <div className="absolute left-[-24px] top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
             <MediaItem
               onClick={() => onPlay(getSongPlayerId(song))}
               data={song}
@@ -215,10 +203,8 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
           </div>
         ))}
 
-        {/* Skeleton rows while loading */}
         {loading && (
           <div className="flex flex-col gap-y-0.5 mt-1 relative">
-            {/* VHS label */}
             <div className="flex items-center gap-x-2 px-2 py-1.5 mb-1">
               <div
                 className="w-2 h-2 rounded-full"
@@ -239,12 +225,10 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
               </span>
               <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(255,165,0,0.3), transparent)' }} />
             </div>
-
             {[0, 1, 2, 3].map(i => <LuandaSkeleton key={i} index={i} />)}
           </div>
         )}
 
-        {/* Load more button */}
         {hasMore && !loading && (
           <div className="flex justify-center pt-4 pb-2">
             <button
@@ -258,12 +242,10 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
                 boxShadow: '0 0 12px rgba(255,140,0,0.1), inset 0 0 12px rgba(255,140,0,0.03)',
               }}
             >
-              {/* Hover sweep */}
               <div
                 className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ background: 'linear-gradient(135deg, rgba(255,140,0,0.08), rgba(239,68,68,0.05))' }}
               />
-              {/* Scanlines */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -286,7 +268,6 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
           </div>
         )}
 
-        {/* End of results */}
         {!hasMore && songs.length > 0 && (
           <div className="flex items-center gap-x-3 px-2 py-4">
             <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(255,140,0,0.2), transparent)' }} />
