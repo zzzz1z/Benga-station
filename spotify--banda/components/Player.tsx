@@ -8,9 +8,6 @@ import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
-import { createClient } from "@/utils/supabase/client";
-
-const supabase = createClient();
 
 let audioCtx: AudioContext | null = null;
 
@@ -46,23 +43,6 @@ const recordPlayEvent = (videoId: string) => {
   }).catch(() => {});
 };
 
-// Resolve a song's URL without the hook (for next song pre-loading)
-const resolveSongUrl = async (song: Song): Promise<string> => {
-  if (!song?.id) return '';
-  if (song.source === 'youtube' && song.youtube_video_id) {
-    return `/api/youtube/stream?videoId=${song.youtube_video_id}`;
-  }
-  if (song.song_path) {
-    const { data } = supabase.storage.from('musicas').getPublicUrl(song.song_path);
-    return data?.publicUrl ?? '';
-  }
-  return '';
-};
-
-const PRELOAD_AT = 50;   // seconds left → load next audio into buffer
-const CROSSFADE_AT = 10; // seconds left → start crossfade
-const CROSSFADE_DURATION = 10; // seconds
-
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -85,9 +65,9 @@ const Player = () => {
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
 
-  const activeID  = usePlayer(state => state.activeID);
-  const playCount = usePlayer(state => state.playCount);
-  const songsMap  = usePlayer(state => state.songs);
+  const activeID   = usePlayer(state => state.activeID);
+  const playCount  = usePlayer(state => state.playCount);
+  const songsMap   = usePlayer(state => state.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
   const songFromStore   = activeID ? songsMap[activeID] : null;
@@ -95,14 +75,13 @@ const Player = () => {
   const song = songFromStore ?? lastGoodSongRef.current;
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
-  const audioRef     = useRef<HTMLAudioElement | null>(null);
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [isPlaying,  setIsPlaying]  = useState(false);
-  const [isLoading,  setIsLoading]  = useState(false);
-  const [volume,     setVolume]     = useState(1);
-  const [duration,   setDuration]   = useState(0);
-  const [position,   setPosition]   = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [volume,    setVolume]    = useState(1);
+  const [duration,  setDuration]  = useState(0);
+  const [position,  setPosition]  = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const volumeRef          = useRef(1);
@@ -111,25 +90,20 @@ const Player = () => {
   const endedFiredRef      = useRef(false);
   const shouldBePlayingRef = useRef(false);
 
-  // Crossfade state
-  const crossfadeActiveRef   = useRef(false);
-  const crossfadeFrameRef    = useRef<number | null>(null);
-  const nextSongPreloadedRef = useRef<string>(''); // url of preloaded next song
-  const nextSongIdRef        = useRef<string>(''); // id of preloaded next song
-  const preloadTriggeredRef  = useRef(false);
-  const crossfadeTriggeredRef = useRef(false);
-
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
+  // ── Session integration ──
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
+  // Register this player's controls with the session context
   useEffect(() => {
     registerPlayer({ audioRef, setIsPlaying, setPosition });
   }, [registerPlayer]);
 
+  // Broadcast playback state whenever it changes (only if canControl)
   const broadcastCurrentState = useCallback(() => {
     if (!sessionRef.current?.canControl) return;
     const audio = audioRef.current;
@@ -141,6 +115,7 @@ const Player = () => {
     });
   }, [broadcastState]);
 
+  // Broadcast queue when it changes (only host)
   const prevQueueRef = useRef<string>('');
   useEffect(() => {
     const { ids, songs: songMap, activeID: aid } = usePlayer.getState();
@@ -152,125 +127,14 @@ const Player = () => {
     }
   });
 
-  // Get next song from the queue
-  const getNextSong = useCallback((): Song | null => {
-    const { ids, activeID: aid, songs: songMap, repeatMode, shuffleOn } = usePlayer.getState();
-    if (!aid || !ids.length) return null;
-    if (repeatMode === 'one') return songMap[aid] ?? null;
-    const currentIndex = ids.indexOf(aid);
-    if (shuffleOn) {
-      const others = ids.filter(id => id !== aid);
-      if (!others.length) return null;
-      const randomId = others[Math.floor(Math.random() * others.length)];
-      return songMap[randomId] ?? null;
-    }
-    if (repeatMode === 'all') {
-      const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
-      return songMap[ids[nextIndex]] ?? null;
-    }
-    if (currentIndex === -1 || currentIndex === ids.length - 1) return null;
-    return songMap[ids[currentIndex + 1]] ?? null;
-  }, []);
-
-  // Cancel any in-progress crossfade
-  const cancelCrossfade = useCallback(() => {
-    if (crossfadeFrameRef.current !== null) {
-      cancelAnimationFrame(crossfadeFrameRef.current);
-      crossfadeFrameRef.current = null;
-    }
-    crossfadeActiveRef.current = false;
-    const next = nextAudioRef.current;
-    if (next) {
-      next.pause();
-      next.src = '';
-      next.load();
-    }
-    nextSongPreloadedRef.current = '';
-    nextSongIdRef.current = '';
-    preloadTriggeredRef.current = false;
-    crossfadeTriggeredRef.current = false;
-  }, []);
-
-  // Preload next song into nextAudioRef silently
-  const preloadNextSong = useCallback(async () => {
-    const nextSong = getNextSong();
-    if (!nextSong) return;
-    const nextId = nextSong.source === 'youtube' && nextSong.youtube_video_id
-      ? `yt_${nextSong.youtube_video_id}`
-      : String(nextSong.id);
-
-    // Already preloaded this one
-    if (nextSongIdRef.current === nextId) return;
-
-    const url = await resolveSongUrl(nextSong);
-    if (!url) return;
-
-    const next = nextAudioRef.current;
-    if (!next) return;
-
-    next.src = url;
-    next.volume = 0;
-    next.load();
-    nextSongPreloadedRef.current = url;
-    nextSongIdRef.current = nextId;
-  }, [getNextSong]);
-
-  // Start the actual crossfade
-  const startCrossfade = useCallback(() => {
-    if (crossfadeActiveRef.current) return;
-    const next = nextAudioRef.current;
-    const current = audioRef.current;
-    if (!next || !current || !nextSongPreloadedRef.current) return;
-
-    crossfadeActiveRef.current = true;
-    const startTime = performance.now();
-    const startVolume = volumeRef.current;
-
-    safePlay(next).catch(() => {});
-
-    const tick = () => {
-      const elapsed = (performance.now() - startTime) / 1000;
-      const progress = Math.min(elapsed / CROSSFADE_DURATION, 1);
-
-      // Fade current down, next up
-      if (current.src) current.volume = startVolume * (1 - progress);
-      next.volume = startVolume * progress;
-
-      if (progress < 1) {
-        crossfadeFrameRef.current = requestAnimationFrame(tick);
-      } else {
-        // Crossfade complete — swap to next song
-        current.pause();
-        current.src = '';
-        next.volume = startVolume;
-
-        // Advance player state to next song
-        endedFiredRef.current = true;
-        playerRef.current.playNext();
-        setTimeout(() => { endedFiredRef.current = false; }, 1000);
-
-        crossfadeActiveRef.current = false;
-        crossfadeFrameRef.current = null;
-        nextSongPreloadedRef.current = '';
-        nextSongIdRef.current = '';
-        preloadTriggeredRef.current = false;
-        crossfadeTriggeredRef.current = false;
-      }
-    };
-
-    crossfadeFrameRef.current = requestAnimationFrame(tick);
-  }, []);
-
-  const handleEnded = useCallback(() => {
+  const handleEnded = () => {
     if (endedFiredRef.current) return;
-    // If crossfade handled it already, don't double fire
-    if (crossfadeActiveRef.current) return;
     endedFiredRef.current = true;
     playerRef.current.playNext();
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
-  }, []);
+  };
 
-  // Record play events + preextract window
+  // Record play event + priority window preextract on song change
   useEffect(() => {
     if (!activeID) return;
     const s = songsMap[activeID];
@@ -290,6 +154,7 @@ const Player = () => {
       .map(id => id.slice(3));
 
     if (!window.length) return;
+
     window.forEach(videoId => {
       fetch('/api/preextract', {
         method: 'POST',
@@ -299,39 +164,16 @@ const Player = () => {
     });
   }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Main audio setup
   useEffect(() => {
     const audio = new Audio();
-    const nextAudio = new Audio();
     audioRef.current = audio;
-    nextAudioRef.current = nextAudio;
 
     let lastTime = 0;
     let stuckInterval: NodeJS.Timeout;
 
-    audio.ontimeupdate = () => {
-      const current = audio.currentTime;
-      const dur = audio.duration;
-      setPosition(current);
-
-      if (!dur || !isFinite(dur) || !isPlayingRef.current) return;
-      const remaining = dur - current;
-
-      // Preload next song 50s before end
-      if (remaining <= PRELOAD_AT && !preloadTriggeredRef.current) {
-        preloadTriggeredRef.current = true;
-        preloadNextSong();
-      }
-
-      // Start crossfade 10s before end
-      if (remaining <= CROSSFADE_AT && !crossfadeTriggeredRef.current && nextSongPreloadedRef.current) {
-        crossfadeTriggeredRef.current = true;
-        startCrossfade();
-      }
-    };
-
+    audio.ontimeupdate = () => { setPosition(audio.currentTime); };
     audio.onended      = handleEnded;
-    audio.onplay       = () => { setIsPlaying(true);  setIsLoading(false); };
+    audio.onplay       = () => { setIsPlaying(true); setIsLoading(false); };
     audio.onpause      = () => { if (audio.src) setIsPlaying(false); };
     audio.onwaiting    = () => setIsLoading(true);
     audio.oncanplay    = () => {
@@ -402,20 +244,13 @@ const Player = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       audio.pause();
       audio.src = '';
-      nextAudio.pause();
-      nextAudio.src = '';
       audioRef.current = null;
-      nextAudioRef.current = null;
     };
-  }, [handleEnded, preloadNextSong, startCrossfade]);
+  }, []);
 
-  // Song URL change → load new song
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    // Cancel any crossfade in progress when song changes manually
-    cancelCrossfade();
 
     skipOnErrorRef.current = false;
     setIsLoading(!!songUrl);
@@ -472,7 +307,7 @@ const Player = () => {
       clearTimeout(metaStableTimer!);
       audio.removeEventListener('loadedmetadata', onMeta);
     };
-  }, [songUrl, cancelCrossfade]);
+  }, [songUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -484,15 +319,12 @@ const Player = () => {
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
-    // Don't override next audio volume if crossfade is active
-    if (nextAudioRef.current && !crossfadeActiveRef.current) {
-      nextAudioRef.current.volume = 0;
-    }
   }, [volume]);
 
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
+    // Guests without permission can't control
     if (session && !session.canControl) return;
 
     if (isPlaying) {
@@ -502,19 +334,18 @@ const Player = () => {
       safePlay(audio).catch(() => {});
       shouldBePlayingRef.current = true;
     }
+    // Broadcast after a tick so state has updated
     setTimeout(broadcastCurrentState, 50);
   };
 
   const handleNext = () => {
     if (session && !session.canControl) return;
-    cancelCrossfade();
     playerRef.current.playNext();
     setTimeout(broadcastCurrentState, 200);
   };
 
   const handlePrevious = () => {
     if (session && !session.canControl) return;
-    cancelCrossfade();
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
@@ -530,10 +361,6 @@ const Player = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = value;
       setPosition(value);
-      // If user seeks back, reset crossfade triggers so they fire again
-      preloadTriggeredRef.current = false;
-      crossfadeTriggeredRef.current = false;
-      if (crossfadeActiveRef.current) cancelCrossfade();
       broadcastCurrentState();
     }
   };
