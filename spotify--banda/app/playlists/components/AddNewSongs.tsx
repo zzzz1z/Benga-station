@@ -217,73 +217,110 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
     setYtSelectedIds(new Set());
   };
 
-  return (
+return (
     <>
-      <button onClick={() => setIsOpen(true)}>
-        <CiCirclePlus size={30} />
+      <button
+        onClick={() => setIsOpen(true)}
+        className="flex items-center justify-center w-10 h-10 border border-red-500/30 bg-red-500/5 active:bg-red-500/20 transition"
+        style={{ clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)' }}
+        title="Adicionar músicas"
+      >
+        <CiCirclePlus size={22} className="text-red-400" />
       </button>
 
-      <ModalToAddNewSongs
-        isOpen={isOpen}
-        onClose={handleClose}
-        title="Adicionar músicas à Playlist"
-      >
+      <ModalToAddNewSongs isOpen={isOpen} onClose={handleClose} title="SYNC_TRACKS">
+
         {/* Tab switcher */}
-        <div className="flex border-b border-neutral-700 mb-3">
-          <button
-            onClick={() => setTab('db')}
-            className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px
-              ${tab === 'db' ? 'border-red-500 text-white' : 'border-transparent text-neutral-400 hover:text-white'}`}
-          >
-            Biblioteca
-          </button>
-          <button
-            onClick={() => setTab('yt')}
-            className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px
-              ${tab === 'yt' ? 'border-red-500 text-white' : 'border-transparent text-neutral-400 hover:text-white'}`}
-          >
-            YouTube
-          </button>
+        <div className="flex border-b border-red-900/20 mb-4">
+          {(['db', 'yt'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-[10px] font-mono uppercase tracking-widest transition border-b-2 -mb-px ${
+                tab === t
+                  ? 'border-red-500 text-red-400'
+                  : 'border-transparent text-neutral-600 active:text-white'
+              }`}
+            >
+              {t === 'db' ? 'BIBLIOTECA' : 'YOUTUBE'}
+            </button>
+          ))}
         </div>
 
         {tab === 'db' && (
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Pesquisar..."
-              className="p-2 mb-2 bg-neutral-800 border border-neutral-700 rounded text-white text-sm focus:outline-none"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-            {warning && <p className="text-red-500 text-xs">{warning}</p>}
-            <div className="max-h-60 overflow-y-auto flex flex-col gap-y-1">
+          <div className="flex flex-col gap-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="PESQUISAR_TRACKS..."
+                className="w-full bg-neutral-900 border border-red-900/30 text-white text-[11px] font-mono uppercase tracking-wider px-3 py-2.5 placeholder:text-neutral-700 focus:outline-none focus:border-red-500/50"
+                style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {warning && (
+              <p className="text-red-500 font-mono text-[9px] uppercase tracking-widest border border-red-500/20 bg-red-500/5 px-3 py-2">
+                ⚠ {warning}
+              </p>
+            )}
+
+            <div className="max-h-60 overflow-y-auto flex flex-col gap-y-0.5 pr-1">
               {filteredSongs.map(song => (
-                <div key={song.id} className="flex items-center gap-x-2">
-                  <div className="flex-1 min-w-0">
+                <div
+                  key={song.id}
+                  onClick={() => handleCheckboxChange(String(song.id))}
+                  className={`flex items-center gap-x-2 cursor-pointer border-l-2 transition ${
+                    selectedSongs.has(String(song.id))
+                      ? 'border-red-500 bg-red-500/5'
+                      : playlistSongs.has(String(song.id))
+                      ? 'border-neutral-800 opacity-40'
+                      : 'border-transparent active:border-red-900'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0 pointer-events-none">
                     <MediaItem data={song} />
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={selectedSongs.has(String(song.id))}
-                    onChange={() => handleCheckboxChange(String(song.id))}
-                    className="flex-shrink-0 accent-red-500 w-4 h-4"
-                  />
+                  <div className={`flex-shrink-0 w-4 h-4 mr-2 border transition ${
+                    selectedSongs.has(String(song.id))
+                      ? 'bg-red-500 border-red-500'
+                      : 'border-neutral-700'
+                  }`}
+                    style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
+                  >
+                    {selectedSongs.has(String(song.id)) && (
+                      <span className="flex items-center justify-center w-full h-full text-white text-[8px] font-black">✓</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            <Button onClick={handleAddDbSongs} disabled={selectedSongs.size === 0} className="mt-2">
-              Adicionar ({selectedSongs.size})
-            </Button>
+
+            <button
+              onClick={handleAddDbSongs}
+              disabled={selectedSongs.size === 0}
+              className="w-full py-3 text-[10px] font-mono uppercase tracking-widest transition disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{
+                background: selectedSongs.size > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${selectedSongs.size > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.05)'}`,
+                color: selectedSongs.size > 0 ? '#f87171' : '#4b4b4b',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+              }}
+            >
+              {selectedSongs.size > 0 ? `SYNC ${selectedSongs.size} TRACK${selectedSongs.size > 1 ? 'S' : ''}` : 'SELECIONAR TRACKS'}
+            </button>
           </div>
         )}
 
         {tab === 'yt' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-y-3">
             <div className="flex gap-x-2">
               <input
                 type="text"
-                placeholder="Pesquisar no YouTube..."
-                className="flex-1 p-2 bg-neutral-800 border border-neutral-700 rounded text-white text-sm focus:outline-none"
+                placeholder="PESQUISAR_YOUTUBE..."
+                className="flex-1 bg-neutral-900 border border-red-900/30 text-white text-[11px] font-mono uppercase tracking-wider px-3 py-2.5 placeholder:text-neutral-700 focus:outline-none focus:border-red-500/50"
+                style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
                 value={ytQuery}
                 onChange={e => setYtQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleYtSearch()}
@@ -291,42 +328,54 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
               <button
                 onClick={handleYtSearch}
                 disabled={ytSearching}
-                className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition disabled:opacity-50"
+                className="px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition disabled:opacity-40"
+                style={{
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.4)',
+                  color: '#f87171',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                }}
               >
-                {ytSearching ? '...' : 'Pesquisar'}
+                {ytSearching ? (
+                  <div className="w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin" />
+                ) : 'GO'}
               </button>
             </div>
 
-            <div className="max-h-64 overflow-y-auto flex flex-col gap-y-1 mt-1">
+            <div className="max-h-64 overflow-y-auto flex flex-col gap-y-1">
               {ytResults.map(r => {
                 const isUnavailable = ytUnavailableIds.has(r.videoId);
                 const isLoading = ytLoadingIds.has(r.videoId);
                 const isSelected = ytSelectedIds.has(r.videoId);
-
                 return (
                   <div
                     key={r.videoId}
                     onClick={() => !isUnavailable && !isLoading && toggleYtSelect(r)}
-                    className={`flex items-center gap-x-3 p-2 rounded-lg transition cursor-pointer
-                      ${isUnavailable ? 'opacity-40 cursor-not-allowed' : isSelected ? 'bg-white/10 ring-1 ring-red-500' : 'hover:bg-neutral-800'}`}
+                    className={`flex items-center gap-x-3 p-2 transition cursor-pointer border-l-2 ${
+                      isUnavailable ? 'opacity-30 cursor-not-allowed border-neutral-800' :
+                      isSelected ? 'border-red-500 bg-red-500/5' :
+                      'border-transparent active:border-red-900'
+                    }`}
                   >
-                    <div className="relative w-10 h-10 rounded-md overflow-hidden flex-shrink-0 bg-neutral-700">
+                    <div className="relative w-10 h-10 overflow-hidden flex-shrink-0 bg-neutral-800">
                       <Image src={r.thumbnail} alt={r.title} fill className="object-cover" unoptimized />
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">
-                      <p className="text-white text-sm font-medium truncate">{r.title}</p>
-                      <p className="text-neutral-400 text-xs truncate">{r.artist}</p>
+                      <p className="text-white text-xs font-black uppercase tracking-tight truncate">{r.title}</p>
+                      <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-widest truncate">{r.artist}</p>
                     </div>
                     <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                       {isLoading
-                        ? <div className="w-3 h-3 border border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                        ? <div className="w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin" />
                         : isUnavailable
-                        ? <MdOutlineNotInterested size={14} className="text-neutral-600" />
+                        ? <MdOutlineNotInterested size={14} className="text-neutral-700" />
                         : isSelected
-                        ? <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
-                            <span className="text-white text-[8px] font-bold">✓</span>
+                        ? <div className="w-4 h-4 bg-red-500 flex items-center justify-center"
+                            style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}>
+                            <span className="text-white text-[8px] font-black">✓</span>
                           </div>
-                        : <div className="w-4 h-4 rounded-full border border-neutral-600" />
+                        : <div className="w-4 h-4 border border-neutral-700"
+                            style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }} />
                       }
                     </div>
                   </div>
@@ -335,16 +384,22 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
             </div>
 
             {ytSelectedIds.size > 0 && (
-              <Button
+              <button
                 onClick={handleAddYtSongs}
                 disabled={ytAdding}
-                className="mt-2"
+                className="w-full py-3 text-[10px] font-mono uppercase tracking-widest transition disabled:opacity-40"
+                style={{
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.4)',
+                  color: '#f87171',
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                }}
               >
                 {ytAdding
-                  ? 'A adicionar...'
-                  : `Adicionar ${ytSelectedIds.size} música${ytSelectedIds.size > 1 ? 's' : ''}`
+                  ? <div className="flex items-center justify-center gap-x-2"><div className="w-3 h-3 border border-red-500 border-t-transparent rounded-full animate-spin" />A SINCRONIZAR...</div>
+                  : `SYNC ${ytSelectedIds.size} TRACK${ytSelectedIds.size > 1 ? 'S' : ''}`
                 }
-              </Button>
+              </button>
             )}
           </div>
         )}

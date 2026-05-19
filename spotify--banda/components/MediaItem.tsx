@@ -26,12 +26,14 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
     const { user } = useUser();
     const authModal = useAuthModal();
     const router = useRouter();
+    const menuRef = useRef<HTMLDivElement>(null);
+const triggerRef = useRef<HTMLButtonElement>(null);
+const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
     const [isLiked, setIsLiked] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
-    const menuRef = useRef<HTMLDivElement>(null);
 
     const songId = String(data.id);
 
@@ -42,15 +44,19 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
             .then(json => { if (json.liked) setIsLiked(true); });
     }, [user?.id, songId]);
 
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setShowMenu(false);
-            }
-        };
-        if (showMenu) document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [showMenu]);
+useEffect(() => {
+    const handler = (e: MouseEvent) => {
+        if (
+            menuRef.current && !menuRef.current.contains(e.target as Node) &&
+            triggerRef.current && !triggerRef.current.contains(e.target as Node)
+        ) {
+            setShowMenu(false);
+            setMenuPos(null);
+        }
+    };
+    if (showMenu) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+}, [showMenu]);
 
     const handleClick = () => {
         if (onClick) onClick();
@@ -143,45 +149,47 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <OfflineButton song={data} size={18} />
                 </div>
 
-                {/* Mobile three-dot menu */}
-                <div className="relative md:hidden flex-shrink-0" ref={menuRef} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setShowMenu(prev => !prev)} className="text-red-900/40 p-2">
-                        <BsThreeDotsVertical size={16} />
-                    </button>
-                    {showMenu && (
-                        <div className="absolute right-0 bottom-full mb-1 w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] z-50 overflow-hidden">
-                            <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
-                                {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
-                                {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
-                            </button>
-                            <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
-                                <MdPlaylistAdd size={16} /> Add_Playlist
-                            </button>
-                            <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition border-b border-white/5">
-                                <AiOutlineInfoCircle size={16} /> Ver_Metadata
-                            </button>
-                            <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white hover:bg-red-600/10 transition">
-                                <OfflineButton song={data} size={16} />
-                                <span>Offline</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
+{/* Mobile three-dot menu */}
+<div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
+    <button
+        ref={triggerRef}
+        onClick={() => {
+            if (showMenu) { setShowMenu(false); setMenuPos(null); return; }
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (rect) setMenuPos({ top: rect.top - 4, right: window.innerWidth - rect.right });
+            setShowMenu(true);
+        }}
+        className="text-red-900/40 p-2"
+    >
+        <BsThreeDotsVertical size={16} />
+    </button>
+    </div>
             </div>
 
-            <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="SYNC_PLAYLIST" description="Selecione o destino para o pacote de dados:">
-                <div className="flex flex-col gap-y-2 mt-4">
-                    {playlists.length === 0
-                        ? <p className="text-red-600/40 font-mono text-xs text-center py-4 tracking-tighter">NULL_DIRECTORIES_FOUND</p>
-                        : playlists.map(pl => (
-                            <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
-                                className="w-full text-left px-4 py-3 text-[10px] font-mono uppercase tracking-widest text-red-500 bg-red-900/5 border border-red-900/20 hover:bg-red-600 hover:text-white transition truncate">
-                                {'>'} {pl.title}
-                            </button>
-                        ))
-                    }
-                </div>
-            </Modal>
+{/* Portal-style fixed menu */}
+{showMenu && menuPos && (
+    <div
+        ref={menuRef}
+        className="fixed z-[999] w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden"
+        style={{ top: menuPos.top, right: menuPos.right, transform: 'translateY(-100%)' }}
+        onClick={e => e.stopPropagation()}
+    >
+        <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+            {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
+            {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
+        </button>
+        <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+            <MdPlaylistAdd size={16} /> Add_Playlist
+        </button>
+        <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+            <AiOutlineInfoCircle size={16} /> Ver_Metadata
+        </button>
+        <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition">
+            <OfflineButton song={data} size={16} />
+            <span>Offline</span>
+        </div>
+    </div>
+)}
         </>
     );
 };
