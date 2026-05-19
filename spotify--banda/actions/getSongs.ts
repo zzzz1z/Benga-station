@@ -1,6 +1,7 @@
 import { Song } from "@/types";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getCache, setCache, keys, TTL } from "@/libs/cache";
 
 const PAGE_SIZE = 15;
 
@@ -8,6 +9,10 @@ const getSongs = async (search?: string, page = 0): Promise<{ songs: Song[]; has
     const trimmed = search?.trim() ?? '';
 
     if (trimmed.length === 1) return { songs: [], hasMore: false };
+
+    const cacheKey = keys.songs(trimmed, page);
+    const cached = await getCache<{ songs: Song[]; hasMore: boolean }>(cacheKey);
+    if (cached) return cached;
 
     try {
         const cookieStore = await cookies();
@@ -35,7 +40,7 @@ const getSongs = async (search?: string, page = 0): Promise<{ songs: Song[]; has
             .from("Songs")
             .select("*")
             .order("created_at", { ascending: false })
-            .range(from, to + 1); // fetch one extra to check if there's more
+            .range(from, to + 1);
 
         if (trimmed) {
             query = query.or(`title.ilike.%${trimmed}%,author.ilike.%${trimmed}%`);
@@ -50,11 +55,14 @@ const getSongs = async (search?: string, page = 0): Promise<{ songs: Song[]; has
 
         const results = data || [];
         const hasMore = results.length > PAGE_SIZE;
-
-        return {
+        const result = {
             songs: hasMore ? results.slice(0, PAGE_SIZE) : results,
             hasMore,
         };
+
+        await setCache(cacheKey, result, TTL.songs);
+
+        return result;
     } catch (err) {
         console.error("Erro inesperado ao buscar músicas:", err);
         return { songs: [], hasMore: false };

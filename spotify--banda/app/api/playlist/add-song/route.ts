@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { invalidate, keys } from '@/libs/cache';
 
 export async function POST(request: Request) {
     const supabase = await createClient();
@@ -39,6 +40,8 @@ export async function POST(request: Request) {
     });
 
     if (error) return NextResponse.json({ error: 'Song already in playlist' }, { status: 409 });
+
+    await invalidate(keys.playlists(user.id));
 
     return NextResponse.json({ ok: true });
 }

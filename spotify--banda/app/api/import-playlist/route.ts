@@ -1,253 +1,146 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { invalidate, keys } from '@/libs/cache';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const spotifyUrlInfo = require('spotify-url-info');
 const { getData } = spotifyUrlInfo(fetch);
 
 export const maxDuration = 60;
 
-const WORKER_URL = process.env.YT_WORKER_URL!;
-const WORKER_SECRET = process.env.WORKER_SECRET!;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function detectPlatform(url: string): 'spotify' | 'youtube' | null {
-  if (url.includes('spotify.com')) return 'spotify';
-  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-  return null;
+function send(controller: ReadableStreamDefaultController, data: object) {
+  controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function extractYouTubePlaylistId(url: string): string | null {
-  try {
-    const u = new URL(url);
-    return u.searchParams.get('list');
-  } catch {
-    return null;
-  }
-}
-
-async function searchYouTube(
-  query: string,
-  signal?: AbortSignal,
-): Promise<{ videoId: string; title: string; artist: string; thumbnail: string } | null> {
-  try {
-    const res = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(query)}`, {
-      headers: { 'x-worker-secret': WORKER_SECRET },
-      signal: signal ?? AbortSignal.timeout(25000),
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-async function fetchYouTubePlaylist(
-  playlistId: string,
-  signal?: AbortSignal,
-): Promise<{ videoId: string; title: string; artist: string; thumbnail: string }[]> {
-  const res = await fetch(`${WORKER_URL}/playlist/${playlistId}`, {
-    headers: { 'x-worker-secret': WORKER_SECRET },
-    signal: signal ?? AbortSignal.timeout(115000),
-  });
-  if (!res.ok) throw new Error('Failed to fetch YouTube playlist');
-  const data = await res.json();
-  return data.tracks ?? [];
-}
-
-// ── Main handler ──────────────────────────────────────────────────────────────
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { url } = await req.json();
-  if (!url || typeof url !== 'string')
-    return NextResponse.json({ error: 'Missing URL' }, { status: 400 });
+  const { url } = await request.json();
+  if (!url) return NextResponse.json({ error: 'Missing URL' }, { status: 400 });
 
-  const platform = detectPlatform(url.trim());
-  if (!platform)
-    return NextResponse.json(
-      { error: 'URL não reconhecido. Usa um link do Spotify ou YouTube.' },
-      { status: 400 },
-    );
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        send(controller, { status: 'fetching', message: 'A obter playlist do Spotify...' });
 
-  const ac = new AbortController();
-  req.signal.addEventListener('abort', () => ac.abort());
-
-  const encoder = new TextEncoder();
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
-
-  const send = async (data: object) => {
-    if (ac.signal.aborted) return;
-    try {
-      await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-    } catch {
-      ac.abort();
-    }
-  };
-
-  let closed = false;
-  const closeWriter = async () => {
-    if (closed) return;
-    closed = true;
-    try {
-      await writer.close();
-    } catch {
-      // Already closed
-    }
-  };
-
-  (async () => {
-    try {
-      let tracks: { title: string; artist: string; thumbnail: string; videoId?: string }[] = [];
-      let playlistName = 'Playlist Importada';
-      let playlistCover = '';
-
-      // ── Fetch track list ────────────────────────────────────────────────────
-      if (platform === 'spotify') {
-        await send({ status: 'fetching', message: 'A obter playlist do Spotify...' });
-        if (ac.signal.aborted) return;
-
-        const data = await getData(url.trim());
-
-        playlistName = data.name ?? playlistName;
-        const images: any[] = data.coverArt?.sources ?? data.images ?? [];
-        playlistCover = images[0]?.url ?? '';
-
-        const rawTracks: any[] = data.trackList ?? [];
-        tracks = rawTracks.map((item: any) => ({
-          title: item.title ?? '',
-          artist: item.subtitle ?? '',
-          thumbnail: item.coverArt?.sources?.[0]?.url ?? playlistCover,
-        }));
-      } else {
-        const playlistId = extractYouTubePlaylistId(url.trim());
-        if (!playlistId) {
-          await send({ status: 'error', message: 'Link de playlist YouTube inválido.' });
+        let playlistData: any;
+        try {
+          playlistData = await getData(url);
+        } catch {
+          send(controller, { status: 'error', message: 'Não foi possível obter a playlist do Spotify.' });
+          controller.enqueue('data: [DONE]\n\n');
+          controller.close();
           return;
         }
-        await send({ status: 'fetching', message: 'A obter playlist do YouTube...' });
-        if (ac.signal.aborted) return;
 
-        const ytTracks = await fetchYouTubePlaylist(playlistId, ac.signal);
-        playlistName = 'Playlist YouTube';
-        playlistCover = ytTracks[0]?.thumbnail ?? '';
-        tracks = ytTracks.map(t => ({
-          title: t.title,
-          artist: t.artist,
-          thumbnail: t.thumbnail,
-          videoId: t.videoId,
-        }));
-      }
-
-      if (ac.signal.aborted) return;
-
-      if (!tracks.length) {
-        await send({ status: 'error', message: 'Nenhuma música encontrada na playlist.' });
-        return;
-      }
-
-      await send({
-        status: 'matching',
-        message: `${tracks.length} músicas encontradas. A processar...`,
-        total: tracks.length,
-      });
-
-      // ── Create playlist record ──────────────────────────────────────────────
-      const { data: playlist, error: playlistError } = await supabase
-        .from('Playlists')
-        .insert({
-          user_id: user.id,
-          title: playlistName,
-          description: `Importada de ${platform === 'spotify' ? 'Spotify' : 'YouTube'}`,
-          cover_image: playlistCover,
-        })
-        .select()
-        .single();
-
-      if (playlistError || !playlist) {
-        console.error('[import-playlist] playlist insert failed:', JSON.stringify(playlistError));
-        await send({ status: 'error', message: 'Erro ao criar playlist.', detail: playlistError?.message ?? 'no data returned' });
-        return;
-      }
-
-      // ── Process each track ──────────────────────────────────────────────────
-      let imported = 0;
-      let failed = 0;
-
-      for (const track of tracks) {
-        if (ac.signal.aborted) break;
-
-        try {
-          let videoId = track.videoId;
-
-          if (!videoId) {
-            const query = `${track.title} ${track.artist}`;
-            const result = await searchYouTube(query, ac.signal);
-            if (!result) {
-              failed++;
-              continue;
-            }
-            videoId = result.videoId;
-          }
-
-          if (ac.signal.aborted) break;
-
-          const { data: song, error: songError } = await supabase
-            .from('Songs')
-            .insert({
-              user_id: user.id,
-              title: track.title,
-              author: track.artist,
-              source: 'youtube',
-              youtube_video_id: videoId,
-              song_path: '',
-              image_path: track.thumbnail ?? '',
-            })
-            .select()
-            .single();
-
-          if (songError || !song) {
-            failed++;
-            continue;
-          }
-
-          await supabase.from('playlist_songs').insert({
-            playlist_id: playlist.id,
-            song_id: song.id,
-            user_id: user.id,
-          });
-
-          imported++;
-          await send({ status: 'progress', imported, total: tracks.length, failed });
-        } catch {
-          failed++;
-          await send({ status: 'progress', imported, total: tracks.length, failed });
+        const tracks: any[] = playlistData?.tracks?.items ?? playlistData?.trackList ?? [];
+        if (!tracks.length) {
+          send(controller, { status: 'error', message: 'Playlist vazia ou não suportada.' });
+          controller.enqueue('data: [DONE]\n\n');
+          controller.close();
+          return;
         }
-      }
 
-      if (!ac.signal.aborted) {
-        await send({
+        const total = tracks.length;
+        send(controller, { status: 'matching', message: `A encontrar ${total} músicas...`, total });
+
+        // Create playlist
+        const playlistTitle = playlistData?.name ?? 'Playlist Importada';
+        const { data: newPlaylist, error: playlistError } = await supabase
+          .from('Playlists')
+          .insert([{ title: playlistTitle, user_id: user.id }])
+          .select()
+          .single();
+
+        if (playlistError || !newPlaylist) {
+          send(controller, { status: 'error', message: 'Erro ao criar playlist.' });
+          controller.enqueue('data: [DONE]\n\n');
+          controller.close();
+          return;
+        }
+
+        let imported = 0;
+        let failed = 0;
+
+        for (const item of tracks) {
+          const track = item.track ?? item;
+          const title: string = track?.name ?? track?.title ?? '';
+          const artist: string =
+            track?.artists?.[0]?.name ?? track?.subtitle ?? track?.artist ?? '';
+
+          if (!title) { failed++; continue; }
+
+          try {
+            // Search YouTube for the track
+            const ytRes = await fetch(
+              `/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`,
+              { signal: AbortSignal.timeout(10000) }
+            );
+            const ytData = ytRes.ok ? await ytRes.json() : null;
+            const ytTrack = ytData?.results?.[0];
+
+            if (!ytTrack?.videoId) { failed++; continue; }
+
+            // Upsert song — reuse existing if youtube_video_id already in DB
+            const { data: song, error: songError } = await supabase
+              .from('Songs')
+              .upsert({
+                title: ytTrack.title ?? title,
+                author: ytTrack.artist ?? artist,
+                source: 'youtube',
+                youtube_video_id: ytTrack.videoId,
+                user_id: user.id,
+                song_path: '',
+                image_path: ytTrack.thumbnail ?? '',
+              }, { onConflict: 'youtube_video_id' })
+              .select('id')
+              .single();
+
+            if (songError || !song) { failed++; continue; }
+
+            // Add to playlist (ignore duplicate errors)
+            await supabase.from('playlist_songs').upsert({
+              playlist_id: newPlaylist.id,
+              song_id: song.id,
+              user_id: user.id,
+            }, { onConflict: 'playlist_id,song_id' });
+
+            imported++;
+            send(controller, {
+              status: 'progress',
+              message: `${imported}/${total} importadas`,
+              imported,
+              total,
+              failed,
+            });
+          } catch {
+            failed++;
+          }
+        }
+
+        // Invalidate playlists cache so next server render is fresh
+        await invalidate(keys.playlists(user.id));
+
+        send(controller, {
           status: 'done',
-          message: `${imported} músicas importadas${failed > 0 ? `, ${failed} falharam` : ''}.`,
+          message: `Importação concluída: ${imported} músicas adicionadas.`,
           imported,
+          total,
           failed,
-          playlistId: playlist.id,
+          playlistId: newPlaylist.id,
         });
+      } catch (err: any) {
+        send(controller, { status: 'error', message: err.message ?? 'Erro inesperado.' });
+      } finally {
+        // Sentinel so the client reader knows to stop
+        controller.enqueue('data: [DONE]\n\n');
+        controller.close();
       }
-    } catch (err: any) {
-      if (!ac.signal.aborted) {
-        await send({ status: 'error', message: err.message ?? 'Erro desconhecido.' });
-      }
-    } finally {
-      await closeWriter();
-    }
-  })();
+    },
+  });
 
-  return new Response(stream.readable, {
+  return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',

@@ -1,6 +1,7 @@
 import { Playlist } from "@/types";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getCache, setCache, keys, TTL } from "@/libs/cache";
 
 const getLikedPlaylists = async (): Promise<Playlist[]> => {
     const cookieStore = await cookies();
@@ -20,6 +21,10 @@ const getLikedPlaylists = async (): Promise<Playlist[]> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
+    const cacheKey = keys.likedPlaylists(user.id);
+    const cached = await getCache<Playlist[]>(cacheKey);
+    if (cached) return cached;
+
     const { data, error } = await supabase
         .from('Playlists_Favoritas')
         .select('*, Playlists(*)')
@@ -28,7 +33,10 @@ const getLikedPlaylists = async (): Promise<Playlist[]> => {
 
     if (error || !data) return [];
 
-    return data.map((item) => ({ ...item.Playlists }));
+    const result = data.map((item) => ({ ...item.Playlists }));
+    await setCache(cacheKey, result, TTL.liked);
+
+    return result;
 };
 
 export default getLikedPlaylists;

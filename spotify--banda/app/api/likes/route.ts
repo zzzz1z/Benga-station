@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { invalidate, keys } from '@/libs/cache';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -34,6 +35,8 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    await invalidate(keys.liked(user.id));
+
     return NextResponse.json({ ok: true });
 }
 
@@ -52,6 +55,8 @@ export async function DELETE(request: Request) {
         .eq('song_id', songId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    await invalidate(keys.liked(user.id));
 
     return NextResponse.json({ ok: true });
 }

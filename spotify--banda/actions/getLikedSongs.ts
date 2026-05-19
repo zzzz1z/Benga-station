@@ -1,6 +1,7 @@
 import { Song } from "@/types";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getCache, setCache, keys, TTL } from "@/libs/cache";
 
 const getLikedSongs = async (): Promise<Song[]> => {
     const cookieStore = await cookies();
@@ -22,8 +23,11 @@ const getLikedSongs = async (): Promise<Song[]> => {
     );
 
     const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) return [];
+
+    const cacheKey = keys.liked(user.id);
+    const cached = await getCache<Song[]>(cacheKey);
+    if (cached) return cached;
 
     const { data, error } = await supabase
         .from('Músicas_Favoritas')
@@ -36,7 +40,10 @@ const getLikedSongs = async (): Promise<Song[]> => {
         return [];
     }
 
-    return (data || []).map((item) => ({ ...item.Songs }));
+    const result = (data || []).map((item) => ({ ...item.Songs }));
+    await setCache(cacheKey, result, TTL.liked);
+
+    return result;
 };
 
 export default getLikedSongs;

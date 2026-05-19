@@ -51,8 +51,17 @@ export function useImportPlaylist() {
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
+
+          const payload = line.slice(6);
+
+          // Sentinel — server signals clean end
+          if (payload === '[DONE]') {
+            reader.cancel();
+            return;
+          }
+
           try {
-            const event = JSON.parse(line.slice(6));
+            const event = JSON.parse(payload);
             setState(prev => ({
               ...prev,
               status: event.status ?? prev.status,

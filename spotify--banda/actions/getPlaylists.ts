@@ -1,6 +1,7 @@
 import { Playlist } from "@/types";
 import { type CookieOptions, createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getCache, setCache, keys, TTL } from "@/libs/cache";
 
 const getPlaylists = async (search?: string): Promise<Playlist[]> => {
     const cookieStore = await cookies();
@@ -24,6 +25,13 @@ const getPlaylists = async (search?: string): Promise<Playlist[]> => {
     const resolvedUserId = (await supabase.auth.getUser()).data.user?.id;
     if (!resolvedUserId) return [];
 
+    // Only cache non-search requests — search is rare and low traffic
+    if (!search) {
+        const cacheKey = keys.playlists(resolvedUserId);
+        const cached = await getCache<Playlist[]>(cacheKey);
+        if (cached) return cached;
+    }
+
     let query = supabase
         .from('Playlists')
         .select('*, playlist_songs(Songs(*))')
@@ -40,12 +48,18 @@ const getPlaylists = async (search?: string): Promise<Playlist[]> => {
         return [];
     }
 
-    return (data ?? []).map((playlist: any) => ({
+    const result = (data ?? []).map((playlist: any) => ({
         ...playlist,
         songs: (playlist.playlist_songs ?? [])
             .map((ps: any) => ps.Songs)
             .filter(Boolean),
     }));
+
+    if (!search) {
+        await setCache(keys.playlists(resolvedUserId), result, TTL.playlists);
+    }
+
+    return result;
 };
 
 export default getPlaylists;
