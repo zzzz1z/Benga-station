@@ -14,7 +14,6 @@ import EditPlaylist from './EditPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
-import { usePageTransition } from '@/providers/PageTransitionProvider';
 import { useRefresh } from '@/hooks/useRefresh';
 
 const supabase = createClient();
@@ -48,32 +47,7 @@ const PlaylistDetails: React.FC = () => {
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
-  const { startLoading, stopLoading } = usePageTransition();
   const { refreshKey } = useRefresh();
-
-  // Single ref to track whether we've called startLoading without a matching stopLoading
-  const loadingActiveRef = useRef(false);
-  const safetyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const safeStopLoading = useCallback(() => {
-    if (!loadingActiveRef.current) return;
-    loadingActiveRef.current = false;
-    if (safetyTimerRef.current) {
-      clearTimeout(safetyTimerRef.current);
-      safetyTimerRef.current = null;
-    }
-    stopLoading();
-  }, [stopLoading]);
-
-  const safeStartLoading = useCallback(() => {
-    if (loadingActiveRef.current) return; // already loading, don't double-call
-    loadingActiveRef.current = true;
-    startLoading();
-    // Safety net — never stay stuck longer than 8 seconds
-    safetyTimerRef.current = setTimeout(() => {
-      safeStopLoading();
-    }, 8000);
-  }, [startLoading, safeStopLoading]);
 
   const fetchPlaylist = useCallback(async () => {
     if (!id) {
@@ -83,7 +57,8 @@ const PlaylistDetails: React.FC = () => {
     }
 
     setError(null);
-    safeStartLoading();
+    setLoading(true);
+    setSongsLoading(true);
 
     try {
       const [playlistRes, songRes] = await Promise.all([
@@ -95,7 +70,6 @@ const PlaylistDetails: React.FC = () => {
         setError('Playlist não encontrada.');
         setLoading(false);
         setSongsLoading(false);
-        safeStopLoading();
         return;
       }
 
@@ -104,15 +78,15 @@ const PlaylistDetails: React.FC = () => {
 
       if (songRes.error) {
         setSongsLoading(false);
-        safeStopLoading();
         return;
       }
 
-      const fetchedSongs = (songRes.data ?? []).map((item: any) => item.Songs).filter(Boolean);
+      const fetchedSongs = (songRes.data ?? [])
+        .map((item: any) => item.Songs)
+        .filter(Boolean);
+
       setSongs(fetchedSongs);
       setSongsLoading(false);
-      safeStopLoading();
-
       setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
 
       const ytIds = fetchedSongs
@@ -129,19 +103,17 @@ const PlaylistDetails: React.FC = () => {
       setError('Erro inesperado.');
       setLoading(false);
       setSongsLoading(false);
-      safeStopLoading();
     }
-  }, [id, safeStartLoading, safeStopLoading]);
+  }, [id]);
 
   useEffect(() => {
     fetchPlaylist();
-    return () => safeStopLoading();
   }, [fetchPlaylist]);
 
   useEffect(() => {
     if (refreshKey === 0) return;
     fetchPlaylist();
-  }, [refreshKey]);
+  }, [refreshKey, fetchPlaylist]);
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
