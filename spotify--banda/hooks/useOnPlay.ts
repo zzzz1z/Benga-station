@@ -8,15 +8,13 @@ export const getSongPlayerId = (song: Song): string =>
     ? `yt_${song.youtube_video_id}`
     : String(song.id);
 
-const preExtractSong = async (videoId: string): Promise<void> => {
-  try {
-    await fetch('/api/preextract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId }),
-      signal: AbortSignal.timeout(20000),
-    });
-  } catch {}
+const preExtractSong = (videoId: string): void => {
+  fetch('/api/preextract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoId }),
+    signal: AbortSignal.timeout(20000),
+  }).catch(() => {});
 };
 
 const useOnPlay = (defaultSongs?: Song[]) => {
@@ -24,7 +22,7 @@ const useOnPlay = (defaultSongs?: Song[]) => {
   const authModal = useAuthModal();
   const { user } = useUser();
 
-  const onPlay = async (id: string, callSongs?: Song[]) => {
+  const onPlay = (id: string, callSongs?: Song[]) => {
     if (!user) return authModal.onOpen('sign_up');
 
     const songs = callSongs ?? defaultSongs ?? [];
@@ -33,10 +31,8 @@ const useOnPlay = (defaultSongs?: Song[]) => {
 
     const tappedSong = songs.find(s => getSongPlayerId(s) === id);
 
-    // Preextract tapped song first — with Redis URL caching this is usually
-    // a cache hit and returns in < 1 second
     if (tappedSong?.source === 'youtube' && tappedSong.youtube_video_id) {
-      await preExtractSong(tappedSong.youtube_video_id);
+      preExtractSong(tappedSong.youtube_video_id);
     }
 
     player.setQueue(songs, id);

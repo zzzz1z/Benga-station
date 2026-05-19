@@ -7,7 +7,6 @@ import Image from 'next/image';
 import { Playlist } from '@/types';
 import MediaItem from '@/components/MediaItem';
 import AddNewSongs from './AddNewSongs';
-import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import DeletePlaylist from './deletePlaylist';
 import ShuffleSongs from './ShuffleSongs';
 import EditPlaylist from './EditPlaylist';
@@ -15,6 +14,7 @@ import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
 import { useRefresh } from '@/hooks/useRefresh';
+import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 
 const supabase = createClient();
 
@@ -88,17 +88,6 @@ const PlaylistDetails: React.FC = () => {
       setSongs(fetchedSongs);
       setSongsLoading(false);
       setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
-
-      const ytIds = fetchedSongs
-        .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
-        .map((s: any) => s.youtube_video_id);
-      if (ytIds.length) {
-        fetch('/api/preextract-queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ videoIds: ytIds }),
-        }).catch(() => {});
-      }
     } catch {
       setError('Erro inesperado.');
       setLoading(false);
