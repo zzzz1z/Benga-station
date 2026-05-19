@@ -10,29 +10,41 @@ export async function POST(request: Request) {
   try {
     const { videoIds } = await request.json();
 
-    if (!Array.isArray(videoIds) || !videoIds.length)
+    if (!Array.isArray(videoIds) || !videoIds.length) {
       return NextResponse.json({ error: 'No video IDs' }, { status: 400 });
+    }
 
+    // Sanitize and limit to 200 IDs per request chunk
     const valid = videoIds
-      .filter((id: string) => /^[a-zA-Z0-9_-]{11}$/.test(id))
+      .filter((id: string) => typeof id === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(id))
       .slice(0, 200);
 
-    if (!valid.length)
+    if (!valid.length) {
       return NextResponse.json({ error: 'No valid IDs' }, { status: 400 });
+    }
 
-    // Fire and don't await — worker acks immediately anyway
-    fetch(`${WORKER_URL}/preextract-queue`, {
+    // CRITICAL: We MUST await the worker's initial validation/acceptance 
+    // response so Vercel doesn't freeze the container midway.
+    const response = await fetch(`${WORKER_URL}/preextract-queue`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-worker-secret': WORKER_SECRET,
       },
       body: JSON.stringify({ videoIds: valid }),
-      signal: AbortSignal.timeout(10000),
-    }).catch(() => {});
+      signal: AbortSignal.timeout(15000), 
+    });
 
-    return NextResponse.json({ ok: true, queued: valid.length });
-  } catch {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Worker Error] Status: ${response.status} - ${errorText}`);
+      return NextResponse.json({ error: 'Worker rejected processing batch' }, { status: 502 });
+    }
+
+    const data = await response.json();
+    return NextResponse.json({ ok: true, queued: valid.length, workerResponse: data });
+  } catch (error: any) {
+    console.error('[API Error] Pre-extract bridge failed:', error.message || error);
+    return NextResponse.json({ error: 'Internal execution pipeline failed' }, { status: 500 });
   }
 }

@@ -26,15 +26,15 @@ const GlobalWarmer = () => {
         }
       } catch (_) {}
 
-      // Random jitter 0-60s so 300 users don't all hit Supabase at once after a deploy
-      await new Promise(res => setTimeout(res, Math.random() * 60000));
+      // Random jitter 0-30s so users don't spike Supabase concurrently post-deployment
+      await new Promise(res => setTimeout(res, Math.random() * 30000));
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const videoIds = new Set<string>();
 
-      // 1. Full library — warm everything so Redis is always hot
+      // 1. Full library — query chunks
       let page = 0;
       const PAGE_SIZE = 200;
       while (true) {
@@ -87,7 +87,7 @@ const GlobalWarmer = () => {
       if (topPlayed) {
         const counts: Record<string, number> = {};
         topPlayed.forEach((row: any) => {
-          counts[row.video_id] = (counts[row.video_id] ?? 0) + 1;
+          if (row.video_id) counts[row.video_id] = (counts[row.video_id] ?? 0) + 1;
         });
         Object.entries(counts)
           .sort((a, b) => b[1] - a[1])
@@ -98,17 +98,23 @@ const GlobalWarmer = () => {
       if (!videoIds.size) return;
 
       const ids = Array.from(videoIds);
-      console.log(`[GlobalWarmer] warming ${ids.length} songs`);
+      console.log(`[GlobalWarmer] warming ${ids.length} unique songs`);
 
-      // Send in batches of 50 to avoid oversized requests
+      // Send in small sequential batches of 50 to prevent event loop stalls on VPS
       const BATCH_SIZE = 50;
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
-        fetch('/api/preextract-queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ videoIds: batch }),
-        }).catch(() => {});
+        try {
+          // Awaiting ensures we do not flood Next.js with 20 parallel fetches
+          const res = await fetch('/api/preextract-queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: batch }),
+          });
+          if (!res.ok) console.warn(`[GlobalWarmer] Batch ${Math.floor(i / BATCH_SIZE) + 1} met with api error`);
+        } catch (err) {
+          console.error('[GlobalWarmer] Failed dispatching warming batch:', err);
+        }
       }
 
       try {
