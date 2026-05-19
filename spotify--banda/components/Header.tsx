@@ -8,7 +8,7 @@ import useAuthModal from "@/hooks/useAuthModal";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { FaUserAlt } from "react-icons/fa";
-import { RiLogoutBoxRLine, RiMenuUnfoldLine } from "react-icons/ri";
+import { RiLogoutBoxRLine } from "react-icons/ri";
 import { AiOutlineFileAdd } from "react-icons/ai";
 import toast from "react-hot-toast";
 import usePlayer from "@/hooks/usePlayer";
@@ -16,7 +16,7 @@ import { SlPlaylist } from "react-icons/sl";
 import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { usePageTransition } from "@/providers/PageTransitionProvider";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -63,40 +63,10 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   const { user, userDetails } = useUser();
   const uploadModal = useUploadModal();
   const activeID    = usePlayer(s => s.activeID);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef     = useRef<HTMLDivElement>(null);
-  const triggerRef  = useRef<HTMLButtonElement>(null);
-  const [fabTop, setFabTop] = useState(80);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as Node;
-      if (
-        menuRef.current && !menuRef.current.contains(target) &&
-        triggerRef.current && !triggerRef.current.contains(target)
-      ) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    document.addEventListener('touchstart', handler);
-    return () => {
-      document.removeEventListener('mousedown', handler);
-      document.removeEventListener('touchstart', handler);
-    };
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (menuOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setFabTop(rect.bottom + 8);
-    }
-  }, [menuOpen]);
-
-  const onClick = () => {
+  const handleUpload = () => {
     if (!user) return authModal.onOpen("sign_up");
-    return uploadModal.onOpen();
+    uploadModal.onOpen();
   };
 
   const handleLogout = async () => {
@@ -115,205 +85,159 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
     { icon: FcLike,     path: "/liked",     label: "Favoritas" },
   ];
 
-  const MENU_ITEMS = [
-    {
-      icon: FaUserAlt,
-      label: 'Perfil',
-      color: 'border-red-500/20 text-white',
-      action: () => { setMenuOpen(false); navigate('/account'); },
-    },
-    ...(userDetails?.role === 'admin' ? [{
-      icon: AiOutlineFileAdd,
-      label: 'Upload',
-      color: 'border-red-500/40 text-red-400',
-      action: () => { setMenuOpen(false); onClick(); },
-    }] : []),
-    {
-      icon: RiLogoutBoxRLine,
-      label: 'Logout',
-      color: 'border-red-600/50 text-red-500',
-      action: () => { setMenuOpen(false); handleLogout(); },
-    },
-  ];
+  const mobileNavBtn = (onClick: () => void, Icon: React.ElementType, label: string, extraClass = '') => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all ${extraClass}`}
+      style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+    >
+      <Icon size={22} className="text-white" />
+      <span className="text-[8px] font-mono uppercase tracking-widest text-neutral-500">{label}</span>
+    </button>
+  );
 
   return (
-    <>
+    <div
+      className={twMerge(`relative h-fit bg-neutral-900/50 px-6 pb-6 overflow-hidden`, className)}
+      style={{ paddingTop: `calc(env(safe-area-inset-top) + 1.5rem)` }}
+    >
+      <HeaderPulse />
+
       <div
-        className={twMerge(`relative h-fit bg-neutral-900/50 px-6 pb-6 overflow-hidden`, className)}
-        style={{ paddingTop: `calc(env(safe-area-inset-top) + 1.5rem)` }}
-      >
-        <HeaderPulse />
+        className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-1000"
+        style={{
+          background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.02) 3px, rgba(239,68,68,0.02) 4px)',
+          opacity: activeID ? 1 : 0.4,
+          animation: activeID ? 'scanDown 8s linear infinite' : 'none',
+        }}
+      />
+      <div className="absolute bottom-0 left-0 right-0 h-px z-10"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }} />
 
-        <div
-          className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-1000"
-          style={{
-            background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.02) 3px, rgba(239,68,68,0.02) 4px)',
-            opacity: activeID ? 1 : 0.4,
-            animation: activeID ? 'scanDown 8s linear infinite' : 'none',
-          }}
-        />
-        <div className="absolute bottom-0 left-0 right-0 h-px z-10"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }} />
+      <div className="relative z-20 w-full mb-4 flex items-center justify-between">
 
-        <div className="relative z-20 w-full mb-4 flex items-center justify-between">
-
-          {/* Desktop nav */}
-          <div className="hidden md:flex gap-x-2 items-center">
-            <button type="button" onClick={goBack}
-              className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
-              style={{ clipPath: BUTTON_CUT }}>
-              <RxCaretLeft className="text-white" size={35} />
-            </button>
-            <button type="button" onClick={goForward}
-              className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
-              style={{ clipPath: BUTTON_CUT }}>
-              <RxCaretRight className="text-white" size={35} />
-            </button>
-          </div>
-
-          {/* Mobile nav */}
-          {user && (
-            <div className="flex md:hidden items-center gap-x-2 flex-1">
-              {NAV_ITEMS.map((item, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => navigate(item.path)}
-                  className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
-                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
-                >
-                  <item.icon size={22} className="text-white" />
-                  <span className="text-[8px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!user && (
-            <div className="flex md:hidden items-center gap-x-2 flex-1">
-              {NAV_ITEMS.slice(0, 2).map((item, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => navigate(item.path)}
-                  className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
-                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
-                >
-                  <item.icon size={22} className="text-white" />
-                  <span className="text-[8px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Right side */}
-          <div className="flex items-center gap-x-3 ml-3">
-
-            {/* Desktop auth */}
-            <div className="hidden md:flex items-center gap-x-4">
-              {user ? (
-                <>
-                  <button onClick={() => navigate("/account")}
-                    className="bg-white p-2 flex items-center justify-center transition active:scale-95"
-                    style={{ clipPath: BUTTON_CUT }}>
-                    <FaUserAlt className="text-black" />
-                  </button>
-                  <button onClick={handleLogout}
-                    className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)]"
-                    style={{ clipPath: BUTTON_CUT }}>
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => authModal.onOpen("sign_up")}
-                    className="bg-transparent text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] transition">
-                    Registar
-                  </button>
-                  <button onClick={() => authModal.onOpen("sign_in")}
-                    className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-                    style={{ clipPath: BUTTON_CUT }}>
-                    Login
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Mobile trigger */}
-            {user && (
-              <div ref={menuRef} className="md:hidden relative flex-shrink-0">
-                <button
-                  ref={triggerRef}
-                  onClick={() => setMenuOpen(p => !p)}
-                  className="flex items-center justify-center w-12 h-12 bg-neutral-900/80 border border-red-500/30 active:border-red-500 active:bg-red-500/10 transition-all"
-                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
-                >
-                  <RiMenuUnfoldLine
-                    size={22}
-                    className="text-red-400 transition-transform duration-300"
-                    style={{ transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                  />
-                </button>
-              </div>
-            )}
-
-            {!user && (
-              <div className="md:hidden flex items-center gap-x-2">
-                <button onClick={() => authModal.onOpen("sign_in")}
-                  className="bg-red-600 px-4 py-2 text-white font-black uppercase text-xs tracking-widest transition-all"
-                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}>
-                  Login
-                </button>
-              </div>
-            )}
-          </div>
+        {/* Desktop nav */}
+        <div className="hidden md:flex gap-x-2 items-center">
+          <button type="button" onClick={goBack}
+            className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
+            style={{ clipPath: BUTTON_CUT }}>
+            <RxCaretLeft className="text-white" size={35} />
+          </button>
+          <button type="button" onClick={goForward}
+            className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
+            style={{ clipPath: BUTTON_CUT }}>
+            <RxCaretRight className="text-white" size={35} />
+          </button>
         </div>
 
-        {children && <div className="relative z-20">{children}</div>}
-      </div>
-
-      {/* FAB — fixed portal, always above everything */}
-      {user && (
-        <div
-          className="fixed z-[200] right-4 flex flex-col gap-y-2 items-end"
-          style={{
-            top: fabTop,
-            pointerEvents: menuOpen ? 'auto' : 'none',
-          }}
-        >
-          {/* backdrop */}
-          {menuOpen && (
-            <div
-              className="fixed inset-0 z-[-1]"
-              onClick={() => setMenuOpen(false)}
-            />
-          )}
-
-          {MENU_ITEMS.map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-x-2"
-              style={{
-                opacity: menuOpen ? 1 : 0,
-                transform: menuOpen ? 'translateX(0)' : 'translateX(70px)',
-                transition: `opacity 0.22s cubic-bezier(0.32,0.72,0,1) ${i * 0.06}s, transform 0.22s cubic-bezier(0.32,0.72,0,1) ${i * 0.06}s`,
-              }}
-            >
-              <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-400 bg-neutral-950 px-2 py-1 border border-white/5 whitespace-nowrap">
-                {item.label}
-              </span>
+        {/* Mobile nav — all buttons inline */}
+        {user ? (
+          <div className="flex md:hidden items-center gap-x-1 flex-1">
+            {NAV_ITEMS.map((item, i) => (
               <button
-                onClick={item.action}
-                className={`flex items-center justify-center w-11 h-11 bg-neutral-900 border active:scale-90 transition-transform ${item.color}`}
+                key={i}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
                 style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
               >
-                <item.icon size={18} />
+                <item.icon size={20} className="text-white" />
+                <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
               </button>
-            </div>
-          ))}
+            ))}
+
+            <button
+              type="button"
+              onClick={() => navigate('/account')}
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+              style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+            >
+              <FaUserAlt size={18} className="text-white" />
+              <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">Perfil</span>
+            </button>
+
+            {userDetails?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={handleUpload}
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+                style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+              >
+                <AiOutlineFileAdd size={20} className="text-red-400" />
+                <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">Upload</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-600/30 active:bg-red-600/20 active:border-red-600 transition-all"
+              style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+            >
+              <RiLogoutBoxRLine size={20} className="text-red-500" />
+              <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">Logout</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex md:hidden items-center gap-x-1 flex-1">
+            {NAV_ITEMS.slice(0, 2).map((item, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+                style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+              >
+                <item.icon size={20} className="text-white" />
+                <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => authModal.onOpen("sign_in")}
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-red-600/20 border border-red-600/50 active:bg-red-600/40 transition-all"
+              style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+            >
+              <FaUserAlt size={18} className="text-red-400" />
+              <span className="text-[7px] font-mono uppercase tracking-widest text-neutral-500">Login</span>
+            </button>
+          </div>
+        )}
+
+        {/* Desktop auth */}
+        <div className="hidden md:flex items-center gap-x-4 ml-3">
+          {user ? (
+            <>
+              <button onClick={() => navigate("/account")}
+                className="bg-white p-2 flex items-center justify-center transition active:scale-95"
+                style={{ clipPath: BUTTON_CUT }}>
+                <FaUserAlt className="text-black" />
+              </button>
+              <button onClick={handleLogout}
+                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                style={{ clipPath: BUTTON_CUT }}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => authModal.onOpen("sign_up")}
+                className="bg-transparent text-neutral-400 font-bold uppercase text-[10px] tracking-[0.2em] transition">
+                Registar
+              </button>
+              <button onClick={() => authModal.onOpen("sign_in")}
+                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                style={{ clipPath: BUTTON_CUT }}>
+                Login
+              </button>
+            </>
+          )}
         </div>
-      )}
-    </>
+      </div>
+
+      {children && <div className="relative z-20">{children}</div>}
+    </div>
   );
 };
 

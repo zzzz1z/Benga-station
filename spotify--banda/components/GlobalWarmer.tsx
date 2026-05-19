@@ -27,6 +27,9 @@ const GlobalWarmer = () => {
         }
       } catch (_) {}
 
+      // Random jitter 0-60s so 300 users don't all hit Supabase at once after a deploy
+      await new Promise(res => setTimeout(res, Math.random() * 60000));
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -41,6 +44,8 @@ const GlobalWarmer = () => {
         const vid = row.Songs?.youtube_video_id;
         if (row.Songs?.source === 'youtube' && vid) videoIds.add(vid);
       });
+
+
 
       const { data: playlists } = await supabase
         .from('Playlists')
