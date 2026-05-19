@@ -302,7 +302,7 @@ const SongDetails = () => {
         </button>
 
         {/* Like */}
-        <LikedButton songId={String(song.id)} />
+        <LikedButton songId={song.id} initialLiked={true} />
 
         {/* Offline */}
         <OfflineButton song={song} size={20} />

@@ -3,34 +3,23 @@
 import useAuthModal from "@/hooks/useAuthModal";
 import { useUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 
 interface LikedButtonProps {
   songId: string;
+  initialLiked?: boolean;
 }
 
-const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
+const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false }) => {
   const router = useRouter();
   const authModal = useAuthModal();
   const { user } = useUser();
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(initialLiked);
 
   const id = String(songId);
   const isYoutube = id.startsWith('yt_');
-
-  const fetchLikedStatus = useCallback(async () => {
-    if (!user?.id || isYoutube) return;
-
-    const res = await fetch(`/api/likes?songId=${id}`);
-    const json = await res.json();
-    if (json.liked) setIsLiked(true);
-  }, [id, user?.id, isYoutube]);
-
-  useEffect(() => {
-    fetchLikedStatus();
-  }, [fetchLikedStatus]);
 
   const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');

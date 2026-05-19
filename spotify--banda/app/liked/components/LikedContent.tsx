@@ -103,7 +103,8 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
                             />
                         </div>
                         <div className="flex-shrink-0">
-                            <LikedButton songId={song.id} />
+                           <LikedButton songId={song.id} initialLiked={true} />
+
                         </div>
                     </div>
                 ))}

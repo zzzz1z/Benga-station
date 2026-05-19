@@ -180,7 +180,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
             </div>
             <div className="flex-shrink-0">
-              <LikedButton songId={String(song.id)} />
+              <LikedButton songId={song.id} initialLiked={true} />
+
             </div>
           </div>
 
