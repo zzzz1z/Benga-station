@@ -7,10 +7,10 @@ import ModalProvider from '@/providers/ModalProvider';
 import UserProvider from '@/providers/userProvider';
 import SideBar from '@/components/SideBar';
 import { SessionProvider } from '@/providers/SessionContext';
-import { PageTransitionProvider } from '@/hooks/PageTransitionProvider';
 import FloatingRefreshButton from '@/components/FloatingRefreshButton';
 import { PlaylistProvider } from '@/hooks/usePlaylists';
 import { RefreshProvider } from '@/hooks/useRefresh';
+import { PageTransitionProvider } from '@/providers/PageTransitionProvider';
 
 const font = Figtree({ subsets: ['latin'] });
 
@@ -22,8 +22,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <UserProvider>
           <PageTransitionProvider>
             <SessionProvider>
-              <GlobalWarmer />
               <RefreshProvider>
+                <GlobalWarmer />
                 <PlaylistProvider>
                   <ModalProvider />
                   

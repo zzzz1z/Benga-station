@@ -8,17 +8,14 @@ import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
+import { useQueueExtender } from '@/hooks/useQueueExtender';
 
 let audioCtx: AudioContext | null = null;
 
 async function unlockAudioContext(): Promise<void> {
   try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (audioCtx.state === "suspended") {
-      await audioCtx.resume();
-    }
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtx.state === "suspended") await audioCtx.resume();
   } catch {}
 }
 
@@ -45,10 +42,11 @@ const recordPlayEvent = (videoId: string) => {
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
+  const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
 
   useEffect(() => {
     const saved = loadFromSession();
-    if (saved && saved.activeID && saved.ids.length > 0) {
+    if (saved?.activeID && saved.ids.length > 0) {
       usePlayer.setState({
         ids: saved.ids,
         originalIds: saved.originalIds ?? saved.ids,
@@ -61,13 +59,13 @@ const Player = () => {
     setIsMounted(true);
   }, []);
 
-  const player = usePlayer();
+  const player    = usePlayer();
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
 
-  const activeID   = usePlayer(state => state.activeID);
-  const playCount  = usePlayer(state => state.playCount);
-  const songsMap   = usePlayer(state => state.songs);
+  const activeID  = usePlayer(s => s.activeID);
+  const playCount = usePlayer(s => s.playCount);
+  const songsMap  = usePlayer(s => s.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
   const songFromStore   = activeID ? songsMap[activeID] : null;
@@ -77,11 +75,11 @@ const Player = () => {
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [volume,    setVolume]    = useState(1);
-  const [duration,  setDuration]  = useState(0);
-  const [position,  setPosition]  = useState(0);
+  const [isPlaying,  setIsPlaying]  = useState(false);
+  const [isLoading,  setIsLoading]  = useState(false);
+  const [volume,     setVolume]     = useState(1);
+  const [duration,   setDuration]   = useState(0);
+  const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const volumeRef          = useRef(1);
@@ -93,17 +91,14 @@ const Player = () => {
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  // ── Session integration ──
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
-  // Register this player's controls with the session context
   useEffect(() => {
     registerPlayer({ audioRef, setIsPlaying, setPosition });
   }, [registerPlayer]);
 
-  // Broadcast playback state whenever it changes (only if canControl)
   const broadcastCurrentState = useCallback(() => {
     if (!sessionRef.current?.canControl) return;
     const audio = audioRef.current;
@@ -115,16 +110,13 @@ const Player = () => {
     });
   }, [broadcastState]);
 
-  // Broadcast queue when it changes (only host)
-  const prevQueueRef = useRef<string>('');
+  const prevQueueRef = useRef('');
   useEffect(() => {
     const { ids, songs: songMap, activeID: aid } = usePlayer.getState();
     const key = ids.join(',') + (aid ?? '');
     if (key === prevQueueRef.current) return;
     prevQueueRef.current = key;
-    if (sessionRef.current?.isHost) {
-      broadcastQueue(ids, songMap, aid ?? '');
-    }
+    if (sessionRef.current?.isHost) broadcastQueue(ids, songMap, aid ?? '');
   });
 
   const handleEnded = () => {
@@ -134,28 +126,22 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // Record play event + priority window preextract on song change
   useEffect(() => {
     if (!activeID) return;
     const s = songsMap[activeID];
-    if (s?.source === 'youtube' && s?.youtube_video_id) {
-      recordPlayEvent(s.youtube_video_id);
-    }
+    if (s?.source === 'youtube' && s?.youtube_video_id) recordPlayEvent(s.youtube_video_id);
 
     const { ids } = usePlayer.getState();
-    const currentIdx = ids.indexOf(activeID);
-    if (currentIdx === -1) return;
+    const idx = ids.indexOf(activeID);
+    if (idx === -1) return;
 
-    const window = [
-      ...ids.slice(Math.max(0, currentIdx - 3), currentIdx),
-      ...ids.slice(currentIdx + 1, currentIdx + 6),
-    ]
-      .filter(id => id.startsWith('yt_'))
-      .map(id => id.slice(3));
+    const ytWindow = [
+      ...ids.slice(Math.max(0, idx - 3), idx),
+      ...ids.slice(idx + 1, idx + 6),
+    ].filter(id => id.startsWith('yt_')).map(id => id.slice(3));
 
-    if (!window.length) return;
-
-    window.forEach(videoId => {
+    if (!ytWindow.length) return;
+    ytWindow.forEach(videoId => {
       fetch('/api/preextract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,42 +153,31 @@ const Player = () => {
   useEffect(() => {
     const audio = new Audio();
     audioRef.current = audio;
-
     let lastTime = 0;
-    let stuckInterval: NodeJS.Timeout;
 
     audio.ontimeupdate = () => { setPosition(audio.currentTime); };
     audio.onended      = handleEnded;
-    audio.onplay       = () => { setIsPlaying(true); setIsLoading(false); };
+    audio.onplay       = () => { setIsPlaying(true);  setIsLoading(false); };
     audio.onpause      = () => { if (audio.src) setIsPlaying(false); };
     audio.onwaiting    = () => setIsLoading(true);
     audio.oncanplay    = () => {
       setIsLoading(false);
-      if (shouldBePlayingRef.current && audio.paused) {
-        safePlay(audio).catch(() => {});
-      }
+      if (shouldBePlayingRef.current && audio.paused) safePlay(audio).catch(() => {});
     };
-
     audio.onerror = () => {
       if (!audio.src || !skipOnErrorRef.current) return;
       if (!audio.dataset.retried) {
         audio.dataset.retried = '1';
         const src = audio.src;
-        audio.src = '';
-        audio.load();
-        setTimeout(() => {
-          audio.src = src;
-          audio.load();
-          safePlay(audio).catch(() => {});
-        }, 800);
+        audio.src = ''; audio.load();
+        setTimeout(() => { audio.src = src; audio.load(); safePlay(audio).catch(() => {}); }, 800);
         return;
       }
-      setIsLoading(false);
-      setIsPlaying(false);
+      setIsLoading(false); setIsPlaying(false);
       if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
     };
 
-    stuckInterval = setInterval(() => {
+    const stuckInterval = setInterval(() => {
       if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
       if (isPlayingRef.current) {
         const dur = audio.duration;
@@ -210,20 +185,13 @@ const Player = () => {
           if (!endedFiredRef.current) handleEnded();
           return;
         }
-        if (audio.currentTime === lastTime && audio.currentTime > 0) {
-          audio.play().catch(() => {});
-        }
+        if (audio.currentTime === lastTime && audio.currentTime > 0) audio.play().catch(() => {});
         lastTime = audio.currentTime;
       }
     }, 2000);
 
-    const backgroundStuckInterval = setInterval(async () => {
-      if (
-        shouldBePlayingRef.current &&
-        audio.paused &&
-        audio.src &&
-        audio.readyState >= 3
-      ) {
+    const bgStuckInterval = setInterval(async () => {
+      if (shouldBePlayingRef.current && audio.paused && audio.src && audio.readyState >= 3) {
         await unlockAudioContext();
         audio.play().catch(() => {});
       }
@@ -232,18 +200,15 @@ const Player = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
       if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 &&
-        audio.paused && isPlayingRef.current) {
-        handleEnded();
-      }
+        audio.paused && isPlayingRef.current) handleEnded();
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(stuckInterval);
-      clearInterval(backgroundStuckInterval);
+      clearInterval(bgStuckInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      audio.pause();
-      audio.src = '';
+      audio.pause(); audio.src = '';
       audioRef.current = null;
     };
   }, []);
@@ -287,10 +252,9 @@ const Player = () => {
 
     const timer = setTimeout(() => {
       skipOnErrorRef.current = true;
-      audio.src = songUrl;
+      audio.src    = songUrl;
       audio.volume = volumeRef.current;
       audio.load();
-
       safePlay(audio).then(() => {
         setIsPlaying(true);
         setPosition(0);
@@ -311,10 +275,7 @@ const Player = () => {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio && audio.src && playCount > 0) {
-      audio.currentTime = 0;
-      safePlay(audio);
-    }
+    if (audio && audio.src && playCount > 0) { audio.currentTime = 0; safePlay(audio); }
   }, [playCount]);
 
   useEffect(() => {
@@ -324,17 +285,9 @@ const Player = () => {
   const handlePlay = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
-    // Guests without permission can't control
     if (session && !session.canControl) return;
-
-    if (isPlaying) {
-      audio.pause();
-      shouldBePlayingRef.current = false;
-    } else {
-      safePlay(audio).catch(() => {});
-      shouldBePlayingRef.current = true;
-    }
-    // Broadcast after a tick so state has updated
+    if (isPlaying) { audio.pause(); shouldBePlayingRef.current = false; }
+    else { safePlay(audio).catch(() => {}); shouldBePlayingRef.current = true; }
     setTimeout(broadcastCurrentState, 50);
   };
 
@@ -347,12 +300,8 @@ const Player = () => {
   const handlePrevious = () => {
     if (session && !session.canControl) return;
     const audio = audioRef.current;
-    if (audio && audio.currentTime > 3) {
-      audio.currentTime = 0;
-      setPosition(0);
-    } else {
-      playerRef.current.playPrevious();
-    }
+    if (audio && audio.currentTime > 3) { audio.currentTime = 0; setPosition(0); }
+    else playerRef.current.playPrevious();
     setTimeout(broadcastCurrentState, 200);
   };
 
@@ -368,9 +317,7 @@ const Player = () => {
   const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 0);
 
   useMediaSession(
-    isPlaying,
-    (song ?? {}) as Song,
-    audioRef,
+    isPlaying, (song ?? {}) as Song, audioRef,
     () => { safePlay(audioRef.current!).catch(() => {}); shouldBePlayingRef.current = true; setTimeout(broadcastCurrentState, 50); },
     () => { audioRef.current?.pause(); shouldBePlayingRef.current = false; setTimeout(broadcastCurrentState, 50); }
   );
@@ -383,22 +330,16 @@ const Player = () => {
     song, isPlaying, isLoading, position, duration, volume,
     onPlay: handlePlay, onNext: handleNext, onPrevious: handlePrevious,
     onSeek: handleSeek, onVolumeChange: setVolume, onToggleMute: toggleMute,
+    queueStatus, queueFetchMore,
   };
 
   return (
     <>
       {isExpanded && (
-        <ExpandedPlayer
-          {...sharedProps}
-          onClose={() => setIsExpanded(false)}
-        />
+        <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />
       )}
       <div className="fixed bottom-0 bg-neutral-950/95 backdrop-blur-md w-full h-[100px] pb-[30px] border-t border-red-900/40 px-4 z-[40]">
-        <PlayerContent
-          {...sharedProps}
-          onExpand={() => setIsExpanded(true)}
-          session={session}
-        />
+        <PlayerContent {...sharedProps} onExpand={() => setIsExpanded(true)} session={session} />
       </div>
     </>
   );

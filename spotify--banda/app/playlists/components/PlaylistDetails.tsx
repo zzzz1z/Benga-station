@@ -14,7 +14,7 @@ import EditPlaylist from './EditPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
-import { usePageTransition } from '@/hooks/PageTransitionProvider';
+import { usePageTransition } from '@/providers/PageTransitionProvider';
 import { useRefresh } from '@/hooks/useRefresh';
 
 const supabase = createClient();
@@ -49,15 +49,31 @@ const PlaylistDetails: React.FC = () => {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
   const { startLoading, stopLoading } = usePageTransition();
-  const loadingActiveRef = useRef(false);
   const { refreshKey } = useRefresh();
 
-  const safeStopLoading = () => {
-    if (loadingActiveRef.current) {
-      loadingActiveRef.current = false;
-      stopLoading();
+  // Single ref to track whether we've called startLoading without a matching stopLoading
+  const loadingActiveRef = useRef(false);
+  const safetyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const safeStopLoading = useCallback(() => {
+    if (!loadingActiveRef.current) return;
+    loadingActiveRef.current = false;
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
     }
-  };
+    stopLoading();
+  }, [stopLoading]);
+
+  const safeStartLoading = useCallback(() => {
+    if (loadingActiveRef.current) return; // already loading, don't double-call
+    loadingActiveRef.current = true;
+    startLoading();
+    // Safety net — never stay stuck longer than 8 seconds
+    safetyTimerRef.current = setTimeout(() => {
+      safeStopLoading();
+    }, 8000);
+  }, [startLoading, safeStopLoading]);
 
   const fetchPlaylist = useCallback(async () => {
     if (!id) {
@@ -67,8 +83,7 @@ const PlaylistDetails: React.FC = () => {
     }
 
     setError(null);
-    loadingActiveRef.current = true;
-    startLoading();
+    safeStartLoading();
 
     try {
       const [playlistRes, songRes] = await Promise.all([
@@ -103,7 +118,6 @@ const PlaylistDetails: React.FC = () => {
       const ytIds = fetchedSongs
         .filter((s: any) => s.source === 'youtube' && s.youtube_video_id)
         .map((s: any) => s.youtube_video_id);
-
       if (ytIds.length) {
         fetch('/api/preextract-queue', {
           method: 'POST',
@@ -117,14 +131,13 @@ const PlaylistDetails: React.FC = () => {
       setSongsLoading(false);
       safeStopLoading();
     }
-  }, [id]);
+  }, [id, safeStartLoading, safeStopLoading]);
 
   useEffect(() => {
     fetchPlaylist();
-    return () => { safeStopLoading(); };
-  }, [id]);
+    return () => safeStopLoading();
+  }, [fetchPlaylist]);
 
-  // Respond to floating refresh button
   useEffect(() => {
     if (refreshKey === 0) return;
     fetchPlaylist();
@@ -133,27 +146,21 @@ const PlaylistDetails: React.FC = () => {
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !playlist) return;
-
     setUploadingCover(true);
     try {
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('playlist-covers')
         .upload(fileName, file, { upsert: true });
-
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage
         .from('playlist-covers')
         .getPublicUrl(uploadData.path);
-
       const { error: updateError } = await supabase
         .from('Playlists')
         .update({ cover_image: urlData.publicUrl })
         .eq('id', playlist.id);
-
       if (updateError) throw updateError;
-
       setPlaylist(prev => prev ? { ...prev, cover_image: urlData.publicUrl } : prev);
       toast.success('Capa sincronizada!');
     } catch {
@@ -191,8 +198,7 @@ const PlaylistDetails: React.FC = () => {
     <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative">
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none z-0"
-          style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }}
-        />
+          style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }} />
         <div className="absolute top-0 left-0 right-0 h-px z-10"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.7), transparent)' }} />
 

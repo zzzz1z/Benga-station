@@ -26,7 +26,6 @@ const AuthModal = () => {
             .maybeSingle();
 
         if (error) {
-            console.error("❌ Error checking email:", error);
             toast.error("Erro ao verificar o email. Tente novamente.");
             return false;
         }
@@ -42,21 +41,13 @@ const AuthModal = () => {
                 setLoading(false);
                 return;
             }
-
-            const { error: signUpError } = await supabase.auth.signUp({
-                email,
-                password,
-            });
-
-            if (signUpError) {
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) {
                 toast.error("Erro ao criar conta. Tente novamente.");
-                setLoading(false);
-                return;
+            } else {
+                toast.success("Conta criada com sucesso! Verifique seu email.");
             }
-
-            toast.success("Conta criada com sucesso! Verifique seu email.");
-        } catch (error) {
-            console.error("Erro no signup:", error);
+        } catch {
             toast.error("Ocorreu um erro. Tente novamente.");
         }
         setLoading(false);
@@ -65,63 +56,41 @@ const AuthModal = () => {
     const handleLogin = async () => {
         setLoading(true);
         try {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (signInError) {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
                 toast.error("Por favor verifique o seu email para poder iniciar sessão.");
-                setLoading(false);
-                return;
             }
-
-            toast.success("Login bem-sucedido!");
-            authModal.onClose();
-            markDataStale();
-            
-            router.refresh();
-        } catch (error) {
+            // Don't close here — onAuthStateChange SIGNED_IN handler does it
+        } catch {
             toast.error("Ocorreu um erro. Tente novamente.");
-            console.error(error);
         }
         setLoading(false);
     };
 
     const resendMail = async () => {
-        if (!email) {
-            toast.error("Insira o email primeiro.");
-            return;
-        }
-
+        if (!email) { toast.error("Insira o email primeiro."); return; }
         setLoading(true);
         try {
-            const { error } = await supabase.auth.resend({
-                type: "signup",
-                email: email,
-            });
-
+            const { error } = await supabase.auth.resend({ type: "signup", email });
             if (error) {
                 toast.error("Erro ao reenviar o email.");
-                console.error(error);
             } else {
                 toast.success("Email de confirmação reenviado!");
                 setResendCooldown(60);
             }
-        } catch (err) {
-            console.error(err);
+        } catch {
             toast.error("Erro inesperado.");
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
-    // Insert user into 'users' table if missing and handle post-login
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (!session?.user) return;
+                // Only act on actual sign-in, not token refreshes or other events
+                if (event !== 'SIGNED_IN' || !session?.user) return;
 
+                // Upsert user row
                 const { data } = await supabase
                     .from("users")
                     .select("id")
@@ -129,40 +98,29 @@ const AuthModal = () => {
                     .single();
 
                 if (!data) {
-                    const { error: insertError } = await supabase
-                        .from("users")
-                        .insert({
-                            id: session.user.id,
-                            email: session.user.email,
-                        });
-
-                    if (insertError) {
-                        console.error("Erro ao inserir conta:", insertError);
-                    }
+                    await supabase.from("users").insert({
+                        id: session.user.id,
+                        email: session.user.email,
+                    });
                 }
-                markDataStale();
 
+                markDataStale();
                 router.refresh();
                 authModal.onClose();
             }
         );
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        if (resendCooldown > 0) {
-            const timer = setTimeout(() => {
-                setResendCooldown(resendCooldown - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
+        if (resendCooldown <= 0) return;
+        const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
     }, [resendCooldown]);
 
     const onChange = (open: boolean) => {
-        if (!open) {
-            authModal.onClose();
-        }
+        if (!open) authModal.onClose();
     };
 
     return (
@@ -179,75 +137,40 @@ const AuthModal = () => {
             <div>
                 {authModal.mode === "sign_up" ? (
                     <div className="flex flex-col gap-4">
-                        <input
-                            type="email"
-                            placeholder="Introduza o seu email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        />
-                        <input
-                            type="password"
-                            placeholder="Introduza a sua palavra passe"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        />
+                        <input type="email" placeholder="Introduza o seu email" value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            className="w-full p-2 border rounded-md" />
+                        <input type="password" placeholder="Introduza a sua palavra passe" value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            className="w-full p-2 border rounded-md" />
                         <p className="text-sm">(a sua palavra-passe tem de ter no mínimo 6 caracteres)</p>
-                        <button
-                            onClick={handleSignUp}
-                            disabled={loading}
-                            className="w-full p-2 text-white bg-blue-500 rounded-md"
-                        >
+                        <button onClick={handleSignUp} disabled={loading}
+                            className="w-full p-2 text-white bg-blue-500 rounded-md">
                             {loading ? "Aguarde..." : "Criar conta"}
                         </button>
-                        <button
-                            onClick={() => authModal.onOpen("sign_in")}
-                            disabled={loading}
-                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
-                        >
+                        <button onClick={() => authModal.onOpen("sign_in")} disabled={loading}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2">
                             {loading ? "Aguarde..." : "Já tenho uma conta"}
                         </button>
-                        <button
-                            onClick={resendMail}
-                            disabled={loading || resendCooldown > 0}
-                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
-                        >
-                            {resendCooldown > 0
-                                ? `Reenviar em ${resendCooldown}s`
-                                : loading
-                                ? "Aguarde..."
-                                : "Reenviar email de confirmação"}
+                        <button onClick={resendMail} disabled={loading || resendCooldown > 0}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2">
+                            {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : loading ? "Aguarde..." : "Reenviar email de confirmação"}
                         </button>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <input
-                            type="email"
-                            placeholder="Introduza o seu email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        />
-                        <input
-                            type="password"
-                            placeholder=""
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        />
-                        <button
-                            onClick={handleLogin}
-                            disabled={loading}
-                            className="w-full p-2 text-white bg-blue-500 rounded-md"
-                        >
+                        <input type="email" placeholder="Introduza o seu email" value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            className="w-full p-2 border rounded-md" />
+                        <input type="password" placeholder="" value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            className="w-full p-2 border rounded-md" />
+                        <button onClick={handleLogin} disabled={loading}
+                            className="w-full p-2 text-white bg-blue-500 rounded-md">
                             {loading ? "Aguarde..." : "Entrar"}
                         </button>
-                        <button
-                            onClick={() => authModal.onOpen("sign_up")}
-                            disabled={loading}
-                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2"
-                        >
+                        <button onClick={() => authModal.onOpen("sign_up")} disabled={loading}
+                            className="w-full p-2 text-white bg-gray-500 rounded-md mt-2">
                             {loading ? "Aguarde..." : "Criar uma conta"}
                         </button>
                     </div>

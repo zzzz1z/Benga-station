@@ -14,7 +14,7 @@ import { SlPlaylist } from "react-icons/sl";
 import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { AiOutlineFileAdd } from "react-icons/ai";
-import { usePageTransition } from "@/hooks/PageTransitionProvider";
+import { usePageTransition } from "@/providers/PageTransitionProvider";
 
 interface HeaderProps {
   children?: React.ReactNode;
