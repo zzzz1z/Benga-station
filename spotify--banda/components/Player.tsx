@@ -32,14 +32,6 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-const recordPlayEvent = (videoId: string) => {
-  fetch('/api/play-event', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoId }),
-  }).catch(() => {});
-};
-
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
@@ -126,10 +118,9 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
+  // Preextract nearby songs in queue when active track changes
   useEffect(() => {
     if (!activeID) return;
-    const s = songsMap[activeID];
-    if (s?.source === 'youtube' && s?.youtube_video_id) recordPlayEvent(s.youtube_video_id);
 
     const { ids } = usePlayer.getState();
     const idx = ids.indexOf(activeID);
