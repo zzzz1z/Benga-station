@@ -282,26 +282,26 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         </div>
 
         {/* header row */}
-        <div className="flex items-center justify-between px-5 py-4">
+<div className="flex items-center justify-between px-5 py-4">
           <button
             onClick={handleClose}
-            className="text-neutral-400 active:text-white transition p-2 -ml-2"
+            className="text-neutral-400 active:text-white transition p-3 -ml-3"
             onTouchStart={e => e.stopPropagation()}
           >
-            <IoChevronDown size={26} />
+            <IoChevronDown size={28} />
           </button>
 
           <div className="flex flex-col items-center gap-y-0.5">
             <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">A tocar agora</p>
-            <p className="text-white text-sm font-black uppercase tracking-tight truncate max-w-[180px]">{song.title}</p>
+            <p className="text-white font-black uppercase tracking-tight truncate max-w-[180px] text-sm">{song.title}</p>
           </div>
 
           <button
             onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
-            className="text-neutral-500 active:text-white transition p-2 -mr-2"
+            className="text-neutral-500 active:text-white transition p-3 -mr-3"
             onTouchStart={e => e.stopPropagation()}
           >
-            <AiOutlineInfoCircle size={22} />
+            <AiOutlineInfoCircle size={24} />
           </button>
         </div>
       </div>
@@ -330,10 +330,18 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         </div>
 
         {/* Song info + like */}
-        <div className="flex items-center justify-between flex-shrink-0">
+<div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
-            <p className="text-white text-2xl font-black uppercase tracking-tighter truncate leading-tight"
-              style={{ textShadow: '0 0 20px rgba(239,68,68,0.2)' }}>
+            <p
+              className={`text-white font-black truncate leading-tight ${
+                song.title.length > 30
+                  ? 'text-lg tracking-tight'
+                  : song.title.length > 18
+                  ? 'text-2xl uppercase tracking-tighter'
+                  : 'text-3xl uppercase tracking-tighter'
+              }`}
+              style={{ textShadow: '0 0 20px rgba(239,68,68,0.2)' }}
+            >
               {song.title}
             </p>
             <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>

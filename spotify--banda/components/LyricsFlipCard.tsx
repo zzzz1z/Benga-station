@@ -112,7 +112,7 @@ const FullscreenLyrics: React.FC<{
   }, [activeLine]);
 
   return (
-    <div
+<div
       className="fixed inset-0 z-[200] flex flex-col"
       style={{ background: '#020202', paddingTop: 'env(safe-area-inset-top)' }}
     >
@@ -120,7 +120,6 @@ const FullscreenLyrics: React.FC<{
       <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff, #fff 1px, transparent 1px, transparent 3px)' }} />
 
-      {/* beat pulse bg */}
       {isPlaying && (
         <div className="absolute inset-0 pointer-events-none"
           style={{
@@ -130,9 +129,13 @@ const FullscreenLyrics: React.FC<{
       )}
 
       {/* header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/5">
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-5 border-b border-white/5">
         <p className="text-neutral-600 font-mono text-[9px] uppercase tracking-[0.3em]">Letra completa</p>
-        <button onClick={onClose} className="text-neutral-500 active:text-white transition p-1">
+        <button
+          onClick={onClose}
+          className="text-neutral-400 active:text-white transition p-3 -mr-2 flex items-center gap-x-2"
+        >
+          <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-600">fechar</span>
           <IoChevronDown size={22} />
         </button>
       </div>
@@ -470,7 +473,6 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
             </div>
 
             {/* Back — lyrics */}
-{/* Back — lyrics */}
             <div
               style={{
                 backfaceVisibility: 'hidden',
