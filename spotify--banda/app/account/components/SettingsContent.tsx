@@ -8,7 +8,11 @@ import DefinicoesTab from './DefinicoesTab';
 import ProfilePic from './ProfilePic';
 import ImportPlaylistButton from '@/components/ImportPlaylistButton';
 import { Song, Playlist } from '@/types';
-import { BounceLoader } from 'react-spinners';
+import { HiLightningBolt } from 'react-icons/hi';
+import { TbPlaylist } from 'react-icons/tb';
+import { AiFillHeart } from 'react-icons/ai';
+
+const SLASH = 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)';
 
 interface SettingsContentProps {
     likedSongs: Song[];
@@ -29,8 +33,11 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
 
     if (!mounted || isLoading) {
         return (
-            <div className="flex justify-center items-center h-40">
-                <BounceLoader color="#A52A2A" size={40} />
+            <div className="flex flex-col items-center justify-center h-40 gap-y-3">
+                <div className="w-8 h-8 border-2 border-red-600 border-t-transparent animate-spin" />
+                <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-widest animate-pulse">
+                    A_CARREGAR...
+                </p>
             </div>
         );
     }
@@ -45,129 +52,86 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
     return (
         <div className="flex flex-col w-full h-full">
 
-            {/* ── Gamer profile header ── */}
+            {/* Profile header */}
             <div className="relative flex flex-col items-center px-6 pt-6 pb-5 gap-y-5 overflow-hidden">
 
-                {/* Red scanline background */}
-                <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                        background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)',
-                    }}
-                />
+                <div className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }} />
+                <div className="absolute top-0 left-0 right-0 h-[2px]"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.7), transparent)', boxShadow: '0 0 8px rgba(239,68,68,0.3)' }} />
 
-                {/* Top accent line */}
-                <div
-                    className="absolute top-0 left-0 right-0 h-px"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.7), transparent)' }}
-                />
-
-                {/* Avatar + stats row */}
+                {/* Avatar + stats */}
                 <div className="relative z-10 flex items-center gap-x-8 w-full max-w-sm">
-                    <div className="relative flex-shrink-0">
-                        <div
-                            className="absolute inset-0 rounded-full blur-md opacity-60"
-                            style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.5), transparent 70%)' }}
-                        />
-                        <div
-                            className="relative"
-                            style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.5))' }}
-                        >
-                            <ProfilePic />
+                    <ProfilePic />
 
-                    
-                        </div>
-                        
-            
-                     
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex gap-x-6">
-                        <div className="flex flex-col items-center gap-y-0.5">
-                            <span
-                                className="text-white font-black text-2xl leading-none tabular-nums"
-                                style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}
-                            >
-                                {likedSongs.length}
-                            </span>
-                            <span className="text-neutral-500 text-[10px] uppercase tracking-widest font-medium">
-                                Favoritas
-                            </span>
+                    <div className="flex gap-x-5">
+                        <div className="flex flex-col items-center gap-y-1">
+                            <div className="flex items-center gap-x-1.5">
+                                <AiFillHeart size={10} className="text-red-500/60" />
+                                <span className="text-white font-black text-2xl leading-none tabular-nums"
+                                    style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}>
+                                    {likedSongs.length}
+                                </span>
+                            </div>
+                            <span className="text-neutral-600 text-[9px] font-mono uppercase tracking-[0.2em]">Favoritas</span>
                         </div>
 
-                        <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, rgba(239,68,68,0.4), transparent)' }} />
+                        <div className="w-px self-stretch"
+                            style={{ background: 'linear-gradient(180deg, transparent, rgba(239,68,68,0.4), transparent)' }} />
 
-                        <div className="flex flex-col items-center gap-y-0.5">
-                            <span
-                                className="text-white font-black text-2xl leading-none tabular-nums"
-                                style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}
-                            >
-                                {playlists.length}
-                            </span>
-                            <span className="text-neutral-500 text-[10px] uppercase tracking-widest font-medium">
-                                Playlists
-                            </span>
+                        <div className="flex flex-col items-center gap-y-1">
+                            <div className="flex items-center gap-x-1.5">
+                                <TbPlaylist size={10} className="text-red-500/60" />
+                                <span className="text-white font-black text-2xl leading-none tabular-nums"
+                                    style={{ textShadow: '0 0 12px rgba(239,68,68,0.6)' }}>
+                                    {playlists.length}
+                                </span>
+                            </div>
+                            <span className="text-neutral-600 text-[9px] font-mono uppercase tracking-[0.2em]">Playlists</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Name + email */}
-                <div className="relative z-10 flex flex-col items-center gap-y-1 w-full">
+                {/* Name + badge */}
+                <div className="relative z-10 flex flex-col items-center gap-y-1.5 w-full">
                     <div className="flex items-center gap-x-2">
-                        <span
-                            className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5"
-                            style={{
-                                background: 'rgba(239,68,68,0.15)',
-                                border: '1px solid rgba(239,68,68,0.4)',
-                                color: '#f87171',
-                                clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
-                            }}
-                        >
-                            Player
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5"
+                            style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171', clipPath: SLASH }}>
+                            PLAYER
                         </span>
-                        <p className="text-white font-bold text-base tracking-wide">
-                            {displayName}
-                        </p>
+                        <p className="text-white font-black uppercase tracking-tight text-base">{displayName}</p>
                     </div>
-                    <p className="text-neutral-600 text-xs tracking-wide">
-                        {user?.email ?? ''}
-                    </p>
+                    <p className="text-neutral-700 font-mono text-[9px] tracking-widest">{user?.email ?? ''}</p>
                 </div>
 
-                {/* Centered import button */}
-                <div className="relative z-10 flex justify-center w-full">
+                {/* Import button */}
+                <div className="relative z-10 w-full flex justify-center">
                     <ImportPlaylistButton />
                 </div>
 
-                {/* Bottom accent line */}
-                <div
-                    className="absolute bottom-0 left-0 right-0 h-px"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }}
-                />
+                <div className="absolute bottom-0 left-0 right-0 h-px"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent)' }} />
             </div>
 
-            {/* ── Tabs ── */}
-            <div className="flex border-b border-neutral-800 px-6">
-                {(['casa', 'definicoes'] as const).map((tab) => (
+            {/* Tabs */}
+            <div className="flex border-b border-red-900/20 px-4">
+                {(['casa', 'definicoes'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className="relative px-6 py-3 text-xs font-bold uppercase tracking-widest transition-colors"
-                        style={{ color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.3)' }}
+                        className="relative flex-1 py-3 text-[10px] font-mono uppercase tracking-[0.2em] transition-colors"
+                        style={{ color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.25)' }}
                     >
                         {tab === 'casa' ? 'Casa' : 'Definições'}
                         {activeTab === tab && (
-                            <span
-                                className="absolute bottom-0 left-0 right-0 h-0.5"
-                                style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }}
-                            />
+                            <span className="absolute bottom-0 left-0 right-0 h-[2px]"
+                                style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
                         )}
                     </button>
                 ))}
             </div>
 
-            {/* ── Tab content ── */}
+            {/* Tab content */}
             <div className="flex-1 overflow-y-auto">
                 {activeTab === 'casa'
                     ? <CasaTab likedSongs={likedSongs} playlists={playlists} />
@@ -176,6 +140,6 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
             </div>
         </div>
     );
-}
+};
 
 export default SettingsContent;

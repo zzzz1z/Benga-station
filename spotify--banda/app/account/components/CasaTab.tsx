@@ -7,37 +7,20 @@ import useOnPlay from '@/hooks/useOnPlay';
 import useLoadImagePlaylist from '@/hooks/useLoadImagePlaylist';
 import { AiFillHeart } from 'react-icons/ai';
 import { SlPlaylist } from 'react-icons/sl';
+import { TbChevronRight } from 'react-icons/tb';
 import MediaItem from '@/components/MediaItem';
+
+const SLASH = 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)';
 
 interface CasaTabProps {
   likedSongs: Song[];
   playlists: Playlist[];
 }
 
-const SongRow = ({ song, onPlay }: { song: Song; onPlay: (id: string) => void }) => {
-  const isYT = song.source === 'youtube' && song.youtube_video_id;
-
-  if (isYT) {
-    return (
-      <div
-        onClick={() => onPlay(String(song.id))}
-        className="flex items-center gap-x-3 p-2 hover:bg-neutral-800/50 cursor-pointer transition group"
-      >
-        <div className="relative w-10 h-10 overflow-hidden flex-shrink-0 bg-neutral-700">
-          {song.image_path && (
-            <Image fill src={song.image_path} alt={song.title} className="object-cover" sizes="40px" unoptimized />
-          )}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <p className="text-white text-xs font-bold truncate">{song.title}</p>
-          <p className="text-neutral-400 text-[10px] truncate">{song.author}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <MediaItem data={song} onClick={() => onPlay(String(song.id))} />;
-};
+const getSongPlayerId = (song: Song): string =>
+  song.source === 'youtube' && song.youtube_video_id
+    ? `yt_${song.youtube_video_id}`
+    : String(song.id);
 
 const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const imageUrl = useLoadImagePlaylist(playlist);
@@ -46,32 +29,64 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   return (
     <div
       onClick={() => router.push(`/playlists/${playlist.id}`)}
-      className="flex items-center gap-x-3 p-2 hover:bg-neutral-800/40 cursor-pointer transition group rounded-none"
+      className="flex items-center gap-x-3 p-2 cursor-pointer active:bg-red-500/5 transition border-l-2 border-transparent active:border-red-500 group"
     >
-      <div className="relative w-10 h-10 flex-shrink-0 overflow-hidden bg-neutral-700">
+      <div className="relative w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 border border-red-900/20">
         {imageUrl ? (
-          <Image
-            fill
-            src={imageUrl}
-            alt={playlist.title}
-            className="object-cover group-hover:scale-105 transition duration-300"
-            sizes="40px"
-          />
+          <Image fill src={imageUrl} alt={playlist.title}
+            className="object-cover" sizes="44px" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <SlPlaylist size={16} className="text-neutral-500" />
+            <SlPlaylist size={14} className="text-neutral-600" />
           </div>
         )}
+        {/* corner accents */}
+        <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-red-500/40" />
+        <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-red-500/40" />
       </div>
-      <div className="flex flex-col min-w-0">
-        <p className="text-white text-xs font-bold truncate">{playlist.title}</p>
-        <p className="text-neutral-500 text-[10px] font-mono uppercase tracking-widest">
-          {playlist.songs?.length ?? 0} músicas
+      <div className="flex flex-col min-w-0 flex-1">
+        <p className="text-white text-xs font-black uppercase tracking-tight truncate">{playlist.title}</p>
+        <p className="text-red-600/30 font-mono text-[9px] uppercase tracking-widest">
+          DIR::{playlist.songs?.length ?? 0}_TRACKS
         </p>
       </div>
+      <TbChevronRight size={12} className="text-neutral-700 flex-shrink-0" />
     </div>
   );
 };
+
+const SectionHeader = ({
+  icon, label, count, onSeeAll
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+  onSeeAll: () => void;
+}) => (
+  <div className="flex items-center justify-between px-1 mb-1">
+    <div className="flex items-center gap-x-2">
+      {icon}
+      <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-neutral-400">{label}</span>
+      {count !== undefined && (
+        <span className="text-[8px] font-mono text-red-600/30 tracking-widest">[{count}]</span>
+      )}
+    </div>
+    <button
+      onClick={onSeeAll}
+      className="flex items-center gap-x-1 text-[9px] font-mono uppercase tracking-widest text-neutral-600 active:text-red-400 transition"
+    >
+      Ver todas <TbChevronRight size={10} />
+    </button>
+  </div>
+);
+
+const EmptyState = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-x-2 px-3 py-4 border border-red-900/10 bg-white/[0.01]"
+    style={{ clipPath: SLASH }}>
+    <div className="w-1 h-1 rounded-full bg-red-900/40" />
+    <p className="text-neutral-700 font-mono text-[9px] uppercase tracking-widest">{label}</p>
+  </div>
+);
 
 const CasaTab = ({ likedSongs, playlists }: CasaTabProps) => {
   const router = useRouter();
@@ -81,62 +96,63 @@ const CasaTab = ({ likedSongs, playlists }: CasaTabProps) => {
     <div className="flex flex-col gap-y-6 px-4 py-4">
 
       {/* Liked songs */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-x-2">
-            <AiFillHeart size={14} className="text-red-500" />
-            <h2 className="text-white font-black text-[10px] uppercase tracking-widest">
-              Músicas favoritas
-            </h2>
-          </div>
-          <button
-            onClick={() => router.push('/liked')}
-            className="text-[10px] text-neutral-500 hover:text-white transition font-mono uppercase tracking-widest"
-          >
-            Ver todas →
-          </button>
-        </div>
+      <div className="flex flex-col gap-y-1">
+        <SectionHeader
+          icon={<AiFillHeart size={11} className="text-red-500/60" />}
+          label="Favoritas"
+          count={likedSongs.length}
+          onSeeAll={() => router.push('/liked')}
+        />
 
-        {likedSongs.length === 0 ? (
-          <p className="text-neutral-600 text-xs font-mono">Ainda sem favoritos.</p>
-        ) : (
-          <div className="flex flex-col">
-            {likedSongs.slice(0, 5).map(song => (
-              <SongRow key={song.id} song={song} onPlay={onPlay} />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col border border-red-900/15 overflow-hidden relative"
+          style={{ background: 'rgba(255,255,255,0.01)' }}>
+          <div className="absolute top-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }} />
+
+          {likedSongs.length === 0
+            ? <EmptyState label="SEM_FAVORITAS" />
+            : likedSongs.slice(0, 5).map(song => (
+                <div key={song.id} className="border-b border-white/[0.03] last:border-0">
+                  <MediaItem
+                    data={song}
+                    onClick={() => onPlay(getSongPlayerId(song))}
+                  />
+                </div>
+              ))
+          }
+        </div>
       </div>
 
       {/* Divider */}
-      <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }} />
+      <div className="flex items-center gap-x-3">
+        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(239,68,68,0.2), transparent)' }} />
+        <span className="text-[8px] font-mono text-red-900/30 uppercase tracking-[0.3em]">///</span>
+        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2))' }} />
+      </div>
 
       {/* Playlists */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-x-2">
-            <SlPlaylist size={14} className="text-neutral-400" />
-            <h2 className="text-white font-black text-[10px] uppercase tracking-widest">
-              As minhas playlists
-            </h2>
-          </div>
-          <button
-            onClick={() => router.push('/playlists')}
-            className="text-[10px] text-neutral-500 hover:text-white transition font-mono uppercase tracking-widest"
-          >
-            Ver todas →
-          </button>
-        </div>
+      <div className="flex flex-col gap-y-1">
+        <SectionHeader
+          icon={<SlPlaylist size={11} className="text-neutral-500" />}
+          label="Playlists"
+          count={playlists.length}
+          onSeeAll={() => router.push('/playlists')}
+        />
 
-        {playlists.length === 0 ? (
-          <p className="text-neutral-600 text-xs font-mono">Ainda sem playlists.</p>
-        ) : (
-          <div className="flex flex-col">
-            {playlists.slice(0, 6).map(pl => (
-              <PlaylistRow key={pl.id} playlist={pl} />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col border border-red-900/15 overflow-hidden relative"
+          style={{ background: 'rgba(255,255,255,0.01)' }}>
+          <div className="absolute top-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent)' }} />
+
+          {playlists.length === 0
+            ? <EmptyState label="SEM_PLAYLISTS" />
+            : playlists.slice(0, 6).map(pl => (
+                <div key={pl.id} className="border-b border-white/[0.03] last:border-0">
+                  <PlaylistRow playlist={pl} />
+                </div>
+              ))
+          }
+        </div>
       </div>
 
     </div>

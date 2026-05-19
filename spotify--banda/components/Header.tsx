@@ -8,6 +8,8 @@ import useAuthModal from "@/hooks/useAuthModal";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { FaUserAlt } from "react-icons/fa";
+import { RiLogoutBoxRLine } from "react-icons/ri";
+import { AiOutlineFileAdd } from "react-icons/ai";
 import toast from "react-hot-toast";
 import usePlayer from "@/hooks/usePlayer";
 import { SlPlaylist } from "react-icons/sl";
@@ -16,7 +18,6 @@ import useUploadModal from "@/hooks/useUploadModal";
 import { usePageTransition } from "@/providers/PageTransitionProvider";
 import { useEffect, useRef, useState } from "react";
 import { RiMenuUnfoldLine } from "react-icons/ri";
-import HeaderDrawer from "./HeaderDrawer";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -25,18 +26,11 @@ interface HeaderProps {
 
 const BUTTON_CUT = "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)";
 
-// ── pulse line — reads player state ──────────────────────────────────────────
 const HeaderPulse = () => {
-  const isPlaying = usePlayer(s => !!s.activeID && s.playCount >= 0);
-  const activeID  = usePlayer(s => s.activeID);
+  const activeID = usePlayer(s => s.activeID);
   const [playing, setPlaying] = useState(false);
 
-  // we need actual isPlaying — read from a ref pattern via zustand
-  // simplest: subscribe to player and track via audio events is complex here
-  // instead we pulse whenever activeID exists (song loaded)
-  useEffect(() => {
-    setPlaying(!!activeID);
-  }, [activeID]);
+  useEffect(() => { setPlaying(!!activeID); }, [activeID]);
 
   return (
     <>
@@ -55,14 +49,6 @@ const HeaderPulse = () => {
           0%, 100% { opacity: 0.5; box-shadow: 0 0 8px rgba(239,68,68,0.3); }
           50%       { opacity: 1;   box-shadow: 0 0 20px rgba(239,68,68,0.8); }
         }
-        @keyframes slashReveal {
-          0%   { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); opacity: 0; }
-          100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
-        }
-        @keyframes itemSlideIn {
-          0%   { opacity: 0; transform: translateX(40px) skewX(-5deg); }
-          100% { opacity: 1; transform: translateX(0)    skewX(0deg); }
-        }
         @keyframes scanDown {
           0%   { background-position: 0 0; }
           100% { background-position: 0 100px; }
@@ -78,8 +64,20 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   const player      = usePlayer();
   const { user, userDetails } = useUser();
   const uploadModal = useUploadModal();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const activeID = usePlayer(s => s.activeID);
+  const activeID    = usePlayer(s => s.activeID);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   const onClick = () => {
     if (!user) return authModal.onOpen("sign_up");
@@ -96,31 +94,41 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   };
 
   const NAV_ITEMS = [
-    { icon: HiHome,    path: "/",          label: "Home" },
-    { icon: BiSearch,  path: "/search",    label: "Search" },
-    { icon: SlPlaylist,path: "/playlists", label: "Playlists" },
-    { icon: FcLike,    path: "/liked",     label: "Favoritas" },
+    { icon: HiHome,     path: "/",          label: "Home" },
+    { icon: BiSearch,   path: "/search",    label: "Search" },
+    { icon: SlPlaylist, path: "/playlists", label: "Playlists" },
+    { icon: FcLike,     path: "/liked",     label: "Favoritas" },
+  ];
+
+  const MENU_ITEMS = [
+    {
+      icon: FaUserAlt,
+      label: 'Perfil',
+      color: 'border-red-500/20 text-white',
+      action: () => { setMenuOpen(false); navigate('/account'); },
+    },
+    ...(userDetails?.role === 'admin' ? [{
+      icon: AiOutlineFileAdd,
+      label: 'Upload',
+      color: 'border-red-500/40 text-red-400',
+      action: () => { setMenuOpen(false); onClick(); },
+    }] : []),
+    {
+      icon: RiLogoutBoxRLine,
+      label: 'Logout',
+      color: 'border-red-600/50 text-red-500',
+      action: () => { setMenuOpen(false); handleLogout(); },
+    },
   ];
 
   return (
     <>
-      <HeaderDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        user={user}
-        isAdmin={userDetails?.role === 'admin'}
-        onUpload={() => { setDrawerOpen(false); onClick(); }}
-        onLogout={() => { setDrawerOpen(false); handleLogout(); }}
-        onNavigate={(path) => { setDrawerOpen(false); navigate(path); }}
-      />
-
-<div
-  className={twMerge(`relative h-fit bg-neutral-900/50 px-6 pb-6 overflow-hidden`, className)}
-  style={{ paddingTop: `calc(env(safe-area-inset-top) + 1.5rem)` }}
->
+      <div
+        className={twMerge(`relative h-fit bg-neutral-900/50 px-6 pb-6 overflow-hidden`, className)}
+        style={{ paddingTop: `calc(env(safe-area-inset-top) + 1.5rem)` }}
+      >
         <HeaderPulse />
 
-        {/* scan line bg — animates when playing */}
         <div
           className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-1000"
           style={{
@@ -148,7 +156,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             </button>
           </div>
 
-          {/* Mobile nav — 4 big buttons spread full width */}
+          {/* Mobile nav */}
           {user && (
             <div className="flex md:hidden items-center gap-x-2 flex-1">
               {NAV_ITEMS.map((item, i) => (
@@ -185,6 +193,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
 
           {/* Right side */}
           <div className="flex items-center gap-x-3 ml-3">
+
             {/* Desktop auth */}
             <div className="hidden md:flex items-center gap-x-4">
               {user ? (
@@ -215,15 +224,52 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
               )}
             </div>
 
-            {/* Mobile — drawer trigger */}
+            {/* Mobile — FAB menu */}
             {user && (
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="md:hidden flex items-center justify-center w-12 h-12 bg-neutral-900/80 border border-red-500/30 active:border-red-500 active:bg-red-500/10 transition-all"
-                style={{ clipPath: BUTTON_CUT }}
-              >
-                <RiMenuUnfoldLine size={22} className="text-red-400" />
-              </button>
+              <div ref={menuRef} className="md:hidden relative flex-shrink-0">
+
+                {/* Floating buttons — slide in from right */}
+                <div className="absolute right-14 top-0 flex flex-col gap-y-2 items-end"
+                  style={{ pointerEvents: menuOpen ? 'auto' : 'none' }}>
+                  {MENU_ITEMS.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-x-2"
+                      style={{
+                        opacity: menuOpen ? 1 : 0,
+                        transform: menuOpen ? 'translateX(0)' : 'translateX(60px)',
+                        transition: `opacity 0.25s cubic-bezier(0.32,0.72,0,1) ${i * 0.07}s, transform 0.25s cubic-bezier(0.32,0.72,0,1) ${i * 0.07}s`,
+                      }}
+                    >
+                      {/* label */}
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-500 bg-neutral-950/90 px-2 py-1 border border-white/5 whitespace-nowrap">
+                        {item.label}
+                      </span>
+                      {/* icon button */}
+                      <button
+                        onClick={item.action}
+                        className={`flex items-center justify-center w-11 h-11 bg-neutral-900 border active:scale-90 transition-transform ${item.color}`}
+                        style={{ clipPath: BUTTON_CUT }}
+                      >
+                        <item.icon size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Trigger */}
+                <button
+                  onClick={() => setMenuOpen(p => !p)}
+                  className="flex items-center justify-center w-12 h-12 bg-neutral-900/80 border border-red-500/30 active:border-red-500 active:bg-red-500/10 transition-all"
+                  style={{ clipPath: BUTTON_CUT }}
+                >
+                  <RiMenuUnfoldLine
+                    size={22}
+                    className="text-red-400 transition-transform duration-300"
+                    style={{ transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                  />
+                </button>
+              </div>
             )}
 
             {!user && (
