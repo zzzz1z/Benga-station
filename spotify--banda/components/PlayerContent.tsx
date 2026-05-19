@@ -45,14 +45,16 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
   const isGuest     = session && !session.canControl;
   const memberCount = session?.members.length ?? 0;
 
+  const progressPct = duration > 0 ? (position / duration) * 100 : 0;
+
   const renderPlayButton = (size: number) => {
     if (isLoading) return (
       <div className="border-2 border-red-500 border-t-transparent rounded-full animate-spin"
         style={{ width: size, height: size }} />
     );
     return isPlaying
-      ? <BsPauseFill size={size} className="text-red-600" />
-      : <BsPlayFill  size={size} className="text-red-600" />;
+      ? <BsPauseFill size={size} className="text-red-500" />
+      : <BsPlayFill  size={size} className="text-red-500" />;
   };
 
   const SessionButton = ({ small = false }: { small?: boolean }) => (
@@ -60,8 +62,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
       onClick={() => setShowSession(true)}
       className={`relative flex items-center gap-x-1 border transition flex-shrink-0 ${
         session
-          ? 'border-red-500/60 text-red-400 bg-red-900/10 hover:bg-red-900/20'
-          : 'border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900/40'
+          ? 'border-red-500/60 text-red-400 bg-red-900/10'
+          : 'border-neutral-700 text-neutral-500'
       } ${small ? 'px-1.5 py-1' : 'px-2 py-1.5'}`}
       title="Sessão Conjunta"
     >
@@ -71,14 +73,12 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
     </button>
   );
 
-  // Banner shown above the player bar when queue is fetching or just added songs
   const showBanner = queueStatus === 'fetching' || queueStatus === 'done';
 
   return (
     <>
       {showSession && <SessionPanel onClose={() => setShowSession(false)} />}
 
-      {/* Queue extender banner — floats above the player */}
       {showBanner && (
         <div className={`absolute bottom-full left-0 right-0 flex items-center justify-center gap-x-2 py-1 px-3 text-[9px] font-mono uppercase tracking-widest pointer-events-none
           ${queueStatus === 'fetching'
@@ -86,23 +86,18 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
             : 'bg-neutral-950/90 text-green-400/80 border-t border-green-900/30'
           }`}
         >
-          {queueStatus === 'fetching' && (
-            <>
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              A carregar mais músicas...
-            </>
-          )}
-          {queueStatus === 'done' && (
-            <>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Músicas adicionadas à fila
-            </>
-          )}
+          {queueStatus === 'fetching' && (<><div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />A carregar mais músicas...</>)}
+          {queueStatus === 'done' && (<><div className="w-1.5 h-1.5 rounded-full bg-green-500" />Músicas adicionadas à fila</>)}
         </div>
       )}
 
       <div className="flex flex-col h-full justify-center relative">
+        {/* top glow line */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-red-600/50 shadow-[0_0_10px_#ef4444]" />
+
+        {/* progress bar under the glow line */}
+        <div className="absolute top-0 left-0 h-[2px] bg-red-600/70 transition-all duration-300 md:hidden"
+          style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
 
         {isGuest && (
           <div className="absolute top-0 left-0 right-0 flex justify-center pointer-events-none">
@@ -115,28 +110,59 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
         )}
 
         {/* ── MOBILE ── */}
-        <div className="flex md:hidden flex-col h-full justify-between py-2">
-          <div className="flex items-center gap-x-3 flex-1 min-w-0">
-            <div onClick={onExpand} className="relative h-12 w-12 flex-shrink-0 border border-red-900/50 overflow-hidden cursor-pointer">
-              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title} className="object-cover" sizes="48px" unoptimized />
+        <div className="flex md:hidden flex-col h-full justify-center gap-y-2 py-2">
+
+          {/* top row — art + info + controls */}
+          <div className="flex items-center gap-x-3">
+
+            {/* album art — bigger, tappable to expand */}
+            <div
+              onClick={onExpand}
+              className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+              style={{ width: 56, height: 56 }}
+            >
+              {/* red corner accent */}
+              <div className="absolute -top-0.5 -left-0.5 w-3 h-3 border-t-2 border-l-2 border-red-500 z-10" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-b-2 border-r-2 border-red-500 z-10" />
+              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
+                className="object-cover" sizes="56px" unoptimized />
+              {/* playing pulse ring */}
+              {isPlaying && (
+                <div className="absolute inset-0 border border-red-500/40 animate-ping rounded-none" style={{ animationDuration: '2s' }} />
+              )}
             </div>
+
+            {/* song info — tappable to expand */}
             <div onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer">
               <p className="text-white text-sm font-black uppercase tracking-tighter truncate leading-tight">{song.title}</p>
-              <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
+              <p className="text-red-500/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
             </div>
-            <div className="flex items-center gap-x-1.5 flex-shrink-0">
+
+            {/* controls */}
+            <div className="flex items-center gap-x-2 flex-shrink-0">
               <SessionButton small />
-              <AiFillStepBackward onClick={onPrevious} size={20}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`} />
-              <div onClick={onPlay}
-                className={`flex items-center justify-center h-9 w-9 border border-red-600/40 bg-red-600/5 transition ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer hover:bg-red-600/20'}`}>
-                {renderPlayButton(20)}
+              <AiFillStepBackward
+                onClick={onPrevious} size={22}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
+              />
+              <div
+                onClick={onPlay}
+                className={`flex items-center justify-center rounded-full transition active:scale-90
+                  ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer'}
+                  bg-neutral-800 border border-red-600/30 shadow-[0_0_12px_rgba(239,68,68,0.2)]`}
+                style={{ width: 42, height: 42 }}
+              >
+                {renderPlayButton(22)}
               </div>
-              <AiFillStepForward onClick={onNext} size={20}
-                className={`cursor-pointer transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-500 hover:text-red-500'}`} />
+              <AiFillStepForward
+                onClick={onNext} size={22}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
+              />
             </div>
           </div>
-          <div className="w-full pt-1">
+
+          {/* bottom row — slim seek bar */}
+          <div className="w-full px-1">
             <MusicSlider value={position} onChange={onSeek} max={duration} />
           </div>
         </div>
@@ -161,13 +187,13 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           <div className="flex flex-col items-center justify-center flex-shrink-0 w-[340px] xl:w-[420px] mx-6 gap-y-1.5">
             <div className="flex items-center gap-x-7">
               <AiFillStepBackward onClick={onPrevious} size={22}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 hover:text-red-500 cursor-pointer'}`} />
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`} />
               <div onClick={onPlay}
-                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer hover:bg-red-600/20'}`}>
+                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer'}`}>
                 {renderPlayButton(22)}
               </div>
               <AiFillStepForward onClick={onNext} size={22}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 hover:text-red-500 cursor-pointer'}`} />
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`} />
             </div>
             <div className="w-full">
               <MusicSlider value={position} onChange={onSeek} max={duration} />
@@ -177,7 +203,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           <div className="flex items-center justify-end gap-x-3 flex-1 min-w-0">
             <SessionButton />
             <VolumeIcon onClick={onToggleMute}
-              className="text-neutral-500 hover:text-red-500 cursor-pointer transition flex-shrink-0" size={20} />
+              className="text-neutral-500 cursor-pointer transition flex-shrink-0" size={20} />
             <div className="w-28 flex-shrink-0">
               <Slider value={volume} onChange={onVolumeChange} />
             </div>

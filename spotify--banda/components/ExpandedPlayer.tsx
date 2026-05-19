@@ -55,32 +55,41 @@ const QueueRow = ({
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-x-3 px-2 py-2 rounded-lg transition select-none
+      className={`flex items-center gap-x-3 px-3 py-2.5 transition select-none
         ${dragging ? 'opacity-40 bg-white/5' : ''}
-        ${isCurrent ? 'bg-white/10' : dimmed ? 'opacity-50' : 'hover:bg-white/5 cursor-pointer'}`}
+        ${isCurrent
+          ? 'bg-red-950/40 border-l-2 border-red-500'
+          : dimmed
+          ? 'opacity-40'
+          : 'active:bg-white/5 cursor-pointer border-l-2 border-transparent'
+        }`}
     >
       {!isCurrent && onDragStart ? (
-        <div className="text-neutral-600 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 px-1"
+        <div className="text-neutral-700 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
           onMouseDown={onDragStart} onTouchStart={onDragStart} onClick={e => e.stopPropagation()}>
           <MdDragHandle size={16} />
         </div>
-      ) : <div className="w-6 flex-shrink-0" />}
-      <div className="relative w-8 h-8 rounded-md overflow-hidden flex-shrink-0">
+      ) : <div className="w-4 flex-shrink-0" />}
+      <div className="relative w-9 h-9 overflow-hidden flex-shrink-0">
         <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-          className="object-cover" sizes="32px" unoptimized />
+          className="object-cover" sizes="36px" unoptimized />
+        {isCurrent && (
+          <div className="absolute inset-0 bg-red-600/20 flex items-center justify-center">
+            <div className="flex gap-x-[2px] items-end h-3">
+              {[1, 0.6, 0.8].map((h, i) => (
+                <div key={i} className="w-[3px] bg-red-400 rounded-sm animate-pulse"
+                  style={{ height: `${h * 100}%`, animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex flex-col min-w-0 flex-1">
-        <p className={`text-xs font-medium truncate ${isCurrent ? 'text-white' : 'text-neutral-300'}`}>{song.title}</p>
-        <p className="text-neutral-500 text-[10px] truncate">{song.author}</p>
+        <p className={`text-xs font-semibold truncate ${isCurrent ? 'text-red-400' : 'text-neutral-200'}`}>{song.title}</p>
+        <p className="text-neutral-600 text-[10px] truncate font-mono">{song.author}</p>
       </div>
-      {label && (
-        <span className={`text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium
-          ${isCurrent ? 'bg-white/20 text-white' : 'bg-white/10 text-neutral-400'}`}>
-          {label}
-        </span>
-      )}
       {!isCurrent && onRemove && (
-        <button onClick={onRemove} className="flex-shrink-0 text-neutral-700 hover:text-red-500 transition p-1">
+        <button onClick={onRemove} className="flex-shrink-0 text-neutral-700 active:text-red-500 transition p-1">
           <MdClose size={12} />
         </button>
       )}
@@ -94,6 +103,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   queueStatus, queueFetchMore,
 }) => {
   const router = useRouter();
+  const imageUrl = useLoadImage(song);
 
   const ids        = usePlayer(s => s.ids);
   const songs      = usePlayer(s => s.songs);
@@ -116,23 +126,20 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setTimeout(() => onClose(), 380);
   }, [onClose]);
 
-  const touchStartY    = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
-  const isDraggingDown = useRef(false);
 
   const handleTopBarTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
-    isDraggingDown.current = false;
   };
   const handleTopBarTouchMove = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return;
     const delta = e.touches[0].clientY - touchStartY.current;
-    if (delta > 0) { isDraggingDown.current = true; setDragY(delta); }
+    if (delta > 0) setDragY(delta);
   };
   const handleTopBarTouchEnd = () => {
     if (dragY > 100) { setDragY(0); handleClose(); } else setDragY(0);
     touchStartY.current = null;
-    isDraggingDown.current = false;
   };
 
   const dragIndexRef     = useRef<number | null>(null);
@@ -214,9 +221,13 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const cycleRepeat = () => setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
   const RepeatIcon  = repeatMode === 'one' ? TbRepeatOnce : TbRepeat;
 
+  const progressPct = duration > 0 ? (position / duration) * 100 : 0;
+
   const renderPlayButton = () => {
-    if (isLoading) return <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />;
-    return isPlaying ? <BsPauseFill size={32} className="text-black" /> : <BsPlayFill size={32} className="text-black" />;
+    if (isLoading) return <div className="w-7 h-7 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />;
+    return isPlaying
+      ? <BsPauseFill size={36} className="text-white" />
+      : <BsPlayFill  size={36} className="text-white ml-1" />;
   };
 
   const hasQueue    = history.length > 0 || upcoming.length > 0;
@@ -230,8 +241,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-neutral-900 flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col overflow-hidden"
       style={{
+        background: 'linear-gradient(180deg, #0a0a0a 0%, #111 60%, #0d0d0d 100%)',
         transform: `translateY(${slideY})`, opacity,
         transition: isAnimating && dragY === 0
           ? 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease'
@@ -240,77 +252,145 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         willChange: 'transform, opacity',
       }}
     >
-      {/* Top drag zone */}
-      <div className="flex-shrink-0 select-none touch-none"
-        onTouchStart={handleTopBarTouchStart} onTouchMove={handleTopBarTouchMove} onTouchEnd={handleTopBarTouchEnd}>
-        <div className="flex justify-center pt-8 pb-1">
-          <div className="w-10 h-1 rounded-full bg-neutral-600" />
+      {/* blurred album art bg */}
+      {imageUrl && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <Image fill src={imageUrl} alt="" className="object-cover scale-110 blur-3xl opacity-10" unoptimized />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 60%, #0a0a0a 100%)' }} />
         </div>
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button onClick={handleClose} className="text-white p-2 -ml-2" onTouchStart={e => e.stopPropagation()}>
-            <IoChevronDown size={26} />
+      )}
+
+      {/* scanline texture */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff, #fff 1px, transparent 1px, transparent 3px)' }} />
+
+      {/* top progress bar */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-neutral-900 z-10">
+        <div className="h-full bg-red-500 transition-all duration-300"
+          style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
+      </div>
+
+      {/* Top drag zone */}
+      <div className="flex-shrink-0 select-none touch-none relative z-10"
+        onTouchStart={handleTopBarTouchStart} onTouchMove={handleTopBarTouchMove} onTouchEnd={handleTopBarTouchEnd}>
+        <div className="flex justify-center pt-5 pb-1">
+          <div className="w-8 h-1 rounded-full bg-neutral-700" />
+        </div>
+        <div className="flex items-center justify-between px-5 pt-2 pb-1">
+          <button onClick={handleClose} className="text-neutral-400 active:text-white transition p-2 -ml-2" onTouchStart={e => e.stopPropagation()}>
+            <IoChevronDown size={24} />
           </button>
-          <p className="text-white text-sm font-medium select-none">A tocar agora</p>
+          <div className="flex flex-col items-center">
+            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.2em]">A tocar agora</p>
+          </div>
           <button onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
-            className="text-neutral-400 hover:text-white transition p-2 -mr-2"
+            className="text-neutral-500 active:text-white transition p-2 -mr-2"
             onTouchStart={e => e.stopPropagation()}>
-            <AiOutlineInfoCircle size={22} />
+            <AiOutlineInfoCircle size={20} />
           </button>
         </div>
       </div>
 
       {/* Scrollable content */}
-      <div className="flex flex-col flex-1 px-6 pb-8 gap-y-5 overflow-y-auto">
+      <div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 overflow-y-auto relative z-10">
 
-        <div className="flex justify-center flex-shrink-0">
-          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
+        {/* Album art — large */}
+        <div className="flex justify-center flex-shrink-0 mt-2">
+          <div className="relative" style={{ width: 'min(72vw, 280px)', height: 'min(72vw, 280px)' }}>
+            {/* corner accents */}
+            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10" />
+            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10" />
+            <div className="absolute inset-0 overflow-hidden">
+              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
+                className={`object-cover transition-all duration-700 ${isPlaying ? 'scale-100' : 'scale-95 brightness-75'}`}
+                sizes="280px" unoptimized />
+            </div>
+            {/* playing glow */}
+            {isPlaying && (
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ boxShadow: 'inset 0 0 30px rgba(239,68,68,0.15), 0 0 40px rgba(239,68,68,0.1)' }} />
+            )}
+          </div>
         </div>
 
+        {/* Song info + like */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
-            <p className="text-white text-xl font-bold truncate">{song.title}</p>
-            <p className="text-neutral-400 text-sm truncate mt-0.5">{song.author}</p>
+            <p className="text-white text-2xl font-black uppercase tracking-tighter truncate leading-tight"
+              style={{ textShadow: '0 0 20px rgba(239,68,68,0.2)' }}>
+              {song.title}
+            </p>
+            <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>
           </div>
           <LikedButton songId={String(song.id)} />
         </div>
 
+        {/* Seek bar */}
         <div className="flex-shrink-0">
           <MusicSlider value={position} onChange={onSeek} max={duration} />
-          <div className="flex justify-between mt-1 px-1">
-            <span className="text-neutral-400 text-xs">{formatTime(position)}</span>
-            <span className="text-neutral-400 text-xs">{formatTime(duration)}</span>
+          <div className="flex justify-between mt-1.5 px-0.5">
+            <span className="text-neutral-600 text-[10px] font-mono tabular-nums">{formatTime(position)}</span>
+            <span className="text-neutral-600 text-[10px] font-mono tabular-nums">{formatTime(duration)}</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-x-10 flex-shrink-0">
-          <AiFillStepBackward onClick={onPrevious} size={34}
-            className="text-neutral-400 cursor-pointer hover:text-white transition" />
-          <div onClick={onPlay}
-            className="flex items-center justify-center h-16 w-16 rounded-full bg-white cursor-pointer shadow-lg">
+        {/* Playback controls */}
+        <div className="flex items-center justify-between flex-shrink-0 px-2">
+          <button
+            onClick={() => setShuffleOn(!shuffleOn)}
+            className={`flex flex-col items-center gap-y-1 transition active:scale-90 p-2 ${shuffleOn ? 'text-red-500' : 'text-neutral-600'}`}
+          >
+            <TbArrowsShuffle size={22} />
+          </button>
+
+          <AiFillStepBackward onClick={onPrevious} size={32}
+            className="text-neutral-300 cursor-pointer active:scale-90 transition active:text-white" />
+
+          <div
+            onClick={onPlay}
+            className="flex items-center justify-center rounded-full cursor-pointer active:scale-95 transition-transform"
+            style={{
+              width: 70, height: 70,
+              background: 'linear-gradient(135deg, #dc2626, #7f1d1d)',
+              boxShadow: isPlaying
+                ? '0 0 30px rgba(239,68,68,0.5), 0 0 60px rgba(239,68,68,0.2)'
+                : '0 0 15px rgba(239,68,68,0.2)',
+            }}
+          >
             {renderPlayButton()}
           </div>
-          <AiFillStepForward onClick={handleNext} size={34}
-            className="text-neutral-400 cursor-pointer hover:text-white transition" />
-        </div>
 
-        <div className="flex items-center justify-center gap-x-12 flex-shrink-0">
-          <button onClick={() => setShuffleOn(!shuffleOn)}
-            className={`flex flex-col items-center gap-y-1 transition ${shuffleOn ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}>
-            <TbArrowsShuffle size={24} />
-            <span className="text-[10px]">Aleatório</span>
-          </button>
-          <button onClick={cycleRepeat}
-            className={`flex flex-col items-center gap-y-1 transition ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-400 hover:text-white'}`}>
-            <RepeatIcon size={24} />
-            <span className="text-[10px]">
-              {repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir tudo' : 'Repetir uma'}
-            </span>
+          <AiFillStepForward onClick={handleNext} size={32}
+            className="text-neutral-300 cursor-pointer active:scale-90 transition active:text-white" />
+
+          <button
+            onClick={cycleRepeat}
+            className={`flex flex-col items-center gap-y-1 transition active:scale-90 p-2 ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-600'}`}
+          >
+            <RepeatIcon size={22} />
           </button>
         </div>
 
-        {/* Queue extender card — shown in expanded player */}
+        {/* mode labels */}
+        <div className="flex items-center justify-between flex-shrink-0 px-4 -mt-4">
+          <span className={`text-[9px] font-mono uppercase tracking-widest ${shuffleOn ? 'text-red-500' : 'text-neutral-700'}`}>
+            {shuffleOn ? 'Aleatório on' : 'Aleatório'}
+          </span>
+          <span className={`text-[9px] font-mono uppercase tracking-widest ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-700'}`}>
+            {repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir tudo' : 'Repetir uma'}
+          </span>
+        </div>
+
+        {/* Lyrics flip card */}
+        <div className="flex-shrink-0">
+          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
+        </div>
+
+        {/* Queue extender */}
         {(queueStatus === 'fetching' || queueStatus === 'exhausted') && (
-          <div className="flex-shrink-0 rounded-xl border border-white/10 overflow-hidden bg-white/5">
+          <div className="flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
             {queueStatus === 'fetching' && (
               <div className="flex items-center gap-x-3 px-4 py-3">
                 <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -319,7 +399,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             )}
             {queueStatus === 'exhausted' && (
               <button onClick={queueFetchMore}
-                className="w-full flex items-center gap-x-3 px-4 py-3 hover:bg-white/5 transition text-left active:scale-95">
+                className="w-full flex items-center gap-x-3 px-4 py-3 active:bg-white/5 transition text-left">
                 <TbDatabaseImport size={18} className="text-red-400 flex-shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-white text-xs font-semibold">Fila a acabar</span>
@@ -330,36 +410,36 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </div>
         )}
 
+        {/* Queue */}
         {hasQueue && (
-          <div className="flex-shrink-0 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+          <div className="flex-shrink-0 border border-white/10 overflow-hidden">
             <button onClick={() => setQueueExpanded(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 text-neutral-400 hover:text-white transition">
-              <span className="text-xs font-semibold uppercase tracking-widest">Fila de reprodução</span>
+              className="w-full flex items-center justify-between px-4 py-3 text-neutral-500 active:text-white transition">
+              <span className="text-[10px] font-mono uppercase tracking-widest">Fila de reprodução</span>
               <div className="flex items-center gap-x-2">
-                <span className="text-[10px] text-neutral-600">{ids.length} músicas</span>
-                {queueExpanded ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
+                <span className="text-[10px] text-neutral-700 font-mono">{ids.length}</span>
+                {queueExpanded ? <IoChevronUp size={12} /> : <IoChevronDown size={12} />}
               </div>
             </button>
 
             {!queueExpanded && (
-              <div className="pb-2">
+              <div className="pb-1">
                 {history.slice(-1).map((s, i) => (
                   <QueueRow key={`h-${i}`} song={s} dimmed onClick={() => handleQueueRowClick(currentIndex - 1)} />
                 ))}
-                <QueueRow song={song} isCurrent label="▶" />
-                {upcoming.slice(0, 1).map((s, i) => (
-                  <QueueRow key={`u-${i}`} song={s} onClick={() => handleQueueRowClick(currentIndex + 1)} />
+                <QueueRow song={song} isCurrent />
+                {upcoming.slice(0, 2).map((s, i) => (
+                  <QueueRow key={`u-${i}`} song={s} onClick={() => handleQueueRowClick(currentIndex + 1 + i)} />
                 ))}
               </div>
             )}
 
             {queueExpanded && (
-              <div ref={containerRef} className="pb-2 max-h-72 overflow-y-auto">
+              <div ref={containerRef} className="pb-1 max-h-72 overflow-y-auto">
                 {allQueueRows.map(({ song: s, globalIndex, isCurrent, isPast }) => (
                   <QueueRow
                     key={`q-${globalIndex}`} song={s} isCurrent={isCurrent}
                     dimmed={isPast && !isCurrent} dragging={draggingIndex === globalIndex}
-                    label={isCurrent ? '▶' : undefined}
                     onDragStart={!isCurrent ? (e) => handleDragHandleDown(globalIndex, e) : undefined}
                     onRemove={!isCurrent ? (e) => removeFromQueue(globalIndex, e) : undefined}
                     onClick={!isCurrent ? () => handleQueueRowClick(globalIndex) : undefined}
