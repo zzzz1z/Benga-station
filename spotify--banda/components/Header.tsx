@@ -8,7 +8,7 @@ import useAuthModal from "@/hooks/useAuthModal";
 import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/useUser";
 import { FaUserAlt } from "react-icons/fa";
-import { RiLogoutBoxRLine } from "react-icons/ri";
+import { RiLogoutBoxRLine, RiMenuUnfoldLine } from "react-icons/ri";
 import { AiOutlineFileAdd } from "react-icons/ai";
 import toast from "react-hot-toast";
 import usePlayer from "@/hooks/usePlayer";
@@ -17,7 +17,6 @@ import { FcLike } from "react-icons/fc";
 import useUploadModal from "@/hooks/useUploadModal";
 import { usePageTransition } from "@/providers/PageTransitionProvider";
 import { useEffect, useRef, useState } from "react";
-import { RiMenuUnfoldLine } from "react-icons/ri";
 
 interface HeaderProps {
   children?: React.ReactNode;
@@ -29,7 +28,6 @@ const BUTTON_CUT = "polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)";
 const HeaderPulse = () => {
   const activeID = usePlayer(s => s.activeID);
   const [playing, setPlaying] = useState(false);
-
   useEffect(() => { setPlaying(!!activeID); }, [activeID]);
 
   return (
@@ -66,17 +64,34 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
   const uploadModal = useUploadModal();
   const activeID    = usePlayer(s => s.activeID);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef     = useRef<HTMLDivElement>(null);
+  const triggerRef  = useRef<HTMLButtonElement>(null);
+  const [fabTop, setFabTop] = useState(80);
 
   useEffect(() => {
     if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        menuRef.current && !menuRef.current.contains(target) &&
+        triggerRef.current && !triggerRef.current.contains(target)
+      ) {
         setMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setFabTop(rect.bottom + 8);
+    }
   }, [menuOpen]);
 
   const onClick = () => {
@@ -165,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                   type="button"
                   onClick={() => navigate(item.path)}
                   className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
-                  style={{ clipPath: BUTTON_CUT }}
+                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
                 >
                   <item.icon size={22} className="text-white" />
                   <span className="text-[8px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
@@ -182,7 +197,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                   type="button"
                   onClick={() => navigate(item.path)}
                   className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
-                  style={{ clipPath: BUTTON_CUT }}
+                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
                 >
                   <item.icon size={22} className="text-white" />
                   <span className="text-[8px] font-mono uppercase tracking-widest text-neutral-500">{item.label}</span>
@@ -224,44 +239,14 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
               )}
             </div>
 
-            {/* Mobile — FAB menu */}
+            {/* Mobile trigger */}
             {user && (
               <div ref={menuRef} className="md:hidden relative flex-shrink-0">
-
-                {/* Floating buttons — slide in from right */}
-                <div className="absolute right-14 top-0 flex flex-col gap-y-2 items-end"
-                  style={{ pointerEvents: menuOpen ? 'auto' : 'none' }}>
-                  {MENU_ITEMS.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-x-2"
-                      style={{
-                        opacity: menuOpen ? 1 : 0,
-                        transform: menuOpen ? 'translateX(0)' : 'translateX(60px)',
-                        transition: `opacity 0.25s cubic-bezier(0.32,0.72,0,1) ${i * 0.07}s, transform 0.25s cubic-bezier(0.32,0.72,0,1) ${i * 0.07}s`,
-                      }}
-                    >
-                      {/* label */}
-                      <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-500 bg-neutral-950/90 px-2 py-1 border border-white/5 whitespace-nowrap">
-                        {item.label}
-                      </span>
-                      {/* icon button */}
-                      <button
-                        onClick={item.action}
-                        className={`flex items-center justify-center w-11 h-11 bg-neutral-900 border active:scale-90 transition-transform ${item.color}`}
-                        style={{ clipPath: BUTTON_CUT }}
-                      >
-                        <item.icon size={18} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Trigger */}
                 <button
+                  ref={triggerRef}
                   onClick={() => setMenuOpen(p => !p)}
                   className="flex items-center justify-center w-12 h-12 bg-neutral-900/80 border border-red-500/30 active:border-red-500 active:bg-red-500/10 transition-all"
-                  style={{ clipPath: BUTTON_CUT }}
+                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
                 >
                   <RiMenuUnfoldLine
                     size={22}
@@ -276,7 +261,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
               <div className="md:hidden flex items-center gap-x-2">
                 <button onClick={() => authModal.onOpen("sign_in")}
                   className="bg-red-600 px-4 py-2 text-white font-black uppercase text-xs tracking-widest transition-all"
-                  style={{ clipPath: BUTTON_CUT }}>
+                  style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}>
                   Login
                 </button>
               </div>
@@ -286,6 +271,48 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
 
         {children && <div className="relative z-20">{children}</div>}
       </div>
+
+      {/* FAB — fixed portal, always above everything */}
+      {user && (
+        <div
+          className="fixed z-[200] right-4 flex flex-col gap-y-2 items-end"
+          style={{
+            top: fabTop,
+            pointerEvents: menuOpen ? 'auto' : 'none',
+          }}
+        >
+          {/* backdrop */}
+          {menuOpen && (
+            <div
+              className="fixed inset-0 z-[-1]"
+              onClick={() => setMenuOpen(false)}
+            />
+          )}
+
+          {MENU_ITEMS.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-x-2"
+              style={{
+                opacity: menuOpen ? 1 : 0,
+                transform: menuOpen ? 'translateX(0)' : 'translateX(70px)',
+                transition: `opacity 0.22s cubic-bezier(0.32,0.72,0,1) ${i * 0.06}s, transform 0.22s cubic-bezier(0.32,0.72,0,1) ${i * 0.06}s`,
+              }}
+            >
+              <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-400 bg-neutral-950 px-2 py-1 border border-white/5 whitespace-nowrap">
+                {item.label}
+              </span>
+              <button
+                onClick={item.action}
+                className={`flex items-center justify-center w-11 h-11 bg-neutral-900 border active:scale-90 transition-transform ${item.color}`}
+                style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
+              >
+                <item.icon size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 };
