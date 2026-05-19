@@ -4,7 +4,8 @@ import { useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 
 const supabase = createClient();
-const LS_KEY = 'benga_top_video_ids';
+const LS_WARMED_AT_KEY = 'benga_warmed_at';
+const WARM_INTERVAL_MS = 5 * 60 * 60 * 1000; // 5 hours
 
 const GlobalWarmer = () => {
   const hasWarmed = useRef(false);
@@ -13,30 +14,24 @@ const GlobalWarmer = () => {
     if (hasWarmed.current) return;
     hasWarmed.current = true;
 
-    // Step 1: Fire instantly from localStorage before auth resolves
-    try {
-      const cached = localStorage.getItem(LS_KEY);
-      if (cached) {
-        const ids: string[] = JSON.parse(cached);
-        if (Array.isArray(ids) && ids.length > 0) {
-          console.log(`[GlobalWarmer] instant preextract ${ids.length} songs from localStorage`);
-          fetch('/api/preextract-queue', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoIds: ids }),
-          }).catch(() => {});
-        }
-      }
-    } catch (_) {}
-
-    // Step 2: Auth + full library preextract
     const warmLibrary = async () => {
+      // Check if we warmed recently — if so, worker Redis is still hot, skip
+      try {
+        const warmedAt = localStorage.getItem(LS_WARMED_AT_KEY);
+        if (warmedAt) {
+          const elapsed = Date.now() - parseInt(warmedAt, 10);
+          if (elapsed < WARM_INTERVAL_MS) {
+            console.log(`[GlobalWarmer] skipping — warmed ${Math.round(elapsed / 60000)}m ago`);
+            return;
+          }
+        }
+      } catch (_) {}
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const videoIds = new Set<string>();
 
-      // All liked songs
       const { data: liked } = await supabase
         .from('Músicas_Favoritas')
         .select('Songs ( youtube_video_id, source )')
@@ -47,7 +42,6 @@ const GlobalWarmer = () => {
         if (row.Songs?.source === 'youtube' && vid) videoIds.add(vid);
       });
 
-      // All playlist songs
       const { data: playlists } = await supabase
         .from('Playlists')
         .select('playlist_songs ( Songs ( youtube_video_id, source ) )')
@@ -60,7 +54,6 @@ const GlobalWarmer = () => {
         });
       });
 
-      // Top played from play_history for localStorage cache
       const { data: topPlayed } = await supabase
         .from('play_history')
         .select('video_id')
@@ -73,28 +66,27 @@ const GlobalWarmer = () => {
         topPlayed.forEach((row: any) => {
           counts[row.video_id] = (counts[row.video_id] ?? 0) + 1;
         });
-        const top5 = Object.entries(counts)
+        Object.entries(counts)
           .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([id]) => id);
-
-        // Save top 5 for next app open
-        try { localStorage.setItem(LS_KEY, JSON.stringify(top5)); } catch (_) {}
-
-        // Add top played to the extraction set too
-        top5.forEach(id => videoIds.add(id));
+          .slice(0, 20) // top 20 most played, not just 5
+          .forEach(([id]) => videoIds.add(id));
       }
 
       if (!videoIds.size) return;
 
       const ids = Array.from(videoIds);
-      console.log(`[GlobalWarmer] preextracting full library — ${ids.length} songs`);
+      console.log(`[GlobalWarmer] warming ${ids.length} songs`);
 
       fetch('/api/preextract-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoIds: ids }),
       }).catch(() => {});
+
+      // Mark as warmed — next open within 5h will skip
+      try {
+        localStorage.setItem(LS_WARMED_AT_KEY, Date.now().toString());
+      } catch (_) {}
     };
 
     warmLibrary();
