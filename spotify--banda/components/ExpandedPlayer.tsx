@@ -270,27 +270,41 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
       </div>
 
-      {/* Top drag zone */}
-      <div className="flex-shrink-0 select-none touch-none relative z-10"
+{/* Top drag zone — respects iPhone safe area */}
+      <div
+        className="flex-shrink-0 select-none touch-none relative z-10 border-b border-white/5"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
         onTouchStart={handleTopBarTouchStart} onTouchMove={handleTopBarTouchMove} onTouchEnd={handleTopBarTouchEnd}>
-        <div className="flex justify-center pt-5 pb-1">
+
+        {/* drag pill */}
+        <div className="flex justify-center pt-3 pb-1">
           <div className="w-8 h-1 rounded-full bg-neutral-700" />
         </div>
-        <div className="flex items-center justify-between px-5 pt-2 pb-1">
-          <button onClick={handleClose} className="text-neutral-400 active:text-white transition p-2 -ml-2" onTouchStart={e => e.stopPropagation()}>
-            <IoChevronDown size={24} />
+
+        {/* header row */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <button
+            onClick={handleClose}
+            className="text-neutral-400 active:text-white transition p-2 -ml-2"
+            onTouchStart={e => e.stopPropagation()}
+          >
+            <IoChevronDown size={26} />
           </button>
-          <div className="flex flex-col items-center">
-            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.2em]">A tocar agora</p>
+
+          <div className="flex flex-col items-center gap-y-0.5">
+            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">A tocar agora</p>
+            <p className="text-white text-sm font-black uppercase tracking-tight truncate max-w-[180px]">{song.title}</p>
           </div>
-          <button onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
+
+          <button
+            onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
             className="text-neutral-500 active:text-white transition p-2 -mr-2"
-            onTouchStart={e => e.stopPropagation()}>
-            <AiOutlineInfoCircle size={20} />
+            onTouchStart={e => e.stopPropagation()}
+          >
+            <AiOutlineInfoCircle size={22} />
           </button>
         </div>
       </div>
-
       {/* Scrollable content */}
       <div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 overflow-y-auto relative z-10">
 
@@ -385,7 +399,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
         {/* Lyrics flip card */}
         <div className="flex-shrink-0">
-          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} />
+       <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
         </div>
 
         {/* Queue extender */}
