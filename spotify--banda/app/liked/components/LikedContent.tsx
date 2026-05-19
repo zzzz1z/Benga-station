@@ -7,9 +7,10 @@ import { useUser } from "@/hooks/useUser";
 import { Song } from "@/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { BounceLoader } from "react-spinners";
 import { useRefresh } from "@/hooks/useRefresh";
 import { createClient } from "@/utils/supabase/client";
+import { MdMusicOff } from "react-icons/md";
+import { HiHeart } from "react-icons/hi";
 
 const supabase = createClient();
 
@@ -21,6 +22,8 @@ const getSongPlayerId = (song: Song): string =>
     song.source === 'youtube' && song.youtube_video_id
         ? `yt_${song.youtube_video_id}`
         : String(song.id);
+
+const SLASH_CUT = "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)";
 
 const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
     const router = useRouter();
@@ -43,10 +46,7 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
             .select('Songs(*)')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
-
-        if (!error && data) {
-            setSongs(data.map((item: any) => item.Songs).filter(Boolean));
-        }
+        if (!error && data) setSongs(data.map((item: any) => item.Songs).filter(Boolean));
     }, [user?.id]);
 
     useEffect(() => {
@@ -56,33 +56,65 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
 
     if (!mounted || isLoading) {
         return (
-            <div className="flex justify-center items-center h-40">
-                <BounceLoader color="#A52A2A" size={40} />
+            <div className="flex flex-col items-center justify-center h-40 gap-y-3">
+                <div className="w-8 h-8 border-2 border-red-600 border-t-transparent animate-spin" />
+                <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-widest animate-pulse">
+                    A_CARREGAR...
+                </p>
             </div>
         );
     }
 
     if (songs.length === 0) {
         return (
-            <div className="flex flex-col gap-y-2 w-full px-6 text-neutral-400">
-                Sem bengas por aqui ✖︎
+            <div className="flex flex-col items-center justify-center py-20 gap-y-4">
+                <div className="w-14 h-14 border border-red-900/30 flex items-center justify-center" style={{ clipPath: SLASH_CUT }}>
+                    <MdMusicOff size={22} className="text-red-900/50" />
+                </div>
+                <p className="text-red-900/40 font-mono text-[9px] uppercase tracking-[0.3em] text-center">
+                    SEM_BENGAS<br />AQUI_✖
+                </p>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-y-2 w-full p-6">
-            {songs.map((song) => (
-                <div key={song.id} className="flex items-center gap-x-4 w-full">
-                    <div className="flex-1">
-                        <MediaItem
-                            onClick={() => onPlay(getSongPlayerId(song))}
-                            data={song}
-                        />
+        <div className="flex flex-col w-full p-4 gap-y-3">
+
+            {/* Count header */}
+            <div className="flex items-center gap-x-3 px-1 py-1">
+                <HiHeart size={12} className="text-red-500/40 flex-shrink-0" />
+                <div className="flex-1 h-px bg-red-900/20" />
+                <span className="text-[8px] font-mono text-red-600/20 uppercase tracking-[0.3em]">{songs.length} TRACKS</span>
+            </div>
+
+            {/* Song list */}
+            <div className="flex flex-col gap-y-1">
+                {songs.map((song, i) => (
+                    <div
+                        key={song.id}
+                        className="flex items-center gap-x-3 w-full opacity-0 animate-[fadeSlideIn_0.3s_ease_forwards]"
+                        style={{ animationDelay: `${i * 0.035}s` }}
+                    >
+                        <div className="flex-1 min-w-0">
+                            <MediaItem
+                                onClick={() => onPlay(getSongPlayerId(song))}
+                                data={song}
+                            />
+                        </div>
+                        <div className="flex-shrink-0">
+                            <LikedButton songId={song.id} />
+                        </div>
                     </div>
-                    <LikedButton songId={song.id} />
-                </div>
-            ))}
+                ))}
+            </div>
+
+            <style>{`
+                @keyframes fadeSlideIn {
+                    from { opacity: 0; transform: translateX(20px) skewX(-2deg); }
+                    to   { opacity: 1; transform: translateX(0) skewX(0deg); }
+                }
+            `}</style>
         </div>
     );
 };

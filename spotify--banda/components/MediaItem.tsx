@@ -105,7 +105,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
         <>
             <div
                 onClick={handleClick}
-                className="flex items-center gap-4 cursor-pointer hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative overflow-hidden"
+                className="flex items-center gap-4 cursor-pointer hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative"
             >
                 <div className="relative rounded-none h-14 w-16 flex-shrink-0 overflow-hidden border border-white/5">
                     <Image

@@ -167,8 +167,8 @@ const PlaylistDetails: React.FC = () => {
   if (!playlist) return <div className="p-20 text-white">Playlist não encontrada.</div>;
 
   return (
-    <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative">
-      <div className="relative overflow-hidden">
+<div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative z-0">
+<div className="relative overflow-hidden" style={{ isolation: 'isolate' }}>
         <div className="absolute inset-0 pointer-events-none z-0"
           style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }} />
         <div className="absolute top-0 left-0 right-0 h-px z-10"

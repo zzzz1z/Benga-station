@@ -1,8 +1,8 @@
 import Header from "@/components/Header";
-import LikedContent from "./components/LikedContent";
 import Image from "next/image";
 import getPlaylists from "@/actions/getPlaylists";
 import ImportPlaylistButton from "@/components/ImportPlaylistButton";
+import PlaylistContent from "./components/PlaylistContent";
 
 
 const Liked = async () => {
@@ -57,7 +57,7 @@ const Liked = async () => {
         </div>
       </Header>
 
-      <LikedContent playlists={playlist} />
+      <PlaylistContent playlists={playlist} />
     </div>
   );
 }

@@ -3,89 +3,62 @@ import LikedContent from "./components/LikedContent";
 import getLikedSongs from "@/actions/getLikedSongs";
 import Image from "next/image";
 
-
 export const dynamic = 'force-dynamic';
-const Liked = async () => {
 
+const Liked = async () => {
   const songs = await getLikedSongs();
 
-
   return (
-    <div className="
-    bg-neutral-900
-    rounded-lg
-    h-full
-    w-full
-    overflow-hidden
-    pt-[30px]
-    overflow-y-auto"
-    >
-     <Header>
-        <div className="mt20">
-            <div
-             className="
-             flex
-             flex-col
-             md:flex-row
-             items-center
-             gap-x-5
-             "
-            >
-                <div
-                className="
-                relative
-                h-32
-                w-32
-                lg:h-44
-                lg:w-44"
-                >
-                    <Image
-                     fill
-                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                     priority
-                     alt='Lista de Músicas'
-                     className="object-cover"
-                     src='/images/likedit.png'
-                     
-                    />
+    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
+      <Header>
+        <div className="mt-6 mb-2">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-x-6 gap-y-4">
 
-                </div>
-                <div className="
-                flex
-                flex-col
-                gap-y-2
-                mt-4
-                md:mt-0"
-                >
-                    <p className="hidden md:block font-semibold text-sm">
-                        Playlist 
-                    </p>
-                    <h1
-                    className="
-                    text-white
-                    text-4xl
-                    sm:text-5xl
-                    lg:text-7xl
-                    font-bold
-                    ">
-                        Músicas favoritas
-                    </h1>
-                </div>
-
+            {/* Album art with corner accents */}
+            <div className="relative flex-shrink-0 h-32 w-32 lg:h-44 lg:w-44">
+              <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10" />
+              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10" />
+              <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10" />
+              {/* red glow */}
+              <div className="absolute inset-0 blur-xl opacity-30 pointer-events-none z-0"
+                style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.8), transparent 70%)' }} />
+              <Image
+                fill priority
+                sizes="(max-width: 768px) 128px, 176px"
+                alt="Músicas Favoritas"
+                className="object-cover relative z-[1]"
+                src="/images/likedit.png"
+              />
             </div>
+
+            {/* Text info */}
+            <div className="flex flex-col gap-y-2 items-center md:items-start">
+              <p className="text-red-500/60 font-mono text-[9px] uppercase tracking-[0.3em]">
+                ▶ BIBLIOTECA // FAVORITAS
+              </p>
+              <h1
+                className="text-white text-4xl sm:text-5xl lg:text-7xl font-black uppercase tracking-tighter text-center md:text-left"
+                style={{ textShadow: '0 0 40px rgba(239,68,68,0.25)' }}
+              >
+                Músicas<br className="md:hidden" /> Favoritas
+              </h1>
+              <div className="flex items-center gap-x-2 mt-1">
+                <div className="h-px w-6 bg-red-500/40" />
+                <span className="text-red-600/30 font-mono text-[8px] uppercase tracking-[0.3em]">
+                  {songs.length} TRACKS_LOADED
+                </span>
+                <div className="h-px w-6 bg-red-500/40" />
+              </div>
+            </div>
+
+          </div>
         </div>
-       
+      </Header>
 
-    
-       
-     </Header>
-     <LikedContent songs={songs}/>
-   
-    
-
+      <LikedContent songs={songs} />
     </div>
-    
   );
-}
+};
 
 export default Liked;

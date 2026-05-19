@@ -114,8 +114,10 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         onNavigate={(path) => { setDrawerOpen(false); navigate(path); }}
       />
 
-      <div className={twMerge(`relative h-fit bg-neutral-900/50 p-6 overflow-hidden`, className)}>
-
+<div
+  className={twMerge(`relative h-fit bg-neutral-900/50 px-6 pb-6 overflow-hidden`, className)}
+  style={{ paddingTop: `calc(env(safe-area-inset-top) + 1.5rem)` }}
+>
         <HeaderPulse />
 
         {/* scan line bg — animates when playing */}
