@@ -1,20 +1,17 @@
-'use client';
+// app/api/keepalive/route.ts
+import { NextResponse } from 'next/server';
 
-import { useEffect } from 'react';
+export async function GET(request: Request) {
+  console.log("▲ Foreground ping received from Next.js Webview");
+  return NextResponse.json({ status: 'ok', source: 'foreground' });
+}
 
-const KeepAlive = () => {
-  useEffect(() => {
-    const ping = () => {
-      fetch('/api/keepalive').catch(() => {});
-    };
-
-    ping();
-    const interval = setInterval(ping, 4 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return null;
-};
-
-export default KeepAlive;
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    console.log("🪐 Native Background Fetch ping received from iOS Device:", body);
+    return NextResponse.json({ status: 'ok', source: 'background' });
+  } catch (e) {
+    return NextResponse.json({ status: 'ok', source: 'background-fallback' });
+  }
+}
