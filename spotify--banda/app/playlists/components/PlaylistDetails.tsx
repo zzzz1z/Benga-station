@@ -57,8 +57,6 @@ const PlaylistDetails: React.FC = () => {
     }
 
     setError(null);
-    setLoading(true);
-    setSongsLoading(true);
 
     try {
       const [playlistRes, songRes] = await Promise.all([
@@ -68,16 +66,6 @@ const PlaylistDetails: React.FC = () => {
 
       if (playlistRes.error) {
         setError('Playlist não encontrada.');
-        setLoading(false);
-        setSongsLoading(false);
-        return;
-      }
-
-      setPlaylist(playlistRes.data);
-      setLoading(false);
-
-      if (songRes.error) {
-        setSongsLoading(false);
         return;
       }
 
@@ -85,24 +73,22 @@ const PlaylistDetails: React.FC = () => {
         .map((item: any) => item.Songs)
         .filter(Boolean);
 
+      setPlaylist(playlistRes.data);
       setSongs(fetchedSongs);
-      setSongsLoading(false);
-      setPlaylist(prev => prev ? { ...prev, songs: fetchedSongs } : prev);
     } catch {
       setError('Erro inesperado.');
+    } finally {
       setLoading(false);
       setSongsLoading(false);
     }
   }, [id]);
 
+  // Safe Lifecycle Hook: Fires exactly once on mount, route changes, or explicit context triggers
   useEffect(() => {
+    setLoading(true);
+    setSongsLoading(true);
     fetchPlaylist();
-  }, [fetchPlaylist]);
-
-  useEffect(() => {
-    if (refreshKey === 0) return;
-    fetchPlaylist();
-  }, [refreshKey, fetchPlaylist]);
+  }, [id, refreshKey, fetchPlaylist]);
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -156,8 +142,8 @@ const PlaylistDetails: React.FC = () => {
   if (!playlist) return <div className="p-20 text-white">Playlist não encontrada.</div>;
 
   return (
-<div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative z-0">
-<div className="relative overflow-hidden" style={{ isolation: 'isolate' }}>
+    <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative z-0">
+      <div className="relative overflow-hidden" style={{ isolation: 'isolate' }}>
         <div className="absolute inset-0 pointer-events-none z-0"
           style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }} />
         <div className="absolute top-0 left-0 right-0 h-px z-10"
@@ -177,13 +163,14 @@ const PlaylistDetails: React.FC = () => {
                   <Image fill alt="Playlist Cover" className="object-cover"
                     src={playlist.cover_image || '/images/likedit.png'} />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-y-2">
-                    {uploadingCover
-                      ? <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
-                      : <>
-                          <MdOutlineAddPhotoAlternate size={32} className="text-red-500" />
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest">Atualizar Capa</span>
-                        </>
-                    }
+                    {uploadingCover ? (
+                      <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <MdOutlineAddPhotoAlternate size={32} className="text-red-500" />
+                        <span className="text-white text-[10px] font-black uppercase tracking-widest">Atualizar Capa</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
