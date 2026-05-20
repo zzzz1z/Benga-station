@@ -67,12 +67,6 @@ const Player = () => {
   const currentSongRef = useRef<Song | null>(null);
   useEffect(() => {
     currentSongRef.current = song;
-    if (song) {
-      console.log('--- 🎵 NEW SONG DETECTED IN PLAYER ---');
-      console.log('Song Title:', song.title);
-      console.log('Song ID:', song.id);
-      console.log('Database Duration Field (song.duration):', song.duration);
-    }
   }, [song]);
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
@@ -84,6 +78,9 @@ const Player = () => {
   const [duration,   setDuration]   = useState(0);
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Track verified header override values safely across async updates
+  const headerDurationRef = useRef<number | null>(null);
 
   const volumeRef          = useRef(1);
   const isPlayingRef       = useRef(false);
@@ -179,9 +176,7 @@ const Player = () => {
     const stuckInterval = setInterval(() => {
       if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
       if (isPlayingRef.current) {
-        const dbDuration = currentSongRef.current?.duration;
-        const dur = (dbDuration && dbDuration > 0) ? dbDuration : audio.duration;
-        
+        const dur = headerDurationRef.current || currentSongRef.current?.duration || audio.duration;
         if (dur > 0 && audio.currentTime >= dur - 0.3) {
           if (!endedFiredRef.current) handleEnded();
           return;
@@ -200,9 +195,7 @@ const Player = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
-      const dbDuration = currentSongRef.current?.duration;
-      const dur = (dbDuration && dbDuration > 0) ? dbDuration : audio.duration;
-
+      const dur = headerDurationRef.current || currentSongRef.current?.duration || audio.duration;
       if (dur > 0 && audio.currentTime >= dur - 0.5 && audio.paused && isPlayingRef.current) {
         handleEnded();
       }
@@ -226,8 +219,10 @@ const Player = () => {
     setIsLoading(!!songUrl);
     setIsPlaying(false);
     
+    // Clean out old references for the new track
+    headerDurationRef.current = null;
+
     if (song?.duration && song.duration > 0) {
-      console.log('Setting state initial duration from database fallback:', song.duration);
       setDuration(song.duration);
     } else {
       setDuration(0);
@@ -241,24 +236,33 @@ const Player = () => {
 
     if (!songUrl) return;
 
+    // Direct HTTP Head Check: Fetch headers from the proxy to find actual Content-Duration
+    fetch(songUrl, { method: 'HEAD' })
+      .then(res => {
+        const cd = res.headers.get('Content-Duration') || res.headers.get('X-Content-Duration');
+        if (cd) {
+          const parsed = parseFloat(cd);
+          if (parsed && !isNaN(parsed) && parsed > 0) {
+            headerDurationRef.current = parsed;
+            setDuration(parsed);
+            console.log(`🎯 TARGET IOS DURATION SET VIA STREAM HEADERS: ${parsed}s`);
+          }
+        }
+      })
+      .catch(() => {});
+
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
     const onMeta = () => {
-      console.log('--- HTML5 EVENT: loadedmetadata fired ---');
-      console.log('Browser raw audio.duration metric:', audio.duration);
-      
-      if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
-        console.log('Bypassing browser metadata. Forcing database duration value:', currentSongRef.current.duration);
-        setDuration(currentSongRef.current.duration);
+      if (headerDurationRef.current || currentSongRef.current?.duration) {
+        setDuration(headerDurationRef.current || currentSongRef.current!.duration);
         return;
       }
-      
       const reported = audio.duration;
       if (!reported || !isFinite(reported) || reported <= 0) return;
       clearTimeout(metaStableTimer);
       metaStableTimer = setTimeout(() => {
         const settled = audio.duration;
-        console.log('Settled browser duration after debounce:', settled);
         if (settled && isFinite(settled) && settled > 0) {
           setDuration(settled);
         }
@@ -268,15 +272,10 @@ const Player = () => {
     };
 
     const onDurationChange = () => {
-      console.log('--- HTML5 EVENT: durationchange fired ---');
-      console.log('Browser revised audio.duration metric:', audio.duration);
-
-      if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
-        console.log('Bypassing updated browser duration. Forcing database value:', currentSongRef.current.duration);
-        setDuration(currentSongRef.current.duration);
+      if (headerDurationRef.current || currentSongRef.current?.duration) {
+        setDuration(headerDurationRef.current || currentSongRef.current!.duration);
         return;
       }
-      
       const d = audio.duration;
       if (!d || !isFinite(d) || d <= 0) return;
       clearTimeout(metaStableTimer);
