@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
+const WORKER_URL = process.env.YT_WORKER_URL!;
+const WORKER_SECRET = process.env.WORKER_SECRET!;
+
+async function searchViaWorker(query: string) {
+  const res = await fetch(`${WORKER_URL}/search?q=${encodeURIComponent(query)}`, {
+    headers: { 'x-worker-secret': WORKER_SECRET },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error('Worker search failed');
+  const data = await res.json();
+  if (!data?.results?.length) throw new Error('No results from worker');
+  return {
+    results: data.results.map((r: any) => ({ ...r, duration: null })),
+    nextPageToken: null,
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
@@ -13,7 +30,11 @@ export async function GET(request: Request) {
 
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    try {
+      return NextResponse.json(await searchViaWorker(query));
+    } catch {
+      return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    }
   }
 
   try {
@@ -30,8 +51,8 @@ export async function GET(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('YouTube API error:', JSON.stringify(data));
-      return NextResponse.json({ error: 'YouTube API error', detail: data }, { status: 500 });
+      console.warn('YouTube API error, falling back to worker:', data?.error?.message ?? response.status);
+      return NextResponse.json(await searchViaWorker(query));
     }
 
     const results = (data.items || []).map((item: any) => ({
@@ -47,7 +68,11 @@ export async function GET(request: Request) {
       nextPageToken: data.nextPageToken ?? null,
     });
   } catch (err) {
-    console.error('Search error:', err);
-    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    console.error('Search error, trying worker fallback:', err);
+    try {
+      return NextResponse.json(await searchViaWorker(query));
+    } catch {
+      return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    }
   }
 }
