@@ -131,7 +131,7 @@ const Player = () => {
       ...ids.slice(idx + 1, idx + 6),
     ].filter(id => id.startsWith('yt_')).map(id => id.slice(3));
 
-  if (!ytWindow.length) return;
+    if (!ytWindow.length) return;
     fetch('/api/preextract-queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -219,25 +219,36 @@ const Player = () => {
 
     if (!songUrl) return;
 
-    let metaDuration = 0;
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
     const onMeta = () => {
       const reported = audio.duration;
-      if (!reported || !isFinite(reported)) return;
-      if (metaDuration === 0) {
-        metaDuration = reported;
-        metaStableTimer = setTimeout(() => {
-          setDuration(audio.duration);
-          audio.removeEventListener('loadedmetadata', onMeta);
-        }, 800);
-        return;
-      }
+      if (!reported || !isFinite(reported) || reported <= 0) return;
       clearTimeout(metaStableTimer);
-      setDuration(reported);
-      audio.removeEventListener('loadedmetadata', onMeta);
+      metaStableTimer = setTimeout(() => {
+        const settled = audio.duration;
+        if (settled && isFinite(settled) && settled > 0) {
+          setDuration(settled);
+        }
+        audio.removeEventListener('loadedmetadata', onMeta);
+        audio.removeEventListener('durationchange', onDurationChange);
+      }, 1500);
     };
+
+    const onDurationChange = () => {
+      const d = audio.duration;
+      if (!d || !isFinite(d) || d <= 0) return;
+      clearTimeout(metaStableTimer);
+      metaStableTimer = setTimeout(() => {
+        const settled = audio.duration;
+        if (settled && isFinite(settled) && settled > 0) {
+          setDuration(settled);
+        }
+      }, 500);
+    };
+
     audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('durationchange', onDurationChange);
 
     const timer = setTimeout(() => {
       skipOnErrorRef.current = true;
@@ -259,6 +270,7 @@ const Player = () => {
       clearTimeout(timer);
       clearTimeout(metaStableTimer!);
       audio.removeEventListener('loadedmetadata', onMeta);
+      audio.removeEventListener('durationchange', onDurationChange);
     };
   }, [songUrl]);
 
