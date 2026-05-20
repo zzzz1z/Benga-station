@@ -101,7 +101,7 @@ const GlobalWarmer = () => {
       console.log(`[GlobalWarmer] warming ${ids.length} unique songs`);
 
       // Send in small sequential batches of 50 to prevent event loop stalls on VPS
-      const BATCH_SIZE = 50;
+      const BATCH_SIZE = 20;
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
         try {
