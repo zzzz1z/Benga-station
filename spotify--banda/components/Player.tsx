@@ -131,14 +131,12 @@ const Player = () => {
       ...ids.slice(idx + 1, idx + 6),
     ].filter(id => id.startsWith('yt_')).map(id => id.slice(3));
 
-    if (!ytWindow.length) return;
-    ytWindow.forEach(videoId => {
-      fetch('/api/preextract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId }),
-      }).catch(() => {});
-    });
+  if (!ytWindow.length) return;
+    fetch('/api/preextract-queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoIds: ytWindow }),
+    }).catch(() => {});
   }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

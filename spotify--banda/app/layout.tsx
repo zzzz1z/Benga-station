@@ -1,7 +1,6 @@
 import { Figtree } from 'next/font/google';
 import './globals.css';
 import Player from '@/components/Player';
-import GlobalWarmer from '@/components/GlobalWarmer';
 import ToasterProvider from '@/hooks/ToasterProvider';
 import ModalProvider from '@/providers/ModalProvider';
 import UserProvider from '@/providers/userProvider';
@@ -23,7 +22,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <PageTransitionProvider>
             <SessionProvider>
               <RefreshProvider>
-                <GlobalWarmer />
                 <PlaylistProvider>
                   <ModalProvider />
                   
