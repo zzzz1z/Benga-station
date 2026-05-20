@@ -64,10 +64,15 @@ const Player = () => {
   if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
   const song = songFromStore ?? lastGoodSongRef.current;
 
-  // Use a ref for the song object to safely read inside the audio loop without reconstruction loops
   const currentSongRef = useRef<Song | null>(null);
   useEffect(() => {
     currentSongRef.current = song;
+    if (song) {
+      console.log('--- 🎵 NEW SONG DETECTED IN PLAYER ---');
+      console.log('Song Title:', song.title);
+      console.log('Song ID:', song.id);
+      console.log('Database Duration Field (song.duration):', song.duration);
+    }
   }, [song]);
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
@@ -124,14 +129,11 @@ const Player = () => {
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
   };
 
-  // Preextract nearby songs in queue when active track changes
   useEffect(() => {
     if (!activeID) return;
-
     const { ids } = usePlayer.getState();
     const idx = ids.indexOf(activeID);
     if (idx === -1) return;
-
     const ytWindow = [
       ...ids.slice(Math.max(0, idx - 3), idx),
       ...ids.slice(idx + 1, idx + 6),
@@ -143,7 +145,7 @@ const Player = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds: ytWindow }),
     }).catch(() => {});
-  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeID]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -177,7 +179,6 @@ const Player = () => {
     const stuckInterval = setInterval(() => {
       if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
       if (isPlayingRef.current) {
-        // Fall back to target song.duration if iOS AVPlayer breaks core timeline limits
         const dbDuration = currentSongRef.current?.duration;
         const dur = (dbDuration && dbDuration > 0) ? dbDuration : audio.duration;
         
@@ -225,8 +226,8 @@ const Player = () => {
     setIsLoading(!!songUrl);
     setIsPlaying(false);
     
-    // Check if song contains a pre-saved backend duration metadata profile
     if (song?.duration && song.duration > 0) {
+      console.log('Setting state initial duration from database fallback:', song.duration);
       setDuration(song.duration);
     } else {
       setDuration(0);
@@ -243,16 +244,21 @@ const Player = () => {
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
     const onMeta = () => {
-      // If our database metadata has already defined a true duration, bypass browser metrics entirely
+      console.log('--- HTML5 EVENT: loadedmetadata fired ---');
+      console.log('Browser raw audio.duration metric:', audio.duration);
+      
       if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
+        console.log('Bypassing browser metadata. Forcing database duration value:', currentSongRef.current.duration);
         setDuration(currentSongRef.current.duration);
         return;
       }
+      
       const reported = audio.duration;
       if (!reported || !isFinite(reported) || reported <= 0) return;
       clearTimeout(metaStableTimer);
       metaStableTimer = setTimeout(() => {
         const settled = audio.duration;
+        console.log('Settled browser duration after debounce:', settled);
         if (settled && isFinite(settled) && settled > 0) {
           setDuration(settled);
         }
@@ -262,10 +268,15 @@ const Player = () => {
     };
 
     const onDurationChange = () => {
+      console.log('--- HTML5 EVENT: durationchange fired ---');
+      console.log('Browser revised audio.duration metric:', audio.duration);
+
       if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
+        console.log('Bypassing updated browser duration. Forcing database value:', currentSongRef.current.duration);
         setDuration(currentSongRef.current.duration);
         return;
       }
+      
       const d = audio.duration;
       if (!d || !isFinite(d) || d <= 0) return;
       clearTimeout(metaStableTimer);
