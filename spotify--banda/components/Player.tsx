@@ -64,6 +64,12 @@ const Player = () => {
   if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
   const song = songFromStore ?? lastGoodSongRef.current;
 
+  // Use a ref for the song object to safely read inside the audio loop without reconstruction loops
+  const currentSongRef = useRef<Song | null>(null);
+  useEffect(() => {
+    currentSongRef.current = song;
+  }, [song]);
+
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -144,7 +150,9 @@ const Player = () => {
     audioRef.current = audio;
     let lastTime = 0;
 
-    audio.ontimeupdate = () => { setPosition(audio.currentTime); };
+    audio.ontimeupdate = () => { 
+      setPosition(audio.currentTime); 
+    };
     audio.onended      = handleEnded;
     audio.onplay       = () => { setIsPlaying(true);  setIsLoading(false); };
     audio.onpause      = () => { if (audio.src) setIsPlaying(false); };
@@ -169,7 +177,10 @@ const Player = () => {
     const stuckInterval = setInterval(() => {
       if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
       if (isPlayingRef.current) {
-        const dur = audio.duration;
+        // Fall back to target song.duration if iOS AVPlayer breaks core timeline limits
+        const dbDuration = currentSongRef.current?.duration;
+        const dur = (dbDuration && dbDuration > 0) ? dbDuration : audio.duration;
+        
         if (dur > 0 && audio.currentTime >= dur - 0.3) {
           if (!endedFiredRef.current) handleEnded();
           return;
@@ -188,8 +199,12 @@ const Player = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
-      if (audio.duration > 0 && audio.currentTime >= audio.duration - 0.5 &&
-        audio.paused && isPlayingRef.current) handleEnded();
+      const dbDuration = currentSongRef.current?.duration;
+      const dur = (dbDuration && dbDuration > 0) ? dbDuration : audio.duration;
+
+      if (dur > 0 && audio.currentTime >= dur - 0.5 && audio.paused && isPlayingRef.current) {
+        handleEnded();
+      }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -209,7 +224,13 @@ const Player = () => {
     skipOnErrorRef.current = false;
     setIsLoading(!!songUrl);
     setIsPlaying(false);
-    setDuration(0);
+    
+    // Check if song contains a pre-saved backend duration metadata profile
+    if (song?.duration && song.duration > 0) {
+      setDuration(song.duration);
+    } else {
+      setDuration(0);
+    }
 
     audio.pause();
     audio.src = '';
@@ -222,6 +243,11 @@ const Player = () => {
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
     const onMeta = () => {
+      // If our database metadata has already defined a true duration, bypass browser metrics entirely
+      if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
+        setDuration(currentSongRef.current.duration);
+        return;
+      }
       const reported = audio.duration;
       if (!reported || !isFinite(reported) || reported <= 0) return;
       clearTimeout(metaStableTimer);
@@ -236,6 +262,10 @@ const Player = () => {
     };
 
     const onDurationChange = () => {
+      if (currentSongRef.current?.duration && currentSongRef.current.duration > 0) {
+        setDuration(currentSongRef.current.duration);
+        return;
+      }
       const d = audio.duration;
       if (!d || !isFinite(d) || d <= 0) return;
       clearTimeout(metaStableTimer);

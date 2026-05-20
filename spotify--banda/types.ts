@@ -18,6 +18,7 @@ export interface ProductWithPrice extends Product {
 }
 
 export interface Song {
+    duration: number;
     readonly id: string;
     user_id: string;
     author: string;
