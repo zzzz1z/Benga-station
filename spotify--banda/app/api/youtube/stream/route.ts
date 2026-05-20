@@ -40,6 +40,12 @@ export async function GET(request: Request) {
     if (cr) headers.set('Content-Range', cr);
     if (cl) headers.set('Content-Length', cl);
 
+    // Forward the duration metadata headers explicitly to fix iOS timeline scaling
+    const xcd = workerRes.headers.get('X-Content-Duration');
+    const cd = workerRes.headers.get('Content-Duration');
+    if (xcd) headers.set('X-Content-Duration', xcd);
+    if (cd) headers.set('Content-Duration', cd);
+
     return new NextResponse(workerRes.body, { status: workerRes.status, headers });
   } catch (err: any) {
     console.error('Stream proxy error:', err.message);
