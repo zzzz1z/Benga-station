@@ -10,6 +10,7 @@ import FloatingRefreshButton from '@/components/FloatingRefreshButton';
 import { PlaylistProvider } from '@/hooks/usePlaylists';
 import { RefreshProvider } from '@/hooks/useRefresh';
 import { PageTransitionProvider } from '@/providers/PageTransitionProvider';
+import KeepAlive from '@/components/KeepAlive';
 
 const font = Figtree({ subsets: ['latin'] });
 
@@ -18,6 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={font.className}>
         <ToasterProvider />
+        <KeepAlive/>
         <UserProvider>
           <PageTransitionProvider>
             <SessionProvider>
