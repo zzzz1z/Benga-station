@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
-import SearchInput from "@/components/SearchInput";
 import SearchTabs from "./components/SearchTabs";
 import getSongs from "@/actions/getSongs";
+import SearchInput from "./components/SearchInput";
 
 interface SearchProps {
   searchParams: Promise<{

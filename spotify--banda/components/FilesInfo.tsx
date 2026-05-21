@@ -2,7 +2,7 @@ import { useUser } from "@/hooks/useUser";
 import { createClient } from "@/utils/supabase/client";
 import { useState } from "react";
 import { FieldValues, useForm } from "react-hook-form";
-import Input from "./Input";
+import Input from "../app/search/components/Input";
 import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";

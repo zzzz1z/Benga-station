@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Playlist } from '@/types';
 import { MdEdit } from 'react-icons/md';
 import Modal from '@/components/Modal';
-import Input from '@/components/Input';
+import Input from '@/app/search/components/Input';
 import toast from 'react-hot-toast';
 import { usePlaylists } from '@/hooks/usePlaylists';
 

@@ -7,7 +7,11 @@ import Input from "./Input";
 import { useRouter } from "next/navigation";
 import { HiSearch } from "react-icons/hi";
 
-const SearchInput = () => {
+interface SearchInputProps {
+  currentTab?: 'library' | 'youtube';
+}
+
+const SearchInput = ({ currentTab = 'library' }: SearchInputProps) => {
     const router = useRouter();
     const [value, setValue] = useState<string>('');
     const debouncedValue = useDebounce<string>(value, 500);
@@ -37,7 +41,11 @@ const SearchInput = () => {
                 onClick={() => {
                     const url = qs.stringifyUrl({
                         url: '/search',
-                        query: { title: value, yt: '1' }
+                        query: {
+                          title: value,
+                          // Only add yt=1 if currently on youtube tab
+                          yt: currentTab === 'youtube' ? '1' : undefined,
+                        }
                     });
                     router.replace(url, { scroll: false });
                 }}

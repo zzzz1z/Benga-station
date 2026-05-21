@@ -3,7 +3,7 @@
 import useDebounce from "@/hooks/useDebounce";
 import { useEffect, useState } from "react";
 import qs from 'query-string';
-import Input from "@/components/Input";
+import Input from "@/app/search/components/Input";
 import { useRouter } from "next/navigation";
 
 const SearchInputPlaylist = () => {
