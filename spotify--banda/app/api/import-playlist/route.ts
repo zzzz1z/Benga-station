@@ -33,22 +33,18 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        console.log('[import-playlist] Stream started — loading spotify-url-info');
-        let spotifyUrlInfo: any;
-        try {
-          const mod = await import('spotify-url-info');
-          spotifyUrlInfo = mod ?? mod;
-          console.log('[import-playlist] spotify-url-info loaded, type:', typeof spotifyUrlInfo);
-        } catch (importErr: any) {
-          console.error('[import-playlist] Failed to import spotify-url-info:', importErr.message);
-          send(controller, { status: 'error', message: 'Erro interno ao carregar módulo Spotify.' });
-          controller.enqueue('data: [DONE]\n\n');
-          controller.close();
-          return;
+        console.log('[import-playlist] Stream started — loading spotify-url-info via require');
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const spotifyUrlInfo = require('spotify-url-info');
+        console.log('[import-playlist] spotify-url-info type:', typeof spotifyUrlInfo);
+
+        if (typeof spotifyUrlInfo !== 'function') {
+          throw new Error(`spotify-url-info is not a function, got: ${typeof spotifyUrlInfo}`);
         }
 
         const { getData } = spotifyUrlInfo(fetch);
-        console.log('[import-playlist] getData ready, fetching Spotify data...');
+        console.log('[import-playlist] getData type:', typeof getData);
 
         send(controller, { status: 'fetching', message: 'A obter playlist do Spotify...' });
 
@@ -112,10 +108,10 @@ export async function POST(request: Request) {
 
           try {
             const searchUrl = `${APP_URL}/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`;
-            console.log(`[import-playlist] Searching YT for: "${title} ${artist}" → ${searchUrl}`);
+            console.log(`[import-playlist] Searching YT for: "${title} ${artist}"`);
 
             const ytRes = await fetch(searchUrl, { signal: AbortSignal.timeout(10000) });
-            console.log(`[import-playlist] YT search response status: ${ytRes.status}`);
+            console.log(`[import-playlist] YT search status: ${ytRes.status}`);
 
             const ytData = ytRes.ok ? await ytRes.json() : null;
             const ytTrack = ytData?.results?.[0];
