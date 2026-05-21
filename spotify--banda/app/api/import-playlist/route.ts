@@ -19,22 +19,83 @@ export async function POST(request: Request) {
   const { url } = await request.json();
   if (!url) return NextResponse.json({ error: 'Missing URL' }, { status: 400 });
 
+  // Required for Vercel — relative URLs don't work in serverless functions
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://benga-station.vercel.app';
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        send(controller, { status: 'fetching', message: 'A obter playlist do Spotify...' });
+        send(controller, { status: 'fetching', message: 'A obter playlist...' });
 
-        let playlistData: any;
-        try {
-          playlistData = await getData(url);
-        } catch {
-          send(controller, { status: 'error', message: 'Não foi possível obter a playlist do Spotify.' });
-          controller.enqueue('data: [DONE]\n\n');
-          controller.close();
-          return;
+        const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+
+        // Normalised track list — populated by whichever branch runs
+        let tracks: { title: string; artist: string }[] = [];
+        let playlistTitle = 'Playlist Importada';
+
+        // ── YOUTUBE ───────────────────────────────────────────────
+        if (isYouTube) {
+          const listMatch = url.match(/[?&]list=([^&]+)/);
+          const playlistId = listMatch?.[1];
+          if (!playlistId) {
+            send(controller, { status: 'error', message: 'ID de playlist YouTube inválido.' });
+            controller.enqueue('data: [DONE]\n\n');
+            controller.close();
+            return;
+          }
+
+          const YT_API_KEY = process.env.YOUTUBE_API_KEY;
+          if (!YT_API_KEY) throw new Error('YOUTUBE_API_KEY not configured');
+
+          // Playlist title
+          const metaRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${YT_API_KEY}`
+          );
+          const metaData = await metaRes.json();
+          playlistTitle = metaData?.items?.[0]?.snippet?.title ?? 'YouTube Playlist';
+
+          // All items — paginated, 50 per page
+          let pageToken: string | undefined;
+          do {
+            const pageParam = pageToken ? `&pageToken=${pageToken}` : '';
+            const itemsRes = await fetch(
+              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${YT_API_KEY}${pageParam}`
+            );
+            const itemsData = await itemsRes.json();
+            for (const item of itemsData?.items ?? []) {
+              const snippet = item.snippet;
+              const videoId = snippet?.resourceId?.videoId;
+              const title = snippet?.title ?? '';
+              if (!videoId || title === 'Deleted video' || title === 'Private video') continue;
+              tracks.push({ title, artist: snippet?.videoOwnerChannelTitle ?? '' });
+            }
+            pageToken = itemsData?.nextPageToken;
+          } while (pageToken);
+
+        // ── SPOTIFY (original, unchanged) ─────────────────────────
+        } else {
+          let playlistData: any;
+          try {
+            playlistData = await getData(url);
+          } catch {
+            send(controller, { status: 'error', message: 'Não foi possível obter a playlist do Spotify.' });
+            controller.enqueue('data: [DONE]\n\n');
+            controller.close();
+            return;
+          }
+
+          playlistTitle = playlistData?.name ?? 'Playlist Importada';
+          const rawTracks: any[] = playlistData?.tracks?.items ?? playlistData?.trackList ?? [];
+          for (const item of rawTracks) {
+            const track = item.track ?? item;
+            const title: string = track?.name ?? track?.title ?? '';
+            const artist: string =
+              track?.artists?.[0]?.name ?? track?.subtitle ?? track?.artist ?? '';
+            if (title) tracks.push({ title, artist });
+          }
         }
 
-        const tracks: any[] = playlistData?.tracks?.items ?? playlistData?.trackList ?? [];
+        // ── COMMON ────────────────────────────────────────────────
         if (!tracks.length) {
           send(controller, { status: 'error', message: 'Playlist vazia ou não suportada.' });
           controller.enqueue('data: [DONE]\n\n');
@@ -45,8 +106,6 @@ export async function POST(request: Request) {
         const total = tracks.length;
         send(controller, { status: 'matching', message: `A encontrar ${total} músicas...`, total });
 
-        // Create playlist
-        const playlistTitle = playlistData?.name ?? 'Playlist Importada';
         const { data: newPlaylist, error: playlistError } = await supabase
           .from('Playlists')
           .insert([{ title: playlistTitle, user_id: user.id }])
@@ -63,18 +122,13 @@ export async function POST(request: Request) {
         let imported = 0;
         let failed = 0;
 
-        for (const item of tracks) {
-          const track = item.track ?? item;
-          const title: string = track?.name ?? track?.title ?? '';
-          const artist: string =
-            track?.artists?.[0]?.name ?? track?.subtitle ?? track?.artist ?? '';
-
+        for (const { title, artist } of tracks) {
           if (!title) { failed++; continue; }
 
           try {
-            // Search YouTube for the track
+            // Search YouTube for the track (absolute URL — required on Vercel)
             const ytRes = await fetch(
-              `/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`,
+              `${APP_URL}/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`,
               { signal: AbortSignal.timeout(10000) }
             );
             const ytData = ytRes.ok ? await ytRes.json() : null;
