@@ -128,7 +128,7 @@ export async function POST(request: Request) {
           try {
             // Search YouTube for the track (absolute URL — required on Vercel)
             const ytRes = await fetch(
-              `${APP_URL}/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`,
+              `/api/youtube/search?q=${encodeURIComponent(`${title} ${artist}`)}`,
               { signal: AbortSignal.timeout(10000) }
             );
             const ytData = ytRes.ok ? await ytRes.json() : null;
