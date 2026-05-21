@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const maxDuration = 60;
 export const preferredRegion = 'cdg1';
 
-const WORKER_URL = 'http://46.62.149.125:3001'
+const WORKER_URL = process.env.YT_WORKER_URL!;
 const WORKER_SECRET = process.env.WORKER_SECRET!;
 
 export async function GET(request: Request) {

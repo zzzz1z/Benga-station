@@ -36,7 +36,9 @@ async function searchYouTube(
       signal: signal ?? AbortSignal.timeout(25000),
     });
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    // Fix: extract first result from the results array
+    return data.results?.[0] ?? null;
   } catch {
     return null;
   }
