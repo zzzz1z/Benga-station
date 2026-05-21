@@ -54,6 +54,7 @@
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>com.transistorsoft.fetch</string>
+        <string>com.transistorsoft.customtask</string>
         <string>com.zzzz1z.bengastation.refresh</string>
     </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
