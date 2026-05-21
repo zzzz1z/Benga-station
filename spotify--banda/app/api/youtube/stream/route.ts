@@ -16,13 +16,25 @@ export async function GET(request: Request) {
   const range = request.headers.get('range') || 'bytes=0-';
 
   try {
-    const workerRes = await fetch(`${WORKER_URL}/stream/${videoId}`, {
-      headers: {
-        'x-worker-secret': WORKER_SECRET,
-        'Range': range,
-      },
-      signal: AbortSignal.timeout(55000),
-    });
+const workerRes = await fetch(`${WORKER_URL}/stream/${videoId}`, {
+  headers: {
+    'x-worker-secret': WORKER_SECRET,
+    'Range': range,
+  },
+  redirect: 'follow',
+  signal: AbortSignal.timeout(55000),
+});
+
+if (workerRes.status === 302) {
+  const location = workerRes.headers.get('location');
+  if (location) return NextResponse.redirect(location);
+  return NextResponse.json({ error: 'Bad redirect' }, { status: 503 });
+}
+
+if (!workerRes.ok && workerRes.status !== 206) {
+  console.error(`Worker returned ${workerRes.status} for ${videoId}`);
+  return NextResponse.json({ error: 'Stream unavailable' }, { status: workerRes.status });
+}
 
     if (!workerRes.ok && workerRes.status !== 206) {
       return NextResponse.json({ error: 'Stream unavailable' }, { status: 503 });
