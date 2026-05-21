@@ -84,17 +84,7 @@ const useMediaSession = (
       } catch {}
     });
 
-    navigator.mediaSession.setActionHandler("seekbackward", async (details) => {
-      if (!audio) return;
-      await unlockAudioContext();
-      audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset ?? 10));
-    });
-
-    navigator.mediaSession.setActionHandler("seekforward", async (details) => {
-      if (!audio) return;
-      await unlockAudioContext();
-      audio.currentTime = Math.min(audio.duration, audio.currentTime + (details.seekOffset ?? 10));
-    });
+   
   };
 
   useEffect(() => {
@@ -136,8 +126,6 @@ const useMediaSession = (
       navigator.mediaSession.setActionHandler("previoustrack", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
-      navigator.mediaSession.setActionHandler("seekbackward", null);
-      navigator.mediaSession.setActionHandler("seekforward", null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song]);
@@ -163,14 +151,41 @@ const useMediaSession = (
       } catch {}
     };
 
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState !== "visible") return;
-      reassertHandlers();
-      if (isPlayingRef.current && audio.paused) {
-        await unlockAudioContext();
-        audio.play().catch(() => {});
-      }
-    };
+const handleVisibilityChange = async () => {
+  if (document.visibilityState !== "visible") return;
+
+  if (songRef.current?.title) {
+    const artworkUrl = getArtworkUrl(songRef.current);
+    const cacheBustedUrl = artworkUrl
+      ? `${artworkUrl}${artworkUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`
+      : '';
+
+    const artwork: MediaImage[] = cacheBustedUrl
+      ? [
+          { src: cacheBustedUrl, sizes: "96x96",   type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "128x128", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "192x192", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "256x256", type: "image/jpeg" },
+          { src: cacheBustedUrl, sizes: "512x512", type: "image/jpeg" },
+        ]
+      : [];
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: songRef.current.title,
+      artist: songRef.current.author,
+      album: "Benga Station",
+      artwork,
+    });
+  }
+
+  navigator.mediaSession.playbackState = isPlayingRef.current ? "playing" : "paused";
+  reassertHandlers();
+
+  if (isPlayingRef.current && audio.paused) {
+    await unlockAudioContext();
+    audio.play().catch(() => {});
+  }
+};
 
     const handlePageShow = async () => {
       reassertHandlers();
