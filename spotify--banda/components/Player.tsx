@@ -93,12 +93,17 @@ const startKeepalive = useCallback(() => {
   let silent = silentRef.current;
   if (!silent) {
     silent = new Audio();
-    // 1-second silent MP3, looped — keeps iOS audio session alive
     silent.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
     silent.loop   = true;
     silent.volume = 0.001;
-    // CRITICAL: no event handlers that touch React state
-    silentRef.current = silent;
+    // Nuke all event handlers so nothing bleeds into React state
+    silent.onplay      = null;
+    silent.onpause     = null;
+    silent.onended     = null;
+    silent.onerror     = null;
+    silent.onwaiting   = null;
+    silent.oncanplay   = null;
+    silentRef.current  = silent;
   }
   silent.play().catch(() => {});
 }, []);
