@@ -36,8 +36,6 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
-const keepaliveCtxRef  = useRef<AudioContext | null>(null);
-const keepaliveNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     const saved = loadFromSession();
@@ -91,33 +89,26 @@ const keepaliveNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
-
 const startKeepalive = useCallback(() => {
-  try {
-    if (!keepaliveCtxRef.current || keepaliveCtxRef.current.state === 'closed') {
-      keepaliveCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = keepaliveCtxRef.current;
-    if (ctx.state === 'suspended') ctx.resume();
-
-    // Stop any existing node
-    try { keepaliveNodeRef.current?.stop(); } catch {}
-
-    // Create a silent buffer and loop it
-    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop   = true;
-    source.connect(ctx.destination);
-    source.start();
-    keepaliveNodeRef.current = source;
-  } catch {}
+  let silent = silentRef.current;
+  if (!silent) {
+    silent = new Audio();
+    // 1-second silent MP3, looped — keeps iOS audio session alive
+    silent.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+    silent.loop   = true;
+    silent.volume = 0.001;
+    // CRITICAL: no event handlers that touch React state
+    silentRef.current = silent;
+  }
+  silent.play().catch(() => {});
 }, []);
 
-
 const stopKeepalive = useCallback(() => {
-  try { keepaliveNodeRef.current?.stop(); } catch {}
-  keepaliveNodeRef.current = null;
+  const silent = silentRef.current;
+  if (silent) {
+    silent.pause();
+    silent.currentTime = 0;
+  }
 }, []);
 
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
