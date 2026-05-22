@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef } from "react";
 import { Song } from "@/types";
 import usePlayer from "./usePlayer";
@@ -28,6 +30,7 @@ const useMediaSession = (
   isPlaying: boolean,
   song: Song,
   audioRef: React.RefObject<HTMLAudioElement>,
+  keepaliveActiveRef: React.RefObject<boolean>, // guard ref passed from Player
   onPlay: () => void,
   onPause: () => void
 ) => {
@@ -83,8 +86,6 @@ const useMediaSession = (
         });
       } catch {}
     });
-
-   
   };
 
   useEffect(() => {
@@ -151,41 +152,43 @@ const useMediaSession = (
       } catch {}
     };
 
-const handleVisibilityChange = async () => {
-  if (document.visibilityState !== "visible") return;
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== "visible") return;
+      // Don't interfere while keepalive is active
+      if (keepaliveActiveRef.current) return;
 
-  if (songRef.current?.title) {
-    const artworkUrl = getArtworkUrl(songRef.current);
-    const cacheBustedUrl = artworkUrl
-      ? `${artworkUrl}${artworkUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`
-      : '';
+      if (songRef.current?.title) {
+        const artworkUrl = getArtworkUrl(songRef.current);
+        const cacheBustedUrl = artworkUrl
+          ? `${artworkUrl}${artworkUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`
+          : '';
 
-    const artwork: MediaImage[] = cacheBustedUrl
-      ? [
-          { src: cacheBustedUrl, sizes: "96x96",   type: "image/jpeg" },
-          { src: cacheBustedUrl, sizes: "128x128", type: "image/jpeg" },
-          { src: cacheBustedUrl, sizes: "192x192", type: "image/jpeg" },
-          { src: cacheBustedUrl, sizes: "256x256", type: "image/jpeg" },
-          { src: cacheBustedUrl, sizes: "512x512", type: "image/jpeg" },
-        ]
-      : [];
+        const artwork: MediaImage[] = cacheBustedUrl
+          ? [
+              { src: cacheBustedUrl, sizes: "96x96",   type: "image/jpeg" },
+              { src: cacheBustedUrl, sizes: "128x128", type: "image/jpeg" },
+              { src: cacheBustedUrl, sizes: "192x192", type: "image/jpeg" },
+              { src: cacheBustedUrl, sizes: "256x256", type: "image/jpeg" },
+              { src: cacheBustedUrl, sizes: "512x512", type: "image/jpeg" },
+            ]
+          : [];
 
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: songRef.current.title,
-      artist: songRef.current.author,
-      album: "Benga Station",
-      artwork,
-    });
-  }
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: songRef.current.title,
+          artist: songRef.current.author,
+          album: "Benga Station",
+          artwork,
+        });
+      }
 
-  navigator.mediaSession.playbackState = isPlayingRef.current ? "playing" : "paused";
-  reassertHandlers();
+      navigator.mediaSession.playbackState = isPlayingRef.current ? "playing" : "paused";
+      reassertHandlers();
 
-  if (isPlayingRef.current && audio.paused) {
-    await unlockAudioContext();
-    audio.play().catch(() => {});
-  }
-};
+      if (isPlayingRef.current && audio.paused) {
+        await unlockAudioContext();
+        audio.play().catch(() => {});
+      }
+    };
 
     const handlePageShow = async () => {
       reassertHandlers();
@@ -204,10 +207,9 @@ const handleVisibilityChange = async () => {
       }, 800);
     };
 
-    // KEY FIX: when a new song starts loading while backgrounded/locked,
-    // iOS won't fire onplay automatically. We listen for canplay and
-    // force play if we know we should be playing but aren't.
     const handleCanPlay = async () => {
+      // Don't force-play if keepalive is running — we're intentionally paused
+      if (keepaliveActiveRef.current) return;
       if (isPlayingRef.current && audio.paused && audio.src) {
         await unlockAudioContext();
         audio.play().catch(() => {});

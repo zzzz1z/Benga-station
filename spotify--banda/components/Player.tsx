@@ -70,7 +70,7 @@ const Player = () => {
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
   const audioRef    = useRef<HTMLAudioElement | null>(null);
-  const silentRef   = useRef<HTMLAudioElement | null>(null); // keepalive audio
+  const silentRef   = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
@@ -98,7 +98,6 @@ const Player = () => {
       silent.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
       silent.loop   = true;
       silent.volume = 0.001;
-      // Nuke all event handlers so nothing bleeds into React state
       silent.onplay      = null;
       silent.onpause     = null;
       silent.onended     = null;
@@ -182,13 +181,12 @@ const Player = () => {
       if (keepaliveActiveRef.current) return; // ignore plays from silent element bleed
       setIsPlaying(true);
       setIsLoading(false);
-      stopKeepalive(); // real audio playing — stop silent track
+      stopKeepalive();
     };
     audio.onpause      = () => {
       if (!audio.src) return;
       if (keepaliveActiveRef.current) return; // ignore pauses caused by keepalive swap
       setIsPlaying(false);
-      // Start keepalive so iOS doesn't kill the audio session
       if (audio.src && audio.currentTime > 0) startKeepalive();
     };
     audio.onwaiting    = () => setIsLoading(true);
@@ -282,7 +280,6 @@ const Player = () => {
 
     if (!songUrl) return;
 
-    // HEAD fetch for iOS Content-Duration header
     fetch(songUrl, { method: 'HEAD' })
       .then(res => {
         const cd = res.headers.get('Content-Duration') || res.headers.get('X-Content-Duration');
@@ -371,9 +368,8 @@ const Player = () => {
     if (isPlaying) {
       audio.pause();
       shouldBePlayingRef.current = false;
-      // keepalive starts in onpause handler
     } else {
-      stopKeepalive(); // stop silent before resuming real audio
+      stopKeepalive();
       safePlay(audio).catch(() => {});
       shouldBePlayingRef.current = true;
     }
@@ -409,6 +405,7 @@ const Player = () => {
 
   useMediaSession(
     isPlaying, (song ?? {}) as Song, audioRef,
+    keepaliveActiveRef,
     () => {
       stopKeepalive();
       safePlay(audioRef.current!).catch(() => {});
@@ -418,7 +415,6 @@ const Player = () => {
     () => {
       audioRef.current?.pause();
       shouldBePlayingRef.current = false;
-      // keepalive starts in onpause handler
       setTimeout(broadcastCurrentState, 50);
     }
   );
