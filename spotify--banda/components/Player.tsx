@@ -32,8 +32,8 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-// 1-second silent MP3 as base64 — keeps iOS audio session alive when paused
-const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+const keepaliveCtxRef  = useRef<AudioContext | null>(null);
+const keepaliveNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -92,29 +92,33 @@ const Player = () => {
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  // Init silent audio keepalive
-  useEffect(() => {
-    const silent = new Audio(SILENT_MP3);
-    silent.loop    = true;
-    silent.volume  = 0.001; // near-silent but not zero — iOS requires non-zero
-    silentRef.current = silent;
-    return () => {
-      silent.pause();
-      silent.src = '';
-    };
-  }, []);
+const startKeepalive = useCallback(() => {
+  try {
+    if (!keepaliveCtxRef.current || keepaliveCtxRef.current.state === 'closed') {
+      keepaliveCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = keepaliveCtxRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
 
-  const startKeepalive  = useCallback(() => {
-    const silent = silentRef.current;
-    if (!silent) return;
-    silent.play().catch(() => {});
-  }, []);
+    // Stop any existing node
+    try { keepaliveNodeRef.current?.stop(); } catch {}
 
-  const stopKeepalive = useCallback(() => {
-    const silent = silentRef.current;
-    if (!silent) return;
-    silent.pause();
-  }, []);
+    // Create a silent buffer and loop it
+    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop   = true;
+    source.connect(ctx.destination);
+    source.start();
+    keepaliveNodeRef.current = source;
+  } catch {}
+}, []);
+
+
+const stopKeepalive = useCallback(() => {
+  try { keepaliveNodeRef.current?.stop(); } catch {}
+  keepaliveNodeRef.current = null;
+}, []);
 
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
