@@ -32,7 +32,6 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
@@ -86,7 +85,7 @@ const Player = () => {
   const endedFiredRef      = useRef(false);
   const shouldBePlayingRef = useRef(false);
   const lastTimeRef        = useRef(0);
-  const keepaliveActiveRef = useRef(false); // guard against re-entrancy
+  const keepaliveActiveRef = useRef(false);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -169,7 +168,7 @@ const Player = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds: ytWindow }),
     }).catch(() => {});
-  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeID]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -178,19 +177,20 @@ const Player = () => {
     audio.ontimeupdate = () => { setPosition(audio.currentTime); };
     audio.onended      = handleEnded;
     audio.onplay       = () => {
-      if (keepaliveActiveRef.current) return; // ignore plays from silent element bleed
+      if (keepaliveActiveRef.current) return;
       setIsPlaying(true);
       setIsLoading(false);
       stopKeepalive();
     };
     audio.onpause      = () => {
       if (!audio.src) return;
-      if (keepaliveActiveRef.current) return; // ignore pauses caused by keepalive swap
+      if (keepaliveActiveRef.current) return;
       setIsPlaying(false);
       if (audio.src && audio.currentTime > 0) startKeepalive();
     };
     audio.onwaiting    = () => setIsLoading(true);
     audio.oncanplay    = () => {
+      if (keepaliveActiveRef.current) return;
       setIsLoading(false);
       if (shouldBePlayingRef.current && audio.paused) safePlay(audio).catch(() => {});
     };
@@ -209,6 +209,7 @@ const Player = () => {
     };
 
     const stuckInterval = setInterval(() => {
+      if (keepaliveActiveRef.current) return;
       if (!audio.src || audio.paused) { lastTimeRef.current = audio.currentTime; return; }
       if (isPlayingRef.current) {
         const dbDuration = currentSongRef.current?.duration;
@@ -229,6 +230,7 @@ const Player = () => {
     }, 2000);
 
     const bgStuckInterval = setInterval(async () => {
+      if (keepaliveActiveRef.current) return;
       if (shouldBePlayingRef.current && audio.paused && audio.src && audio.readyState >= 3) {
         await unlockAudioContext();
         audio.play().catch(() => {});
@@ -236,6 +238,7 @@ const Player = () => {
     }, 3000);
 
     const handleVisibilityChange = () => {
+      if (keepaliveActiveRef.current) return;
       if (document.visibilityState !== 'visible' || !audio.src) return;
       const dbDuration = currentSongRef.current?.duration;
       const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
@@ -366,12 +369,12 @@ const Player = () => {
     if (!audio || isLoading) return;
     if (session && !session.canControl) return;
     if (isPlaying) {
-      audio.pause();
       shouldBePlayingRef.current = false;
+      audio.pause();
     } else {
       stopKeepalive();
-      safePlay(audio).catch(() => {});
       shouldBePlayingRef.current = true;
+      safePlay(audio).catch(() => {});
     }
     setTimeout(broadcastCurrentState, 50);
   };
@@ -408,13 +411,13 @@ const Player = () => {
     keepaliveActiveRef,
     () => {
       stopKeepalive();
-      safePlay(audioRef.current!).catch(() => {});
       shouldBePlayingRef.current = true;
+      safePlay(audioRef.current!).catch(() => {});
       setTimeout(broadcastCurrentState, 50);
     },
     () => {
-      audioRef.current?.pause();
       shouldBePlayingRef.current = false;
+      audioRef.current?.pause();
       setTimeout(broadcastCurrentState, 50);
     }
   );

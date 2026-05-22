@@ -29,8 +29,8 @@ const getArtworkUrl = (song: Song): string => {
 const useMediaSession = (
   isPlaying: boolean,
   song: Song,
-  audioRef: React.RefObject<HTMLAudioElement>,
-  keepaliveActiveRef: React.RefObject<boolean>, // guard ref passed from Player
+  audioRef: React.RefObject<HTMLAudioElement | null>,
+  keepaliveActiveRef: React.RefObject<boolean>,
   onPlay: () => void,
   onPause: () => void
 ) => {
@@ -52,6 +52,7 @@ const useMediaSession = (
     const audio = audioRef.current;
 
     navigator.mediaSession.setActionHandler("play", async () => {
+      if (keepaliveActiveRef.current) return;
       await unlockAudioContext();
       onPlayRef.current();
     });
@@ -128,7 +129,6 @@ const useMediaSession = (
       navigator.mediaSession.setActionHandler("nexttrack", null);
       navigator.mediaSession.setActionHandler("seekto", null);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song]);
 
   useEffect(() => {
@@ -142,6 +142,7 @@ const useMediaSession = (
     if (!audio) return;
 
     const updatePosition = () => {
+      if (keepaliveActiveRef.current) return;
       if (!audio.duration || isNaN(audio.duration)) return;
       try {
         navigator.mediaSession.setPositionState({
@@ -154,7 +155,6 @@ const useMediaSession = (
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== "visible") return;
-      // Don't interfere while keepalive is active
       if (keepaliveActiveRef.current) return;
 
       if (songRef.current?.title) {
@@ -191,6 +191,7 @@ const useMediaSession = (
     };
 
     const handlePageShow = async () => {
+      if (keepaliveActiveRef.current) return;
       reassertHandlers();
       if (isPlayingRef.current && audio.paused) {
         await unlockAudioContext();
@@ -199,6 +200,7 @@ const useMediaSession = (
     };
 
     const handleStalled = () => {
+      if (keepaliveActiveRef.current) return;
       setTimeout(async () => {
         if (isPlayingRef.current && audio.paused && audio.src) {
           await unlockAudioContext();
@@ -208,7 +210,6 @@ const useMediaSession = (
     };
 
     const handleCanPlay = async () => {
-      // Don't force-play if keepalive is running — we're intentionally paused
       if (keepaliveActiveRef.current) return;
       if (isPlayingRef.current && audio.paused && audio.src) {
         await unlockAudioContext();
@@ -231,7 +232,6 @@ const useMediaSession = (
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pageshow", handlePageShow);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioRef, song]);
 };
 
