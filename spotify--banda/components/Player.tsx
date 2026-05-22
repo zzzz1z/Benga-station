@@ -32,12 +32,12 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
-const keepaliveCtxRef  = useRef<AudioContext | null>(null);
-const keepaliveNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
+const keepaliveCtxRef  = useRef<AudioContext | null>(null);
+const keepaliveNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     const saved = loadFromSession();
