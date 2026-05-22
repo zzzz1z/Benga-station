@@ -32,6 +32,9 @@ export async function safePlay(audio: HTMLAudioElement): Promise<void> {
   }
 }
 
+// 1-second silent MP3 as base64 — keeps iOS audio session alive when paused
+const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
@@ -65,12 +68,11 @@ const Player = () => {
   const song = songFromStore ?? lastGoodSongRef.current;
 
   const currentSongRef = useRef<Song | null>(null);
-  useEffect(() => {
-    currentSongRef.current = song;
-  }, [song]);
+  useEffect(() => { currentSongRef.current = song; }, [song]);
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef    = useRef<HTMLAudioElement | null>(null);
+  const silentRef   = useRef<HTMLAudioElement | null>(null); // keepalive audio
 
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
@@ -79,17 +81,40 @@ const Player = () => {
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Track verified header override values safely across async updates
-  const headerDurationRef = useRef<number | null>(null);
-
+  const headerDurationRef  = useRef<number | null>(null);
   const volumeRef          = useRef(1);
   const isPlayingRef       = useRef(false);
   const skipOnErrorRef     = useRef(false);
   const endedFiredRef      = useRef(false);
   const shouldBePlayingRef = useRef(false);
+  const lastTimeRef        = useRef(0);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
+  // Init silent audio keepalive
+  useEffect(() => {
+    const silent = new Audio(SILENT_MP3);
+    silent.loop    = true;
+    silent.volume  = 0.001; // near-silent but not zero — iOS requires non-zero
+    silentRef.current = silent;
+    return () => {
+      silent.pause();
+      silent.src = '';
+    };
+  }, []);
+
+  const startKeepalive  = useCallback(() => {
+    const silent = silentRef.current;
+    if (!silent) return;
+    silent.play().catch(() => {});
+  }, []);
+
+  const stopKeepalive = useCallback(() => {
+    const silent = silentRef.current;
+    if (!silent) return;
+    silent.pause();
+  }, []);
 
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
@@ -135,26 +160,31 @@ const Player = () => {
       ...ids.slice(Math.max(0, idx - 3), idx),
       ...ids.slice(idx + 1, idx + 6),
     ].filter(id => id.startsWith('yt_')).map(id => id.slice(3));
-
     if (!ytWindow.length) return;
     fetch('/api/preextract-queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videoIds: ytWindow }),
     }).catch(() => {});
-  }, [activeID]);
+  }, [activeID]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const audio = new Audio();
     audioRef.current = audio;
-    let lastTime = 0;
 
-    audio.ontimeupdate = () => { 
-      setPosition(audio.currentTime); 
-    };
+    audio.ontimeupdate = () => { setPosition(audio.currentTime); };
     audio.onended      = handleEnded;
-    audio.onplay       = () => { setIsPlaying(true);  setIsLoading(false); };
-    audio.onpause      = () => { if (audio.src) setIsPlaying(false); };
+    audio.onplay       = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+      stopKeepalive(); // real audio playing — stop silent track
+    };
+    audio.onpause      = () => {
+      if (!audio.src) return;
+      setIsPlaying(false);
+      // Start keepalive so iOS doesn't kill the audio session
+      if (audio.src && audio.currentTime > 0) startKeepalive();
+    };
     audio.onwaiting    = () => setIsLoading(true);
     audio.oncanplay    = () => {
       setIsLoading(false);
@@ -170,19 +200,27 @@ const Player = () => {
         return;
       }
       setIsLoading(false); setIsPlaying(false);
+      stopKeepalive();
       if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
     };
 
     const stuckInterval = setInterval(() => {
-      if (!audio.src || audio.paused) { lastTime = audio.currentTime; return; }
+      if (!audio.src || audio.paused) { lastTimeRef.current = audio.currentTime; return; }
       if (isPlayingRef.current) {
-        const dur = headerDurationRef.current || currentSongRef.current?.duration || audio.duration;
+        const dbDuration = currentSongRef.current?.duration;
+        const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
         if (dur > 0 && audio.currentTime >= dur - 0.3) {
           if (!endedFiredRef.current) handleEnded();
           return;
         }
-        if (audio.currentTime === lastTime && audio.currentTime > 0) audio.play().catch(() => {});
-        lastTime = audio.currentTime;
+        if (
+          audio.currentTime === lastTimeRef.current &&
+          audio.currentTime > 0 &&
+          lastTimeRef.current > 0
+        ) {
+          audio.play().catch(() => {});
+        }
+        lastTimeRef.current = audio.currentTime;
       }
     }, 2000);
 
@@ -195,7 +233,8 @@ const Player = () => {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
-      const dur = headerDurationRef.current || currentSongRef.current?.duration || audio.duration;
+      const dbDuration = currentSongRef.current?.duration;
+      const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
       if (dur > 0 && audio.currentTime >= dur - 0.5 && audio.paused && isPlayingRef.current) {
         handleEnded();
       }
@@ -208,6 +247,7 @@ const Player = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       audio.pause(); audio.src = '';
       audioRef.current = null;
+      stopKeepalive();
     };
   }, []);
 
@@ -215,12 +255,12 @@ const Player = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    skipOnErrorRef.current = false;
+    skipOnErrorRef.current  = false;
+    headerDurationRef.current = null;
+    lastTimeRef.current     = 0;
     setIsLoading(!!songUrl);
     setIsPlaying(false);
-    
-    // Clean out old references for the new track
-    headerDurationRef.current = null;
+    stopKeepalive();
 
     if (song?.duration && song.duration > 0) {
       setDuration(song.duration);
@@ -236,7 +276,7 @@ const Player = () => {
 
     if (!songUrl) return;
 
-    // Direct HTTP Head Check: Fetch headers from the proxy to find actual Content-Duration
+    // HEAD fetch for iOS Content-Duration header
     fetch(songUrl, { method: 'HEAD' })
       .then(res => {
         const cd = res.headers.get('Content-Duration') || res.headers.get('X-Content-Duration');
@@ -245,7 +285,6 @@ const Player = () => {
           if (parsed && !isNaN(parsed) && parsed > 0) {
             headerDurationRef.current = parsed;
             setDuration(parsed);
-            console.log(`🎯 TARGET IOS DURATION SET VIA STREAM HEADERS: ${parsed}s`);
           }
         }
       })
@@ -254,7 +293,7 @@ const Player = () => {
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
     const onMeta = () => {
-      if (headerDurationRef.current || currentSongRef.current?.duration) {
+      if (headerDurationRef.current || (currentSongRef.current?.duration && currentSongRef.current.duration > 0)) {
         setDuration(headerDurationRef.current || currentSongRef.current!.duration);
         return;
       }
@@ -263,16 +302,14 @@ const Player = () => {
       clearTimeout(metaStableTimer);
       metaStableTimer = setTimeout(() => {
         const settled = audio.duration;
-        if (settled && isFinite(settled) && settled > 0) {
-          setDuration(settled);
-        }
+        if (settled && isFinite(settled) && settled > 0) setDuration(settled);
         audio.removeEventListener('loadedmetadata', onMeta);
         audio.removeEventListener('durationchange', onDurationChange);
       }, 1500);
     };
 
     const onDurationChange = () => {
-      if (headerDurationRef.current || currentSongRef.current?.duration) {
+      if (headerDurationRef.current || (currentSongRef.current?.duration && currentSongRef.current.duration > 0)) {
         setDuration(headerDurationRef.current || currentSongRef.current!.duration);
         return;
       }
@@ -281,9 +318,7 @@ const Player = () => {
       clearTimeout(metaStableTimer);
       metaStableTimer = setTimeout(() => {
         const settled = audio.duration;
-        if (settled && isFinite(settled) && settled > 0) {
-          setDuration(settled);
-        }
+        if (settled && isFinite(settled) && settled > 0) setDuration(settled);
       }, 500);
     };
 
@@ -327,19 +362,28 @@ const Player = () => {
     const audio = audioRef.current;
     if (!audio || isLoading) return;
     if (session && !session.canControl) return;
-    if (isPlaying) { audio.pause(); shouldBePlayingRef.current = false; }
-    else { safePlay(audio).catch(() => {}); shouldBePlayingRef.current = true; }
+    if (isPlaying) {
+      audio.pause();
+      shouldBePlayingRef.current = false;
+      // keepalive starts in onpause handler
+    } else {
+      stopKeepalive(); // stop silent before resuming real audio
+      safePlay(audio).catch(() => {});
+      shouldBePlayingRef.current = true;
+    }
     setTimeout(broadcastCurrentState, 50);
   };
 
   const handleNext = () => {
     if (session && !session.canControl) return;
+    stopKeepalive();
     playerRef.current.playNext();
     setTimeout(broadcastCurrentState, 200);
   };
 
   const handlePrevious = () => {
     if (session && !session.canControl) return;
+    stopKeepalive();
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) { audio.currentTime = 0; setPosition(0); }
     else playerRef.current.playPrevious();
@@ -359,8 +403,18 @@ const Player = () => {
 
   useMediaSession(
     isPlaying, (song ?? {}) as Song, audioRef,
-    () => { safePlay(audioRef.current!).catch(() => {}); shouldBePlayingRef.current = true; setTimeout(broadcastCurrentState, 50); },
-    () => { audioRef.current?.pause(); shouldBePlayingRef.current = false; setTimeout(broadcastCurrentState, 50); }
+    () => {
+      stopKeepalive();
+      safePlay(audioRef.current!).catch(() => {});
+      shouldBePlayingRef.current = true;
+      setTimeout(broadcastCurrentState, 50);
+    },
+    () => {
+      audioRef.current?.pause();
+      shouldBePlayingRef.current = false;
+      // keepalive starts in onpause handler
+      setTimeout(broadcastCurrentState, 50);
+    }
   );
 
   if (!isMounted) return null;
