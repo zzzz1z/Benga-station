@@ -404,7 +404,7 @@ const Player = () => {
     }
   };
 
-  const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 0);
+  const toggleMute = () => setVolume(prev => prev === 0 ? 99 : 0);
 
   useMediaSession(
     isPlaying, (song ?? {}) as Song, audioRef,
