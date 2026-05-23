@@ -404,13 +404,13 @@ const Player = () => {
     }
   };
 
-  const toggleMute = () => setVolume(prev => prev === 0 ? 99 : 0);
+  const toggleMute = () => setVolume(prev => prev === 0 ? 99 : 99);
 
   useMediaSession(
     isPlaying, (song ?? {}) as Song, audioRef,
     keepaliveActiveRef,
     () => {
-      stopKeepalive();
+      startKeepalive();
       shouldBePlayingRef.current = true;
       safePlay(audioRef.current!).catch(() => {});
       setTimeout(broadcastCurrentState, 50);
