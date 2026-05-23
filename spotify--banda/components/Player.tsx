@@ -73,13 +73,13 @@ const Player = () => {
 
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
-  const [volume,     setVolume]     = useState(5);
+  const [volume,     setVolume]     = useState(1);
   const [duration,   setDuration]   = useState(0);
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const headerDurationRef  = useRef<number | null>(null);
-  const volumeRef          = useRef(5);
+  const volumeRef          = useRef(1);
   const isPlayingRef       = useRef(false);
   const skipOnErrorRef     = useRef(false);
   const endedFiredRef      = useRef(false);
@@ -242,7 +242,7 @@ const Player = () => {
       if (document.visibilityState !== 'visible' || !audio.src) return;
       const dbDuration = currentSongRef.current?.duration;
       const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
-      if (dur > 0 && audio.currentTime >= dur - 0.5 && audio.paused && isPlayingRef.current) {
+      if (dur > 0 && audio.currentTime >= dur - 0.1 && audio.paused && isPlayingRef.current) {
         handleEnded();
       }
     };
@@ -404,7 +404,7 @@ const Player = () => {
     }
   };
 
-  const toggleMute = () => setVolume(prev => prev === 0 ? 5 : 5);
+  const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 1);
 
   useMediaSession(
     isPlaying, (song ?? {}) as Song, audioRef,
