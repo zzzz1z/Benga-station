@@ -73,13 +73,13 @@ const Player = () => {
 
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
-  const [volume,     setVolume]     = useState(1);
+  const [volume,     setVolume]     = useState(0);
   const [duration,   setDuration]   = useState(0);
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const headerDurationRef  = useRef<number | null>(null);
-  const volumeRef          = useRef(1);
+  const volumeRef          = useRef(0);
   const isPlayingRef       = useRef(false);
   const skipOnErrorRef     = useRef(false);
   const endedFiredRef      = useRef(false);
@@ -96,7 +96,7 @@ const Player = () => {
       silent = new Audio();
       silent.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
       silent.loop   = true;
-      silent.volume = 0.001;
+      silent.volume = 99;
       silent.onplay      = null;
       silent.onpause     = null;
       silent.onended     = null;
