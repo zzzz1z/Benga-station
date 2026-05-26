@@ -11,8 +11,7 @@ export default function Home() {
   const [allSongs, setAllSongs] = useState<Song[]>([]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?page=1`)
-      .then(r => r.json())
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?page=0`)      .then(r => r.json())
       .then(({ songs }) => setAllSongs(songs ?? []));
   }, []);
 
