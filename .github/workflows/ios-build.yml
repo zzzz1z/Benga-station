@@ -34,14 +34,14 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Deploy to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: root
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "spotify--banda/out/"
-          target: "/var/www/benga"
-          strip_components: 2
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          echo "$VPS_SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          scp -o StrictHostKeyChecking=no -i /tmp/deploy_key -r spotify--banda/out/* root@$VPS_HOST:/var/www/benga/
+          rm /tmp/deploy_key
 
       - name: Sync Capacitor
         run: |
