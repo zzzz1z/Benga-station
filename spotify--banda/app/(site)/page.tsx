@@ -11,8 +11,9 @@ export default function Home() {
   const [allSongs, setAllSongs] = useState<Song[]>([]);
 
   useEffect(() => {
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?page=0`)      .then(r => r.json())
-      .then(({ songs }) => setAllSongs(songs ?? []));
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?page=0`)
+      .then(r => r.json())
+      .then((data) => setAllSongs(Array.isArray(data) ? data : data.songs ?? []));
   }, []);
 
   const trendingSongs = allSongs.slice(0, 15);
