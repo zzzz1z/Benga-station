@@ -1,22 +1,26 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Header from "@/components/Header";
 import ListaItens from "@/components/ListaItens";
 import PageContent from "./components/PageContent";
-import getSongs from "@/actions/getSongs";
 import { HiLightningBolt, HiSparkles, HiDatabase } from "react-icons/hi";
+import { Song } from '@/types';
 
-// Revalidate every 60 seconds instead of force-dynamic
-// Home songs aren't per-user so they can be cached
-export const revalidate = 60;
+export default function Home() {
+  const [allSongs, setAllSongs] = useState<Song[]>([]);
 
-export default async function Home() {
-  const { songs: allSongs } = await getSongs('', 0);
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?page=1`)
+      .then(r => r.json())
+      .then(({ songs }) => setAllSongs(songs ?? []));
+  }, []);
 
   const trendingSongs = allSongs.slice(0, 15);
   const newReleases = [...allSongs].reverse().slice(0, 15);
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto safe-top pt-[30px] pb-24 relative">
-
       <Header>
         <div className="mb-2 relative z-10">
           <div className="flex items-center gap-x-3 mb-4">
@@ -33,7 +37,6 @@ export default async function Home() {
       </Header>
 
       <div className="mt-4 mb-7 px-6 space-y-12">
-
         <section className="relative">
           <div className="flex items-center gap-x-2 mb-4">
             <HiLightningBolt className="text-red-500 animate-pulse" size={20} />
@@ -68,7 +71,6 @@ export default async function Home() {
             <PageContent songs={allSongs} allSongs={allSongs} />
           </div>
         </section>
-
       </div>
 
       <div className="fixed bottom-28 right-10 pointer-events-none hidden lg:block">

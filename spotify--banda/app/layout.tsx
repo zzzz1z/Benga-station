@@ -1,4 +1,3 @@
-import { Figtree } from 'next/font/google';
 import './globals.css';
 import Player from '@/components/Player';
 import ToasterProvider from '@/hooks/ToasterProvider';
@@ -11,22 +10,21 @@ import { PlaylistProvider } from '@/hooks/usePlaylists';
 import { RefreshProvider } from '@/hooks/useRefresh';
 import { PageTransitionProvider } from '@/providers/PageTransitionProvider';
 import KeepAlive from '@/components/KeepAlive';
-
-const font = Figtree({ subsets: ['latin'] });
+import AccessGuard from '@/components/AcessGuard';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={font.className}>
+      <body>
         <ToasterProvider />
-        <KeepAlive/>
+        <KeepAlive />
+        <AccessGuard />
         <UserProvider>
           <PageTransitionProvider>
             <SessionProvider>
               <RefreshProvider>
                 <PlaylistProvider>
                   <ModalProvider />
-                  
                   <SideBar>
                     {children}
                   </SideBar>

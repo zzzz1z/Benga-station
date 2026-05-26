@@ -1,26 +1,39 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Header from "@/components/Header";
 import LikedContent from "./components/LikedContent";
-import getLikedSongs from "@/actions/getLikedSongs";
 import Image from "next/image";
+import { createClient } from '@/utils/supabase/client';
+import { Song } from '@/types';
 
-export const dynamic = 'force-dynamic';
+const supabase = createClient();
 
-const Liked = async () => {
-  const songs = await getLikedSongs();
+const Liked = () => {
+  const [songs, setSongs] = useState<Song[]>([]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from('Músicas_Favoritas')
+        .select('*, Songs(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => setSongs((data ?? []).map((i: any) => ({ ...i.Songs }))));
+    });
+  }, []);
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
       <Header>
         <div className="mt-6 mb-2">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-x-6 gap-y-4">
-
-            {/* Album art with corner accents */}
             <div className="relative flex-shrink-0 h-32 w-32 lg:h-44 lg:w-44">
               <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10" />
               <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10" />
               <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10" />
               <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10" />
-              {/* red glow */}
               <div className="absolute inset-0 blur-xl opacity-30 pointer-events-none z-0"
                 style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.8), transparent 70%)' }} />
               <Image
@@ -31,8 +44,6 @@ const Liked = async () => {
                 src="/images/likedit.png"
               />
             </div>
-
-            {/* Text info */}
             <div className="flex flex-col gap-y-2 items-center md:items-start">
               <p className="text-red-500/60 font-mono text-[9px] uppercase tracking-[0.3em]">
                 ▶ BIBLIOTECA // FAVORITAS
@@ -51,11 +62,9 @@ const Liked = async () => {
                 <div className="h-px w-6 bg-red-500/40" />
               </div>
             </div>
-
           </div>
         </div>
       </Header>
-
       <LikedContent songs={songs} />
     </div>
   );

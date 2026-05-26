@@ -16,7 +16,7 @@ const useLoadSongUrl = (song: Song) => {
 
     // 2. Compute and set the URL atomically in one single state update
     if (song.source === 'youtube' && song.youtube_video_id) {
-      setUrl(`/api/youtube/stream?videoId=${song.youtube_video_id}`);
+setUrl(`${process.env.NEXT_PUBLIC_API_URL}/api/youtube/stream?videoId=${song.youtube_video_id}`);
     } else if (song.song_path) {
       const { data } = supabase.storage
         .from('musicas')

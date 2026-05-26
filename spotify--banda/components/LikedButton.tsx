@@ -26,7 +26,8 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false 
     if (isYoutube) return;
 
     const method = isLiked ? 'DELETE' : 'POST';
-    const res = await fetch('/api/likes', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ songId: id }),

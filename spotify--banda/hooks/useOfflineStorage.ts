@@ -126,7 +126,7 @@ export const useOfflineStorage = () => {
       await ensureDir();
 
       // Fetch the stream as a blob
-      const response = await fetch(`/api/youtube/stream?videoId=${videoId}`);
+const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/youtube/stream?videoId=${videoId}`);
       if (!response.ok) throw new Error(`Stream fetch failed: ${response.status}`);
 
       // Read with progress tracking

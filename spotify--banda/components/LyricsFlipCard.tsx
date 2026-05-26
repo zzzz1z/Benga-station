@@ -286,7 +286,7 @@ const LyricsFlipCard: React.FC<LyricsFlipCardProps> = ({ song, position, duratio
 
     if (song.source === 'youtube' && song.youtube_video_id) {
       try {
-        const res = await fetch(`/api/lyrics?videoId=${song.youtube_video_id}`);
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lyrics?videoId=${song.youtube_video_id}`);
         if (abortedRef.current) return;
         if (res.ok) {
           const data = await res.json();

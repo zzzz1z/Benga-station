@@ -4,7 +4,7 @@ export function scheduleWarm(videoIds: string[]) {
   const valid = videoIds.filter(id => /^[a-zA-Z0-9_-]{11}$/.test(id));
   if (!valid.length) return;
 
-  fetch('/api/preextract-queue', {
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoIds: valid }),

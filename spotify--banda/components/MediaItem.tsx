@@ -39,7 +39,7 @@ const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(nu
 
     useEffect(() => {
         if (!user?.id) return;
-        fetch(`/api/likes?songId=${songId}`)
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
             .then(res => res.json())
             .then(json => { if (json.liked) setIsLiked(true); });
     }, [user?.id, songId]);
@@ -67,7 +67,7 @@ useEffect(() => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
         const method = isLiked ? 'DELETE' : 'POST';
-        const res = await fetch('/api/likes', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ songId }),
@@ -82,7 +82,7 @@ useEffect(() => {
     const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
-        const res = await fetch('/api/playlist/user-playlists');
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
         const json = await res.json();
         setPlaylists(json.playlists ?? []);
         setShowMenu(false);
@@ -90,7 +90,7 @@ useEffect(() => {
     };
 
     const handleAddToPlaylist = async (playlistId: string) => {
-        const res = await fetch('/api/playlist/add-song', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ playlistId, song: data }),

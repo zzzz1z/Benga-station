@@ -164,14 +164,14 @@ const SongDetails = () => {
   const imageUrl = useLoadImage(song as Song);
 
   const fetchSong = async () => {
-    const res = await fetch(`/api/songs/${id}`);
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}`);
     const json = await res.json();
     if (json.song) setSong(json.song);
     setLoading(false);
   };
 
   const fetchComments = async () => {
-    const res = await fetch(`/api/songs/${id}/comments`);
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`);
     const json = await res.json();
     if (json.comments) setComments(json.comments);
   };
@@ -190,7 +190,7 @@ const SongDetails = () => {
   const handleComment = async () => {
     if (!newComment.trim()) return;
     setSubmitting(true);
-    const res = await fetch(`/api/songs/${id}/comments`, {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: newComment.trim() }),
@@ -201,7 +201,7 @@ const SongDetails = () => {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    const res = await fetch(`/api/songs/${id}/comments?commentId=${commentId}`, { method: 'DELETE' });
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments?commentId=${commentId}`, { method: 'DELETE' });
     if (res.ok) setComments(prev => prev.filter(c => c.id !== commentId));
     else toast.error('Erro ao apagar comentário');
   };

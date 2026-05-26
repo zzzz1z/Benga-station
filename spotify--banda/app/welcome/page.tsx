@@ -15,12 +15,11 @@ const WelcomePage = () => {
         setLoading(true);
         setError('');
 
-        const res = await fetch('/api/access', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: code.trim() }),
-        });
-
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code.trim() }),
+});
         const json = await res.json();
 
         if (json.valid) {

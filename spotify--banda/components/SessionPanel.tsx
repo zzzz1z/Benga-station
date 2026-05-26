@@ -121,7 +121,7 @@ const PanelContent: React.FC<SessionPanelProps> = ({ onClose }) => {
 
   const handleCopyLink = () => {
     if (!session?.code) return;
-    navigator.clipboard.writeText(`${window.location.origin}/session/${session.code}`);
+navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.code}`);
     toast.success('Link copiado!');
   };
 

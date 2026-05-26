@@ -1,10 +1,9 @@
-'use client';
-
 import SongDetails from "../components/SongDetails";
 
+export async function generateStaticParams() {
+  return [{ id: 'placeholder' }];
+}
 
-const SongPage = () => {
-  return <SongDetails />;
-};
+const SongPage = () => <SongDetails />;
 
 export default SongPage;

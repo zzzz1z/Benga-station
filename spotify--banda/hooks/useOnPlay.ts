@@ -9,7 +9,7 @@ export const getSongPlayerId = (song: Song): string =>
     : String(song.id);
 
 const preExtractSong = (videoId: string): void => {
-  fetch('/api/preextract', {
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoId }),

@@ -209,10 +209,10 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
     if (clickedId.startsWith('yt_')) {
-      fetch('/api/preextract', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId: clickedId.slice(3) }),
-      }).catch(() => {});
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ videoId: clickedId.slice(3) }),
+}).catch(() => {});
     }
     setId(clickedId);
   }, [ids, setId]);

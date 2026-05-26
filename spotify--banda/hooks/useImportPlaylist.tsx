@@ -26,8 +26,7 @@ export function useImportPlaylist() {
     setState({ ...initialState, status: 'fetching', message: 'A iniciar...' });
 
     try {
-      const res = await fetch('/api/import-playlist', {
-        method: 'POST',
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`, {        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });

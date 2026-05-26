@@ -1,22 +1,30 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Header from "@/components/Header";
 import SearchTabs from "./components/SearchTabs";
-import getSongs from "@/actions/getSongs";
 import SearchInput from "./components/SearchInput";
+import { Song } from '@/types';
 
-interface SearchProps {
-  searchParams: Promise<{
-    title: string;
-    yt?: string;
-  }>;
-}
+function SearchPage() {
+  const searchParams = useSearchParams();
+  const title = searchParams.get('title') ?? '';
+  const yt = searchParams.get('yt') === '1';
 
-export const dynamic = 'force-dynamic';
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [hasMore, setHasMore] = useState(false);
 
-const Search = async (props: SearchProps) => {
-  const searchParams = await props.searchParams;
-  const title = searchParams.title || '';
-  const yt = searchParams.yt === '1';
-  const { songs, hasMore } = await getSongs(title, 0);
+  useEffect(() => {
+    const params = new URLSearchParams({ page: '1' });
+    if (title) params.set('title', title);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        setSongs(data.songs ?? []);
+        setHasMore(data.hasMore ?? false);
+      });
+  }, [title]);
 
   return (
     <div className="bg-black h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
@@ -34,6 +42,12 @@ const Search = async (props: SearchProps) => {
       <SearchTabs title={title} songs={songs} hasMore={hasMore} triggerYT={yt} />
     </div>
   );
-};
+}
 
-export default Search;
+export default function Search() {
+  return (
+    <Suspense>
+      <SearchPage />
+    </Suspense>
+  );
+}

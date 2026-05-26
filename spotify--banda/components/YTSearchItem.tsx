@@ -45,8 +45,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
 
   useEffect(() => {
     if (!user?.id) return;
-    fetch(`/api/likes?songId=${songId}`)
-      .then(res => res.json())
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)      .then(res => res.json())
       .then(json => { if (json.liked) setIsLiked(true); });
   }, [user?.id, songId]);
 
@@ -64,7 +63,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
     const method = isLiked ? 'DELETE' : 'POST';
-    const res = await fetch('/api/likes', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ songId }),
@@ -81,7 +80,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
   const handlePlaylistClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
-    const res = await fetch('/api/playlist/user-playlists');
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
     const json = await res.json();
     setPlaylists(json.playlists ?? []);
     setShowMenu(false);
@@ -89,7 +88,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
   };
 
   const handleAddToPlaylist = async (playlistId: string) => {
-    const res = await fetch('/api/playlist/add-song', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -113,7 +112,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
     setShowMenu(false);
-    const res = await fetch('/api/songs/upsert-youtube', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

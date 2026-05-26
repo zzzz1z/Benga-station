@@ -45,7 +45,7 @@ const preExtractQueue = (ids: string[]) => {
     .filter(id => id.startsWith('yt_'))
     .map(id => id.slice(3));
   if (!videoIds.length) return;
-  fetch('/api/preextract-queue', {
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoIds }),

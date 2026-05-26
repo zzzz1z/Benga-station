@@ -120,10 +120,10 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
     setYtSelectedIds(new Set());
 
     try {
-      const res = await fetch(
-        `/api/youtube/search?q=${encodeURIComponent(ytQuery)}`,
-        { signal: ytAbortRef.current.signal }
-      );
+const res = await fetch(
+  `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(ytQuery)}`,
+  { signal: ytAbortRef.current.signal }
+);
       const data = await res.json();
       const results: YTResult[] = (data.results || []).slice(0, 8);
       setYtResults(results);
@@ -132,7 +132,8 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
       // preextract all in parallel
       results.forEach(async r => {
         try {
-          const res = await fetch('/api/preextract', {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ videoId: r.videoId }),
@@ -175,7 +176,8 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist }
     const selected = ytResults.filter(r => ytSelectedIds.has(r.videoId));
     const results = await Promise.allSettled(
       selected.map(r =>
-        fetch('/api/playlist/add-song', {
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

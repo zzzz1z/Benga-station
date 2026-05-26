@@ -41,7 +41,7 @@ const KeepAlive = () => {
       } else {
         // Returning from background — restore + refetch
         restoreAppState();
-        fetch('/api/keepalive').catch(() => {});
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/keepalive`).catch(() => {});
       }
     });
 
@@ -50,7 +50,7 @@ const KeepAlive = () => {
       if (document.visibilityState === 'hidden') saveAppState();
       if (document.visibilityState === 'visible') {
         restoreAppState();
-        fetch('/api/keepalive').catch(() => {});
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/keepalive`).catch(() => {});
       }
     };
     document.addEventListener('visibilitychange', onVisibility);

@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  trailingSlash: true,
   reactStrictMode: true,
   images: {
     unoptimized: true,
@@ -13,16 +15,6 @@ const nextConfig = {
         hostname: "i.ytimg.com",
       },
     ],
-  },
-  async headers() {
-    return [
-      {
-        source: '/api/youtube/stream',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-        ],
-      },
-    ];
   },
 };
 

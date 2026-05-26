@@ -39,7 +39,7 @@ export function useQueueExtender({ query = '', enabled = true }: QueueExtenderOp
       ...(query.trim().length >= 2 ? { title: query } : {}),
     });
 
-    fetch(`/api/songs?${params.toString()}`)
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params.toString()}`)
       .then(r => r.json())
       .then(({ songs: newSongs, hasMore }) => {
         if (!newSongs || newSongs.length === 0) {
@@ -76,7 +76,7 @@ export function useQueueExtender({ query = '', enabled = true }: QueueExtenderOp
       ...(query.trim().length >= 2 ? { title: query } : {}),
     });
 
-    fetch(`/api/songs?${params.toString()}`)
+fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params.toString()}`)
       .then(r => r.json())
       .then(({ songs: newSongs, hasMore }) => {
         if (!newSongs || newSongs.length === 0) {

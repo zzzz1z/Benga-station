@@ -124,7 +124,7 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
       const params = new URLSearchParams({ page: String(page) });
       if (query) params.set('title', query);
 
-      const res = await fetch(`/api/songs?${params}`);
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`);
       const data = await res.json();
 
       setSongs(prev => [...prev, ...data.songs]);
