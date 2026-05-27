@@ -3,7 +3,7 @@
 import { createContext, useContext, useRef, useCallback, useState, ReactNode } from 'react';
 import { useSession, SessionInfo, SessionState, SessionMember } from '@/hooks/useSession';
 import usePlayer from '@/hooks/usePlayer';
-import { safePlay } from '@/components/Player';
+import { safePlay } from '@/utils/player';
 
 type SessionContextType = {
   session: SessionInfo | null;
