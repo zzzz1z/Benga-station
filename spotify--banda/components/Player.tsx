@@ -9,28 +9,9 @@ import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
 import { useQueueExtender } from '@/hooks/useQueueExtender';
+import { startKeepalive, stopKeepalive, preextractWindow, safePlay, unlockAudioContext, fetchHeaderDuration } from "@/utils/player";
 
-let audioCtx: AudioContext | null = null;
 
-async function unlockAudioContext(): Promise<void> {
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioCtx.state === "suspended") await audioCtx.resume();
-  } catch {}
-}
-
-export async function safePlay(audio: HTMLAudioElement): Promise<void> {
-  await unlockAudioContext();
-  try {
-    await audio.play();
-  } catch (err: any) {
-    if (err?.name === "NotAllowedError" || err?.name === "NotSupportedError") {
-      await new Promise(r => setTimeout(r, 300));
-      await unlockAudioContext();
-      await audio.play().catch(() => {});
-    }
-  }
-}
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -68,8 +49,7 @@ const Player = () => {
   useEffect(() => { currentSongRef.current = song; }, [song]);
 
   const songUrl  = useLoadSongUrl((song ?? {}) as Song);
-  const audioRef    = useRef<HTMLAudioElement | null>(null);
-  const silentRef   = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
@@ -90,33 +70,8 @@ const Player = () => {
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  const startKeepalive = useCallback(() => {
-    let silent = silentRef.current;
-    if (!silent) {
-      silent = new Audio();
-      silent.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
-      silent.loop   = true;
-      silent.volume = 0.001;
-      silent.onplay      = null;
-      silent.onpause     = null;
-      silent.onended     = null;
-      silent.onerror     = null;
-      silent.onwaiting   = null;
-      silent.oncanplay   = null;
-      silentRef.current  = silent;
-    }
-    keepaliveActiveRef.current = true;
-    silent.play().catch(() => {});
-  }, []);
-
-  const stopKeepalive = useCallback(() => {
-    keepaliveActiveRef.current = false;
-    const silent = silentRef.current;
-    if (silent) {
-      silent.pause();
-      silent.currentTime = 0;
-    }
-  }, []);
+  const _startKeepalive = useCallback(() => startKeepalive(keepaliveActiveRef), []);
+  const _stopKeepalive  = useCallback(() => stopKeepalive(keepaliveActiveRef),  []);
 
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
@@ -156,18 +111,7 @@ const Player = () => {
   useEffect(() => {
     if (!activeID) return;
     const { ids } = usePlayer.getState();
-    const idx = ids.indexOf(activeID);
-    if (idx === -1) return;
-    const ytWindow = [
-      ...ids.slice(Math.max(0, idx - 3), idx),
-      ...ids.slice(idx + 1, idx + 6),
-    ].filter(id => id.startsWith('yt_')).map(id => id.slice(3));
-    if (!ytWindow.length) return;
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ videoIds: ytWindow }),
-}).catch(() => {});
+    preextractWindow(activeID, ids);
   }, [activeID]);
 
   useEffect(() => {
@@ -180,16 +124,16 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
       if (keepaliveActiveRef.current) return;
       setIsPlaying(true);
       setIsLoading(false);
-      stopKeepalive();
+      _stopKeepalive();
     };
-    audio.onpause      = () => {
+    audio.onpause = () => {
       if (!audio.src) return;
       if (keepaliveActiveRef.current) return;
       setIsPlaying(false);
-      if (audio.src && audio.currentTime > 0) startKeepalive();
+      if (audio.src && audio.currentTime > 0) _startKeepalive();
     };
-    audio.onwaiting    = () => setIsLoading(true);
-    audio.oncanplay    = () => {
+    audio.onwaiting = () => setIsLoading(true);
+    audio.oncanplay = () => {
       if (keepaliveActiveRef.current) return;
       setIsLoading(false);
       if (shouldBePlayingRef.current && audio.paused) safePlay(audio).catch(() => {});
@@ -204,7 +148,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
         return;
       }
       setIsLoading(false); setIsPlaying(false);
-      stopKeepalive();
+      _stopKeepalive();
       if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
     };
 
@@ -218,11 +162,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
           if (!endedFiredRef.current) handleEnded();
           return;
         }
-        if (
-          audio.currentTime === lastTimeRef.current &&
-          audio.currentTime > 0 &&
-          lastTimeRef.current > 0
-        ) {
+        if (audio.currentTime === lastTimeRef.current && audio.currentTime > 0 && lastTimeRef.current > 0) {
           audio.play().catch(() => {});
         }
         lastTimeRef.current = audio.currentTime;
@@ -254,7 +194,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       audio.pause(); audio.src = '';
       audioRef.current = null;
-      stopKeepalive();
+      _stopKeepalive();
     };
   }, []);
 
@@ -262,18 +202,15 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
     const audio = audioRef.current;
     if (!audio) return;
 
-    skipOnErrorRef.current  = false;
+    skipOnErrorRef.current    = false;
     headerDurationRef.current = null;
-    lastTimeRef.current     = 0;
+    lastTimeRef.current       = 0;
     setIsLoading(!!songUrl);
     setIsPlaying(false);
-    stopKeepalive();
+    _stopKeepalive();
 
-    if (song?.duration && song.duration > 0) {
-      setDuration(song.duration);
-    } else {
-      setDuration(0);
-    }
+    if (song?.duration && song.duration > 0) setDuration(song.duration);
+    else setDuration(0);
 
     audio.pause();
     audio.src = '';
@@ -283,18 +220,9 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
 
     if (!songUrl) return;
 
-    fetch(songUrl, { method: 'HEAD' })
-      .then(res => {
-        const cd = res.headers.get('Content-Duration') || res.headers.get('X-Content-Duration');
-        if (cd) {
-          const parsed = parseFloat(cd);
-          if (parsed && !isNaN(parsed) && parsed > 0) {
-            headerDurationRef.current = parsed;
-            setDuration(parsed);
-          }
-        }
-      })
-      .catch(() => {});
+    fetchHeaderDuration(songUrl).then(parsed => {
+      if (parsed) { headerDurationRef.current = parsed; setDuration(parsed); }
+    });
 
     let metaStableTimer: ReturnType<typeof setTimeout>;
 
@@ -372,7 +300,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
       shouldBePlayingRef.current = false;
       audio.pause();
     } else {
-      stopKeepalive();
+      _stopKeepalive();
       shouldBePlayingRef.current = true;
       safePlay(audio).catch(() => {});
     }
@@ -381,14 +309,14 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
 
   const handleNext = () => {
     if (session && !session.canControl) return;
-    stopKeepalive();
+    _stopKeepalive();
     playerRef.current.playNext();
     setTimeout(broadcastCurrentState, 200);
   };
 
   const handlePrevious = () => {
     if (session && !session.canControl) return;
-    stopKeepalive();
+    _stopKeepalive();
     const audio = audioRef.current;
     if (audio && audio.currentTime > 3) { audio.currentTime = 0; setPosition(0); }
     else playerRef.current.playPrevious();
@@ -410,7 +338,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
     isPlaying, (song ?? {}) as Song, audioRef,
     keepaliveActiveRef,
     () => {
-      stopKeepalive();
+      _stopKeepalive();
       shouldBePlayingRef.current = true;
       safePlay(audioRef.current!).catch(() => {});
       setTimeout(broadcastCurrentState, 50);
