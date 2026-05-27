@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import PlayButton from "@/components/PlayButton";
 import OfflineButton from "@/components/OfflineButton";
+import { authedFetch } from "@/utils/api";
 
 interface SongItemProps {
     data: Song;
@@ -34,7 +35,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
 
     useEffect(() => {
         if (!user?.id) return;
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
+        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
             .then(res => res.json())
             .then(json => { if (json.liked) setIsLiked(true); });
     }, [user?.id, songId]);
@@ -53,9 +54,8 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
         const method = isLiked ? 'DELETE' : 'POST';
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
             method,
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ songId }),
         });
         if (res.ok) {
@@ -68,17 +68,16 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
     const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
         const json = await res.json();
-        setPlaylists(json.playlists ?? []);
+        setPlaylists(json.playlists ?? json ?? []);
         setShowMenu(false);
         setShowModal(true);
     };
 
     const handleAddToPlaylist = async (playlistId: string) => {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ playlistId, song: data }),
         });
         if (res.status === 409) toast.error('Música já existe na playlist');
@@ -98,7 +97,6 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                 onClick={() => onClick(data.id)}
                 className="relative group flex flex-col cursor-pointer transition p-0"
             >
-                {/* Image Wrapper */}
                 <div className="relative aspect-square w-full overflow-hidden rounded-sm">
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
                     <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-600 opacity-0 group-hover:opacity-100 transition-all z-10" />
@@ -118,7 +116,6 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                         <PlayButton />
                     </div>
 
-                    {/* Desktop Overlay Actions */}
                     <div
                         className="absolute top-2 right-2 hidden md:flex flex-col gap-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
                         onClick={e => e.stopPropagation()}
@@ -135,7 +132,6 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                     </div>
                 </div>
 
-                {/* Text Section */}
                 <div className="flex flex-col items-start w-full pt-3 gap-y-0.5">
                     <p className="font-black truncate w-full text-white uppercase text-sm tracking-tight group-hover:text-red-500 transition-colors">
                         {data.title}
@@ -148,7 +144,6 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                     </div>
                 </div>
 
-                {/* Mobile three-dot menu */}
                 <div
                     className="absolute top-2 right-2 md:hidden z-30"
                     ref={menuRef}

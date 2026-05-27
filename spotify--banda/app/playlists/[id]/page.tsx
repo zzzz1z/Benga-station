@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import PlaylistDetails from '../components/PlaylistDetails';
+import Header from '@/components/Header';
 
 export async function generateStaticParams() {
   const supabase = createClient(
@@ -10,5 +11,6 @@ export async function generateStaticParams() {
   return (data ?? []).map((row) => ({ id: String(row.id) }));
 }
 
-const PlaylistPage = () => <PlaylistDetails />;
+const PlaylistPage = () =>
+   <><Header /><PlaylistDetails /></>;
 export default PlaylistPage;

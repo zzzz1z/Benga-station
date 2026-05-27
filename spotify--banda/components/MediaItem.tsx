@@ -14,6 +14,7 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import OfflineButton from "@/components/OfflineButton";
+import { authedFetch } from "@/utils/api";
 
 interface MediaItemProps {
     data: Song;
@@ -27,8 +28,8 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
     const authModal = useAuthModal();
     const router = useRouter();
     const menuRef = useRef<HTMLDivElement>(null);
-const triggerRef = useRef<HTMLButtonElement>(null);
-const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
     const [isLiked, setIsLiked] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -39,24 +40,24 @@ const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(nu
 
     useEffect(() => {
         if (!user?.id) return;
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
+        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
             .then(res => res.json())
             .then(json => { if (json.liked) setIsLiked(true); });
     }, [user?.id, songId]);
 
-useEffect(() => {
-    const handler = (e: MouseEvent) => {
-        if (
-            menuRef.current && !menuRef.current.contains(e.target as Node) &&
-            triggerRef.current && !triggerRef.current.contains(e.target as Node)
-        ) {
-            setShowMenu(false);
-            setMenuPos(null);
-        }
-    };
-    if (showMenu) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-}, [showMenu]);
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (
+                menuRef.current && !menuRef.current.contains(e.target as Node) &&
+                triggerRef.current && !triggerRef.current.contains(e.target as Node)
+            ) {
+                setShowMenu(false);
+                setMenuPos(null);
+            }
+        };
+        if (showMenu) document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
 
     const handleClick = () => {
         if (onClick) onClick();
@@ -67,9 +68,8 @@ useEffect(() => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
         const method = isLiked ? 'DELETE' : 'POST';
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
             method,
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ songId }),
         });
         if (res.ok) {
@@ -82,17 +82,16 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
     const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
         const json = await res.json();
-        setPlaylists(json.playlists ?? []);
+        setPlaylists(json.playlists ?? json ?? []);
         setShowMenu(false);
         setShowModal(true);
     };
 
     const handleAddToPlaylist = async (playlistId: string) => {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ playlistId, song: data }),
         });
         if (res.status === 409) toast.error('Música já está na playlist');
@@ -132,7 +131,6 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                     </p>
                 </div>
 
-                {/* Desktop hover buttons */}
                 <div
                     className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 opacity-0 group-hover:opacity-100 transition translate-x-4 group-hover:translate-x-0"
                     onClick={e => e.stopPropagation()}
@@ -149,47 +147,45 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-son
                     <OfflineButton song={data} size={18} />
                 </div>
 
-{/* Mobile three-dot menu */}
-<div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
-    <button
-        ref={triggerRef}
-        onClick={() => {
-            if (showMenu) { setShowMenu(false); setMenuPos(null); return; }
-            const rect = triggerRef.current?.getBoundingClientRect();
-            if (rect) setMenuPos({ top: rect.top - 4, right: window.innerWidth - rect.right });
-            setShowMenu(true);
-        }}
-        className="text-red-900/40 p-2"
-    >
-        <BsThreeDotsVertical size={16} />
-    </button>
-    </div>
+                <div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    <button
+                        ref={triggerRef}
+                        onClick={() => {
+                            if (showMenu) { setShowMenu(false); setMenuPos(null); return; }
+                            const rect = triggerRef.current?.getBoundingClientRect();
+                            if (rect) setMenuPos({ top: rect.top - 4, right: window.innerWidth - rect.right });
+                            setShowMenu(true);
+                        }}
+                        className="text-red-900/40 p-2"
+                    >
+                        <BsThreeDotsVertical size={16} />
+                    </button>
+                </div>
             </div>
 
-{/* Portal-style fixed menu */}
-{showMenu && menuPos && (
-    <div
-        ref={menuRef}
-        className="fixed z-[999] w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden"
-        style={{ top: menuPos.top, right: menuPos.right, transform: 'translateY(-100%)' }}
-        onClick={e => e.stopPropagation()}
-    >
-        <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-            {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
-            {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
-        </button>
-        <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-            <MdPlaylistAdd size={16} /> Add_Playlist
-        </button>
-        <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-            <AiOutlineInfoCircle size={16} /> Ver_Metadata
-        </button>
-        <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition">
-            <OfflineButton song={data} size={16} />
-            <span>Offline</span>
-        </div>
-    </div>
-)}
+            {showMenu && menuPos && (
+                <div
+                    ref={menuRef}
+                    className="fixed z-[999] w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden"
+                    style={{ top: menuPos.top, right: menuPos.right, transform: 'translateY(-100%)' }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+                        {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
+                        {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
+                    </button>
+                    <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+                        <MdPlaylistAdd size={16} /> Add_Playlist
+                    </button>
+                    <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+                        <AiOutlineInfoCircle size={16} /> Ver_Metadata
+                    </button>
+                    <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition">
+                        <OfflineButton song={data} size={16} />
+                        <span>Offline</span>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
