@@ -30,7 +30,6 @@ const SideBar: React.FC<SidebarProps> = ({ children }) => {
       { icon: SlPlaylist, label: "Playlists",         active: pathname === "/playlists", href: "/playlists" },
       { icon: FcLike,     label: "Músicas Favoritas", active: pathname === "/liked",     href: "/liked" },
       ...(user ? [
-        { icon: MdWifiOff, label: "Offline", active: pathname === "/offline", href: "/offline" },
       ] : []),
     ],
     [pathname, user]

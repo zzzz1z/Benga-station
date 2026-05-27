@@ -13,7 +13,6 @@ import useAuthModal from "@/hooks/useAuthModal";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import OfflineButton from "@/components/OfflineButton";
 import { authedFetch } from "@/utils/api";
 
 interface MediaItemProps {
@@ -144,7 +143,6 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
                         <AiOutlineInfoCircle size={18} />
                     </button>
-                    <OfflineButton song={data} size={18} />
                 </div>
 
                 <div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
@@ -180,10 +178,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
                         <AiOutlineInfoCircle size={16} /> Ver_Metadata
                     </button>
-                    <div className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition">
-                        <OfflineButton song={data} size={16} />
-                        <span>Offline</span>
-                    </div>
+                  
                 </div>
             )}
         </>

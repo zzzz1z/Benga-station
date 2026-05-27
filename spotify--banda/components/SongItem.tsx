@@ -11,7 +11,6 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import PlayButton from "@/components/PlayButton";
-import OfflineButton from "@/components/OfflineButton";
 import { authedFetch } from "@/utils/api";
 
 interface SongItemProps {
@@ -126,9 +125,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                         <button onClick={handlePlaylistClick} className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm text-white hover:text-red-600 transition">
                             <MdPlaylistAdd size={20} />
                         </button>
-                        <div className="p-1.5 bg-black/40 backdrop-blur-md rounded-sm">
-                            <OfflineButton song={data} size={18} />
-                        </div>
+                        
                     </div>
                 </div>
 
@@ -167,10 +164,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
                             <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
                                 <AiOutlineInfoCircle /> Info
                             </button>
-                            <div className="flex items-center gap-x-3 w-full px-4 py-3 text-[10px] font-black uppercase text-white hover:bg-red-600/10 transition">
-                                <OfflineButton song={data} size={16} />
-                                <span>Offline</span>
-                            </div>
+                            
                         </div>
                     )}
                 </div>
