@@ -23,6 +23,8 @@ jobs:
         run: |
           cd spotify--banda
           npm install
+        env:
+          SUPABASE_SKIP_INSTALL_BINARY: true
 
       - name: Build Next.js static export
         run: |
