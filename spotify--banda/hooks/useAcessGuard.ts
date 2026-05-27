@@ -7,8 +7,7 @@ export function useAccessGuard() {
   const router = useRouter();
 
   useEffect(() => {
-    const cookies = document.cookie.split(';').map(c => c.trim());
-    const hasAccess = cookies.some(c => c.startsWith('access_granted='));
+    const hasAccess = localStorage.getItem('access_granted') === '1';
     if (!hasAccess) {
       router.replace('/welcome');
     }

@@ -23,10 +23,10 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
         const json = await res.json();
 
         if (json.valid) {
-            // set cookie for 2 days
-            const expires = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toUTCString();
-            document.cookie = `access_granted=1; expires=${expires}; path=/`;
-            router.replace('/');
+            if (json.valid) {
+  localStorage.setItem('access_granted', '1');
+  router.replace('/');
+}
         } else {
             setError('Código inválido. Tenta novamente.');
         }
