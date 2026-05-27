@@ -10,29 +10,27 @@ const WelcomePage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async () => {
-        if (!code.trim()) return;
-        setLoading(true);
-        setError('');
+const handleSubmit = async () => {
+    if (!code.trim()) return;
+    setLoading(true);
+    setError('');
 
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: code.trim() }),
-});
-        const json = await res.json();
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+    });
+    const json = await res.json();
 
-        if (json.valid) {
-            if (json.valid) {
-  localStorage.setItem('access_granted', '1');
-  router.replace('/');
-}
-        } else {
-            setError('Código inválido. Tenta novamente.');
-        }
+    if (json.valid) {
+        localStorage.setItem('access_granted', '1');
+        router.replace('/');
+    } else {
+        setError('Código inválido. Tenta novamente.');
+    }
 
-        setLoading(false);
-    };
+    setLoading(false);
+};
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') handleSubmit();
