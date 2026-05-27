@@ -53,14 +53,7 @@ const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, 
       return;
     }
 
-    const { error: upsertError } = await supabase
-      .from("users")
-      .upsert([{ id: user.id, email: user.email, avatar_url: urlData.publicUrl }]);
 
-    if (upsertError) {
-      console.error("Erro ao inserir o avatar no banco de dados:", upsertError);
-      return;
-    }
 
     onImageUpdate(urlData.publicUrl);
 
