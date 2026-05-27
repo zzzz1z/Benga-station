@@ -3,20 +3,34 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import useLoadSongUrl from "@/hooks/useLoadSongUrl";
 import usePlayer, { loadFromSession } from "@/hooks/usePlayer";
-import useMediaSession from "@/hooks/useMediaSession";
 import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
 import { useQueueExtender } from '@/hooks/useQueueExtender';
-import { startKeepalive, stopKeepalive, preextractWindow, safePlay, unlockAudioContext, fetchHeaderDuration } from "@/utils/player";
+import { preextractWindow } from "@/utils/player";
+import { NativeAudio } from '@capgo/native-audio';
 
+// ─── constants ────────────────────────────────────────────────────────────────
 
+const ASSET_ID = 'benga_track';
+
+// Helper: derive artworkUrl from a Song (same logic as old useMediaSession)
+const getArtworkUrl = (song: Song): string => {
+  if (!song?.image_path) return '';
+  if (song.source === 'youtube' || song.image_path.startsWith('http')) {
+    return song.image_path;
+  }
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/imagens/${song.image_path}`;
+};
+
+// ─── component ────────────────────────────────────────────────────────────────
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
 
+  // ── restore session on mount ───────────────────────────────────────────────
   useEffect(() => {
     const saved = loadFromSession();
     if (saved?.activeID && saved.ids.length > 0) {
@@ -32,6 +46,7 @@ const Player = () => {
     setIsMounted(true);
   }, []);
 
+  // ── player store ──────────────────────────────────────────────────────────
   const player    = usePlayer();
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
@@ -46,11 +61,11 @@ const Player = () => {
   const song = songFromStore ?? lastGoodSongRef.current;
 
   const currentSongRef = useRef<Song | null>(null);
-  useEffect(() => { currentSongRef.current = song; }, [song]);
+  useEffect(() => { currentSongRef.current = song ?? null; }, [song]);
 
-  const songUrl  = useLoadSongUrl((song ?? {}) as Song);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const songUrl = useLoadSongUrl((song ?? {}) as Song);
 
+  // ── playback state ────────────────────────────────────────────────────────
   const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
   const [volume,     setVolume]     = useState(1);
@@ -58,39 +73,37 @@ const Player = () => {
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const headerDurationRef  = useRef<number | null>(null);
-  const volumeRef          = useRef(1);
-  const isPlayingRef       = useRef(false);
-  const skipOnErrorRef     = useRef(false);
-  const endedFiredRef      = useRef(false);
-  const shouldBePlayingRef = useRef(false);
-  const lastTimeRef        = useRef(0);
-  const keepaliveActiveRef = useRef(false);
+  const isLoadingRef   = useRef(false);
+  const isLoadedRef    = useRef(false);   // true once preload resolves for current url
+  const endedFiredRef  = useRef(false);
+  const volumeRef      = useRef(1);
+  const isPlayingRef   = useRef(false);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  const _startKeepalive = useCallback(() => startKeepalive(keepaliveActiveRef), []);
-  const _stopKeepalive  = useCallback(() => stopKeepalive(keepaliveActiveRef),  []);
-
+  // ── session (multi-device) ────────────────────────────────────────────────
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
+  // audioRef kept only so SessionContext registerPlayer contract is satisfied
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     registerPlayer({ audioRef, setIsPlaying, setPosition });
   }, [registerPlayer]);
 
-  const broadcastCurrentState = useCallback(() => {
+  const broadcastCurrentState = useCallback(async () => {
     if (!sessionRef.current?.canControl) return;
-    const audio = audioRef.current;
+    let pos = position;
+    try { const r = await NativeAudio.getCurrentTime({ assetId: ASSET_ID }); pos = r.currentTime; } catch {}
     broadcastState({
       activeID: usePlayer.getState().activeID ?? null,
-      isPlaying: !!(audio && !audio.paused),
-      position: audio?.currentTime ?? 0,
+      isPlaying: isPlayingRef.current,
+      position: pos,
       timestamp: Date.now(),
     });
-  }, [broadcastState]);
+  }, [broadcastState, position]);
 
   const prevQueueRef = useRef('');
   useEffect(() => {
@@ -101,255 +114,215 @@ const Player = () => {
     if (sessionRef.current?.isHost) broadcastQueue(ids, songMap, aid ?? '');
   });
 
-  const handleEnded = () => {
-    if (endedFiredRef.current) return;
-    endedFiredRef.current = true;
-    playerRef.current.playNext();
-    setTimeout(() => { endedFiredRef.current = false; }, 1000);
-  };
-
+  // ── preextract window on song change ──────────────────────────────────────
   useEffect(() => {
     if (!activeID) return;
     const { ids } = usePlayer.getState();
     preextractWindow(activeID, ids);
   }, [activeID]);
 
+  // ── one-time configure ────────────────────────────────────────────────────
   useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
+    NativeAudio.configure({
+      showNotification: true,
+      background: true,
+    } as any).catch(() => {});
+  }, []);
 
-    audio.ontimeupdate = () => { setPosition(audio.currentTime); };
-    audio.onended      = handleEnded;
-    audio.onplay       = () => {
-      if (keepaliveActiveRef.current) return;
-      setIsPlaying(true);
-      setIsLoading(false);
-      _stopKeepalive();
-    };
-    audio.onpause = () => {
-      if (!audio.src) return;
-      if (keepaliveActiveRef.current) return;
-      setIsPlaying(false);
-      if (audio.src && audio.currentTime > 0) _startKeepalive();
-    };
-    audio.onwaiting = () => setIsLoading(true);
-    audio.oncanplay = () => {
-      if (keepaliveActiveRef.current) return;
-      setIsLoading(false);
-      if (shouldBePlayingRef.current && audio.paused) safePlay(audio).catch(() => {});
-    };
-    audio.onerror = () => {
-      if (!audio.src || !skipOnErrorRef.current) return;
-      if (!audio.dataset.retried) {
-        audio.dataset.retried = '1';
-        const src = audio.src;
-        audio.src = ''; audio.load();
-        setTimeout(() => { audio.src = src; audio.load(); safePlay(audio).catch(() => {}); }, 800);
-        return;
-      }
-      setIsLoading(false); setIsPlaying(false);
-      _stopKeepalive();
-      if (playerRef.current.activeID) playerRef.current.markFailed(playerRef.current.activeID);
-    };
+  // ── event listeners (complete + currentTime + playbackState) ─────────────
+  useEffect(() => {
+    // complete → play next
+    const completeSub = NativeAudio.addListener('complete', (data: any) => {
+      if (data.assetId !== ASSET_ID) return;
+      if (endedFiredRef.current) return;
+      endedFiredRef.current = true;
+      playerRef.current.playNext();
+      setTimeout(() => { endedFiredRef.current = false; }, 1000);
+    });
 
-    const stuckInterval = setInterval(() => {
-      if (keepaliveActiveRef.current) return;
-      if (!audio.src || audio.paused) { lastTimeRef.current = audio.currentTime; return; }
-      if (isPlayingRef.current) {
-        const dbDuration = currentSongRef.current?.duration;
-        const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
-        if (dur > 0 && audio.currentTime >= dur - 0.3) {
-          if (!endedFiredRef.current) handleEnded();
-          return;
+    // currentTime → update position + duration bar
+    const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
+      if (data.assetId !== ASSET_ID) return;
+      if (data.currentTime !== undefined) setPosition(data.currentTime);
+      if (data.duration && data.duration > 0) setDuration(data.duration);
+    });
+
+    // playbackState → lock screen / notification controls fire this
+    const stateSub = NativeAudio.addListener('playbackState', (data: any) => {
+      if (data.assetId !== ASSET_ID) return;
+      const state: string = data.state ?? '';
+
+      if (state === 'playing') {
+        setIsPlaying(true);
+        setIsLoading(false);
+      } else if (state === 'paused') {
+        setIsPlaying(false);
+      } else if (state === 'nextTrack') {
+        playerRef.current.playNext();
+      } else if (state === 'previousTrack') {
+        const cur = playerRef.current;
+        const curTime = data.position ?? 0;
+        if (curTime > 3) {
+          NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 }).catch(() => {});
+          setPosition(0);
+        } else {
+          cur.playPrevious();
         }
-        if (audio.currentTime === lastTimeRef.current && audio.currentTime > 0 && lastTimeRef.current > 0) {
-          audio.play().catch(() => {});
-        }
-        lastTimeRef.current = audio.currentTime;
+      } else if (state === 'stopped' || state === 'completed') {
+        if (endedFiredRef.current) return;
+        endedFiredRef.current = true;
+        playerRef.current.playNext();
+        setTimeout(() => { endedFiredRef.current = false; }, 1000);
       }
-    }, 2000);
-
-    const bgStuckInterval = setInterval(async () => {
-      if (keepaliveActiveRef.current) return;
-      if (shouldBePlayingRef.current && audio.paused && audio.src && audio.readyState >= 3) {
-        await unlockAudioContext();
-        audio.play().catch(() => {});
-      }
-    }, 3000);
-
-    const handleVisibilityChange = () => {
-      if (keepaliveActiveRef.current) return;
-      if (document.visibilityState !== 'visible' || !audio.src) return;
-      const dbDuration = currentSongRef.current?.duration;
-      const dur = headerDurationRef.current || (dbDuration && dbDuration > 0 ? dbDuration : 0) || audio.duration;
-      if (dur > 0 && audio.currentTime >= dur - 0.1 && audio.paused && isPlayingRef.current) {
-        handleEnded();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    });
 
     return () => {
-      clearInterval(stuckInterval);
-      clearInterval(bgStuckInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      audio.pause(); audio.src = '';
-      audioRef.current = null;
-      _stopKeepalive();
+      completeSub.then(h => h.remove()).catch(() => {});
+      timeSub.then(h => h.remove()).catch(() => {});
+      stateSub.then(h => h.remove()).catch(() => {});
+      // stop + unload on unmount
+      NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
+      NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
     };
   }, []);
 
+  // ── load + play when songUrl changes ─────────────────────────────────────
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!songUrl || !song) return;
 
-    skipOnErrorRef.current    = false;
-    headerDurationRef.current = null;
-    lastTimeRef.current       = 0;
-    setIsLoading(!!songUrl);
-    setIsPlaying(false);
-    _stopKeepalive();
+    let cancelled = false;
 
-    if (song?.duration && song.duration > 0) setDuration(song.duration);
-    else setDuration(0);
+    const load = async () => {
+      isLoadedRef.current = false;
+      isLoadingRef.current = true;
+      setIsLoading(true);
+      setIsPlaying(false);
+      setPosition(0);
+      endedFiredRef.current = false;
 
-    audio.pause();
-    audio.src = '';
-    delete audio.dataset.retried;
-    audio.onloadedmetadata = null;
-    audio.load();
+      // stop + unload any previous track
+      try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
+      try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
 
-    if (!songUrl) return;
+      if (cancelled) return;
 
-    fetchHeaderDuration(songUrl).then(parsed => {
-      if (parsed) { headerDurationRef.current = parsed; setDuration(parsed); }
-    });
+      const artworkUrl = getArtworkUrl(song);
 
-    let metaStableTimer: ReturnType<typeof setTimeout>;
-
-    const onMeta = () => {
-      if (headerDurationRef.current || (currentSongRef.current?.duration && currentSongRef.current.duration > 0)) {
-        setDuration(headerDurationRef.current || currentSongRef.current!.duration);
-        return;
-      }
-      const reported = audio.duration;
-      if (!reported || !isFinite(reported) || reported <= 0) return;
-      clearTimeout(metaStableTimer);
-      metaStableTimer = setTimeout(() => {
-        const settled = audio.duration;
-        if (settled && isFinite(settled) && settled > 0) setDuration(settled);
-        audio.removeEventListener('loadedmetadata', onMeta);
-        audio.removeEventListener('durationchange', onDurationChange);
-      }, 1500);
-    };
-
-    const onDurationChange = () => {
-      if (headerDurationRef.current || (currentSongRef.current?.duration && currentSongRef.current.duration > 0)) {
-        setDuration(headerDurationRef.current || currentSongRef.current!.duration);
-        return;
-      }
-      const d = audio.duration;
-      if (!d || !isFinite(d) || d <= 0) return;
-      clearTimeout(metaStableTimer);
-      metaStableTimer = setTimeout(() => {
-        const settled = audio.duration;
-        if (settled && isFinite(settled) && settled > 0) setDuration(settled);
-      }, 500);
-    };
-
-    audio.addEventListener('loadedmetadata', onMeta);
-    audio.addEventListener('durationchange', onDurationChange);
-
-    const timer = setTimeout(() => {
-      skipOnErrorRef.current = true;
-      audio.src    = songUrl;
-      audio.volume = volumeRef.current;
-      audio.load();
-      safePlay(audio).then(() => {
-        setIsPlaying(true);
-        setPosition(0);
-        shouldBePlayingRef.current = true;
-        broadcastCurrentState();
-      }).catch(() => {
+      try {
+        await NativeAudio.preload({
+          assetId: ASSET_ID,
+          assetPath: songUrl,
+          isUrl: true,
+          notificationMetadata: {
+            title: song.title,
+            artist: song.author,
+            album: 'Benga Station',
+            artworkUrl,
+          },
+        } as any);
+      } catch (e) {
+        if (cancelled) return;
         setIsLoading(false);
-        shouldBePlayingRef.current = true;
-      });
-    }, 100);
+        isLoadingRef.current = false;
+        return;
+      }
 
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(metaStableTimer!);
-      audio.removeEventListener('loadedmetadata', onMeta);
-      audio.removeEventListener('durationchange', onDurationChange);
+      if (cancelled) return;
+
+      isLoadedRef.current = true;
+      isLoadingRef.current = false;
+
+      // get duration (may not be available yet for streams)
+      try {
+        const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
+        if (d.duration > 0) setDuration(d.duration);
+        else if (song.duration && song.duration > 0) setDuration(song.duration);
+      } catch {
+        if (song.duration && song.duration > 0) setDuration(song.duration);
+      }
+
+      if (cancelled) return;
+
+      await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
+
+      try {
+        await NativeAudio.play({ assetId: ASSET_ID });
+        if (!cancelled) {
+          setIsPlaying(true);
+          setIsLoading(false);
+          setTimeout(broadcastCurrentState, 100);
+        }
+      } catch {
+        if (!cancelled) setIsLoading(false);
+      }
     };
+
+    load();
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 
+  // ── repeat-one: replay on playCount bump ──────────────────────────────────
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio && audio.src && playCount > 0) { audio.currentTime = 0; safePlay(audio); }
+    if (playCount === 0 || !isLoadedRef.current) return;
+    NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 }).catch(() => {});
+    NativeAudio.play({ assetId: ASSET_ID }).catch(() => {});
+    setPosition(0);
   }, [playCount]);
 
+  // ── volume sync ───────────────────────────────────────────────────────────
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
+    if (!isLoadedRef.current) return;
+    NativeAudio.setVolume({ assetId: ASSET_ID, volume: volume }).catch(() => {});
   }, [volume]);
 
-  const handlePlay = () => {
-    const audio = audioRef.current;
-    if (!audio || isLoading) return;
+  // ── controls ──────────────────────────────────────────────────────────────
+  const handlePlay = useCallback(async () => {
+    if (isLoadingRef.current) return;
     if (session && !session.canControl) return;
-    if (isPlaying) {
-      shouldBePlayingRef.current = false;
-      audio.pause();
+
+    if (isPlayingRef.current) {
+      await NativeAudio.pause({ assetId: ASSET_ID }).catch(() => {});
+      setIsPlaying(false);
     } else {
-      _stopKeepalive();
-      shouldBePlayingRef.current = true;
-      safePlay(audio).catch(() => {});
+      await NativeAudio.resume({ assetId: ASSET_ID }).catch(() => {});
+      setIsPlaying(true);
     }
     setTimeout(broadcastCurrentState, 50);
-  };
+  }, [session, broadcastCurrentState]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (session && !session.canControl) return;
-    _stopKeepalive();
     playerRef.current.playNext();
     setTimeout(broadcastCurrentState, 200);
-  };
+  }, [session, broadcastCurrentState]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(async () => {
     if (session && !session.canControl) return;
-    _stopKeepalive();
-    const audio = audioRef.current;
-    if (audio && audio.currentTime > 3) { audio.currentTime = 0; setPosition(0); }
-    else playerRef.current.playPrevious();
+    let curTime = position;
+    try { const r = await NativeAudio.getCurrentTime({ assetId: ASSET_ID }); curTime = r.currentTime; } catch {}
+    if (curTime > 3) {
+      await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 }).catch(() => {});
+      setPosition(0);
+    } else {
+      playerRef.current.playPrevious();
+    }
     setTimeout(broadcastCurrentState, 200);
-  };
+  }, [session, broadcastCurrentState, position]);
 
-  const handleSeek = (value: number) => {
+  const handleSeek = useCallback(async (value: number) => {
     if (session && !session.canControl) return;
-    if (audioRef.current) {
-      audioRef.current.currentTime = value;
-      setPosition(value);
-      broadcastCurrentState();
-    }
-  };
+    await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: value }).catch(() => {});
+    setPosition(value);
+    broadcastCurrentState();
+  }, [session, broadcastCurrentState]);
 
-  const toggleMute = () => setVolume(prev => prev === 0 ? 1 : 1);
+  const toggleMute = useCallback(() => {
+    setVolume(prev => prev === 0 ? 1 : 0);
+  }, []);
 
-  useMediaSession(
-    isPlaying, (song ?? {}) as Song, audioRef,
-    keepaliveActiveRef,
-    () => {
-      _stopKeepalive();
-      shouldBePlayingRef.current = true;
-      safePlay(audioRef.current!).catch(() => {});
-      setTimeout(broadcastCurrentState, 50);
-    },
-    () => {
-      shouldBePlayingRef.current = false;
-      audioRef.current?.pause();
-      setTimeout(broadcastCurrentState, 50);
-    }
-  );
-
+  // ── render guard ──────────────────────────────────────────────────────────
   if (!isMounted) return null;
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;

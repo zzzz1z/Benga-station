@@ -1,46 +1,5 @@
-let audioCtx: AudioContext | null = null;
-
-export async function unlockAudioContext(): Promise<void> {
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-  } catch {}
-}
-
-export async function safePlay(audio: HTMLAudioElement): Promise<void> {
-  await unlockAudioContext();
-  try {
-    await audio.play();
-  } catch (err: any) {
-    if (err?.name === 'NotAllowedError' || err?.name === 'NotSupportedError') {
-      await new Promise(r => setTimeout(r, 300));
-      await unlockAudioContext();
-      await audio.play().catch(() => {});
-    }
-  }
-}
-
-let silentAudio: HTMLAudioElement | null = null;
-const SILENT_SRC = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
-
-export function startKeepalive(keepaliveActiveRef: React.MutableRefObject<boolean>) {
-  if (!silentAudio) {
-    silentAudio = new Audio();
-    silentAudio.src = SILENT_SRC;
-    silentAudio.loop = true;
-    silentAudio.volume = 0.001;
-  }
-  keepaliveActiveRef.current = true;
-  silentAudio.play().catch(() => {});
-}
-
-export function stopKeepalive(keepaliveActiveRef: React.MutableRefObject<boolean>) {
-  keepaliveActiveRef.current = false;
-  if (silentAudio) {
-    silentAudio.pause();
-    silentAudio.currentTime = 0;
-  }
-}
+// utils/player.ts
+// AudioContext / keepalive / safePlay removed — NativeAudio handles all of that natively.
 
 export function preextractWindow(activeID: string, ids: string[]) {
   const idx = ids.indexOf(activeID);
