@@ -15,16 +15,16 @@ function SearchPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    const params = new URLSearchParams({ page: '1' });
-    if (title) params.set('title', title);
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
-      .then(r => r.json())
-      .then(data => {
-  setSongs(Array.isArray(data) ? data : data.songs ?? []);
-  setHasMore(data.hasMore ?? false);
-});
-  }, [title]);
+useEffect(() => {
+  const params = new URLSearchParams({ limit: '50', offset: '0' });
+  if (title) params.set('search', title);
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
+    .then(r => r.json())
+    .then(data => {
+      setSongs(Array.isArray(data) ? data : data.songs ?? []);
+      setHasMore(false);
+    });
+}, [title]);
 
   return (
     <div className="bg-black h-full w-full overflow-hidden pt-[30px] overflow-y-auto">

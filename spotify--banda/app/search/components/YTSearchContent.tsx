@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import usePlayer from '@/hooks/usePlayer';
 import useAuthModal from '@/hooks/useAuthModal';
 import { useUser } from '@/hooks/useUser';
-import YTSearchItem, { YTResult } from '@/components/YTSearchItem';
+import YTSearchItem, { YTResult } from '@/app/search/components/YTSearchItem';
 
 const EXTRACT_TIMEOUT_MS = 30000;
 const EXTRACT_RETRY_TIMEOUT_MS = 45000;

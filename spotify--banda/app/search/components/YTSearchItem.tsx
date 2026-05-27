@@ -112,7 +112,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
     setShowMenu(false);
-    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/apiupsert-youtube`, {
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
       method: 'POST',
       body: JSON.stringify({
         title: result.title,
@@ -121,7 +121,9 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
         image_path: result.thumbnail,
       }),
     });
-
+    const json = await res.json();
+    if (json.id) router.push(`/songs?id=${json.id}`);
+    else toast.error('Erro ao abrir música');
   };
 
   return (

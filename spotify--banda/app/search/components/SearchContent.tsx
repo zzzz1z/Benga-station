@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import MediaItem from '@/components/MediaItem';
 import useOnPlay from '@/hooks/useOnPlay';
 import { Song } from '@/types';
@@ -121,8 +121,8 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
     setLoading(true);
 
     try {
-      const params = new URLSearchParams({ page: String(page) });
-      if (query) params.set('title', query);
+const params = new URLSearchParams({ limit: '50', offset: String(page * 50) });
+if (query) params.set('search', query);
 
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`);
       const data = await res.json();
@@ -136,6 +136,12 @@ setHasMore(data.hasMore ?? false);
       setLoading(false);
     }
   }, [loading, hasMore, page, query]);
+
+  useEffect(() => {
+  setSongs(initialSongs);
+  setHasMore(initialHasMore);
+  setPage(1);
+}, [initialSongs, initialHasMore]);
 
   if (songs.length === 0 && !loading)
     return (

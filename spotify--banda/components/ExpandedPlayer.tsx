@@ -196,7 +196,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchmove', onMove as any, { passive: true });
+window.addEventListener('touchmove', onMove as any, { passive: false });
     window.addEventListener('touchend', onUp);
   }, [startQueueDrag, moveQueueDrag, endQueueDrag]);
 
@@ -205,17 +205,25 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     setIds(ids.filter((_, i) => i !== globalIndex));
   }, [ids, setIds]);
 
-  const handleQueueRowClick = useCallback((globalIndex: number) => {
+
+
+
+
+const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
     if (clickedId.startsWith('yt_')) {
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ videoId: clickedId.slice(3) }),
-}).catch(() => {});
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: [clickedId.slice(3)] }),
+        }).catch(() => {});
     }
     setId(clickedId);
-  }, [ids, setId]);
+}, [ids, setId]);
+
+
+
 
   const handleNext = () => { if (repeatMode === 'one') { onSeek(0); return; } onNext(); };
   const cycleRepeat = () => setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');

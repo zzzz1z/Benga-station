@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SearchContent from './SearchContent';
-import YTSearchContent from '@/components/YTSearchContent';
+import YTSearchContent from '@/app/search/components/YTSearchContent';
 import { Song } from '@/types';
 import { useSwipeTabs } from '@/hooks/useSwipeTabs';
 import { useRefresh } from '@/hooks/useRefresh';
@@ -30,11 +30,10 @@ const SearchTabs: React.FC<SearchTabsProps> = ({ title, songs: initialSongs, has
   }, [triggerYT, title]);
 
   // Reset songs when refreshKey changes
-  useEffect(() => {
-    if (refreshKey === 0) return;
-    setSongs(initialSongs);
-    setHasMore(initialHasMore);
-  }, [refreshKey]);
+useEffect(() => {
+  setSongs(initialSongs);
+  setHasMore(initialHasMore);
+}, [initialSongs, initialHasMore]);
 
   const onSwipeLeft = useCallback(() => {
     setTab('youtube');
