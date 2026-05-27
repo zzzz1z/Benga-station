@@ -11,10 +11,10 @@ const EXTRACT_RETRY_TIMEOUT_MS = 45000;
 
 const preExtract = async (videoId: string, signal?: AbortSignal): Promise<boolean> => {
     try {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoId }),
+            body: JSON.stringify({ videoIds: [videoId] }),
             signal,
         });
         return res.ok;
@@ -149,10 +149,10 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         isFetchingMoreRef.current = true;
 
         try {
-const res = await fetch(
-  `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
-  { signal: abortRef.current!.signal }
-);
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
+                { signal: abortRef.current!.signal }
+            );
             const data = await res.json();
             if (data.error || !data.results?.length) return;
 
@@ -246,7 +246,7 @@ const res = await fetch(
 
             try {
                 const res = await fetch(
-                    `/api/youtube/search?q=${encodeURIComponent(query)}`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
                     { signal: abortRef.current!.signal }
                 );
                 const data = await res.json();
