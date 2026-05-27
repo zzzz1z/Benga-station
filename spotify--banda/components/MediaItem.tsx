@@ -103,7 +103,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
     const handleInfo = (e: React.MouseEvent) => {
         e.stopPropagation();
         setShowMenu(false);
-        router.push(`/songs/${data.id}`);
+        ;
     };
 
     return (

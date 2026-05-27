@@ -297,7 +297,7 @@ fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
           </div>
 
           <button
-            onClick={() => { router.push(`/songs/${song.id}`); handleClose(); }}
+            onClick={handleClose}
             className="text-neutral-500 active:text-white transition p-3 -mr-3"
             onTouchStart={e => e.stopPropagation()}
           >

@@ -88,7 +88,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
     const handleInfo = (e: React.MouseEvent) => {
         e.stopPropagation();
         setShowMenu(false);
-        router.push(`/songs/${data.id}`);
+        ;
     };
 
     return (
