@@ -1,20 +1,31 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-let client: ReturnType<typeof createSupabaseClient> | null = null;
+// Only singleton on the client side
+let browserClient: ReturnType<typeof createSupabaseClient> | null = null;
 
 export const createClient = () => {
-  if (client) return client;
-  client = createSupabaseClient(
+  if (typeof window === 'undefined') {
+    // Server: always a fresh instance, never cached
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+  }
+
+  if (browserClient) return browserClient;
+
+  browserClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
         persistSession: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storage: window.localStorage,
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
     }
   );
-  return client;
+
+  return browserClient;
 };
