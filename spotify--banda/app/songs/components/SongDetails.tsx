@@ -166,14 +166,16 @@ const SongDetails = () => {
   const fetchSong = async () => {
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}`);
     const json = await res.json();
-    if (json.song) setSong(json.song);
+    if (json && !json.error) setSong(json);
     setLoading(false);
   };
 
   const fetchComments = async () => {
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`);
     const json = await res.json();
-    if (json.comments) setComments(json.comments);
+    if (Array.isArray(json)) setComments(json);
+
+
   };
 
   useEffect(() => {
@@ -187,24 +189,38 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comm
     player.setQueue([song], getSongPlayerId(song));
   };
 
-  const handleComment = async () => {
+const handleComment = async () => {
     if (!newComment.trim()) return;
     setSubmitting(true);
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newComment.trim() }),
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: newComment.trim() }),
     });
     if (res.ok) { setNewComment(''); await fetchComments(); }
     else toast.error('Erro ao comentar');
     setSubmitting(false);
-  };
+};
 
-  const handleDeleteComment = async (commentId: string) => {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments?commentId=${commentId}`, { method: 'DELETE' });
+const handleDeleteComment = async (commentId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/${id}/comments`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ comment_id: commentId }),
+    });
     if (res.ok) setComments(prev => prev.filter(c => c.id !== commentId));
     else toast.error('Erro ao apagar comentário');
-  };
+};
 
   if (loading) {
     return (

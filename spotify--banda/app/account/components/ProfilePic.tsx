@@ -17,7 +17,7 @@ const ProfilePic = () => {
       .from("users")
       .select("avatar_url")
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.log("Erro ao buscar imagem:", error);

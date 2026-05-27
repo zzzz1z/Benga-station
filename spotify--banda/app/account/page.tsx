@@ -16,7 +16,7 @@ const Account = () => {
       if (!user) return;
       Promise.all([
         supabase.from('Músicas_Favoritas').select('*, Songs(*)').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('playlists').select('*').order('created_at', { ascending: false }),
+        supabase.from('Playlists').select('*').order('created_at', { ascending: false }).eq('user_id', user.id),
       ]).then(([liked, playlists]) => {
         setLikedSongs((liked.data ?? []).map((i: any) => ({ ...i.Songs })));
         setPlaylists(playlists.data ?? []);

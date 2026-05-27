@@ -1,3 +1,4 @@
+import { createClient } from '@/utils/supabase/client';
 import { useState, useCallback } from 'react';
 
 export type ImportStatus = 'idle' | 'fetching' | 'matching' | 'progress' | 'done' | 'error';
@@ -19,17 +20,28 @@ const initialState: ImportState = {
   failed: 0,
 };
 
-export function useImportPlaylist() {
+export  function useImportPlaylist() {
   const [state, setState] = useState<ImportState>(initialState);
+
+
 
   const importPlaylist = useCallback(async (url: string) => {
     setState({ ...initialState, status: 'fetching', message: 'A iniciar...' });
 
-    try {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`, {        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
+    try {  
+      const supabase = createClient();
+const { data: { session } } = await supabase.auth.getSession();
+const token = session?.access_token;
+
+
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
+  body: JSON.stringify({ url }),
+});
 
       if (!res.ok || !res.body) {
         setState(prev => ({ ...prev, status: 'error', message: 'Erro ao ligar ao servidor.' }));

@@ -127,8 +127,8 @@ const SearchContent: React.FC<SearchContentProps> = ({ songs: initialSongs, hasM
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`);
       const data = await res.json();
 
-      setSongs(prev => [...prev, ...data.songs]);
-      setHasMore(data.hasMore);
+setSongs(prev => [...prev, ...(Array.isArray(data) ? data : data.songs ?? [])]);
+setHasMore(data.hasMore ?? false);
       setPage(prev => prev + 1);
     } catch {
       // fail silently

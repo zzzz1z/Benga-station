@@ -21,9 +21,9 @@ function SearchPage() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
       .then(r => r.json())
       .then(data => {
-        setSongs(data.songs ?? []);
-        setHasMore(data.hasMore ?? false);
-      });
+  setSongs(Array.isArray(data) ? data : data.songs ?? []);
+  setHasMore(data.hasMore ?? false);
+});
   }, [title]);
 
   return (
