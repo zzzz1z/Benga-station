@@ -9,7 +9,7 @@ import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
 import { useQueueExtender } from '@/hooks/useQueueExtender';
 import { preextractWindow } from "@/utils/player";
-import { NativeAudio } from '@capgo/native-audio';
+import { backend as NativeAudio } from '@/utils/audioBackend';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 

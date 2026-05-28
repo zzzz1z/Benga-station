@@ -1,0 +1,206 @@
+import { Capacitor } from '@capacitor/core';
+import { NativeAudio } from '@capgo/native-audio';
+
+export const IS_NATIVE = Capacitor.isNativePlatform();
+
+// ─── Web audio singleton ──────────────────────────────────────────────────────
+let _audio: HTMLAudioElement | null = null;
+const getAudio = (): HTMLAudioElement => {
+  if (!_audio) _audio = new Audio();
+  return _audio;
+};
+
+const ASSET_ID = 'benga_track';
+
+// ─── AudioContext unlock ──────────────────────────────────────────────────────
+let audioCtx: AudioContext | null = null;
+const unlockAudioContext = async () => {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+  } catch {}
+};
+
+const safePlay = async (a: HTMLAudioElement) => {
+  await unlockAudioContext();
+  try {
+    await a.play();
+  } catch (err: any) {
+    if (err?.name === 'NotAllowedError' || err?.name === 'NotSupportedError') {
+      await new Promise(r => setTimeout(r, 300));
+      await unlockAudioContext();
+      await a.play().catch(() => {});
+    }
+  }
+};
+
+// ─── Keepalive (keeps audio context alive when screen locks / app backgrounded)
+const SILENT_SRC = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
+let silentAudio: HTMLAudioElement | null = null;
+
+const startKeepalive = () => {
+  if (!silentAudio) {
+    silentAudio = new Audio();
+    silentAudio.src = SILENT_SRC;
+    silentAudio.loop = true;
+    silentAudio.volume = 0.001;
+  }
+  silentAudio.play().catch(() => {});
+};
+
+const stopKeepalive = () => {
+  if (silentAudio) {
+    silentAudio.pause();
+    silentAudio.currentTime = 0;
+  }
+};
+
+// ─── Web shims ────────────────────────────────────────────────────────────────
+
+const webConfigure = async (_opts?: any): Promise<void> => {};
+
+const webPreload = async (opts: any): Promise<void> => {
+  const a = getAudio();
+  a.src = opts.assetPath;
+  a.load();
+
+  if ('mediaSession' in navigator && opts.notificationMetadata) {
+    const m = opts.notificationMetadata;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title:   m.title  ?? '',
+      artist:  m.artist ?? '',
+      album:   m.album  ?? '',
+      artwork: m.artworkUrl ? [{ src: m.artworkUrl }] : [],
+    });
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const onReady = () => { cleanup(); resolve(); };
+    const onError = () => { cleanup(); reject(); };
+    const cleanup = () => {
+      a.removeEventListener('canplay', onReady);
+      a.removeEventListener('error',   onError);
+    };
+    a.addEventListener('canplay', onReady, { once: true });
+    a.addEventListener('error',   onError, { once: true });
+  });
+};
+
+const webPlay = async (_opts?: any): Promise<void> => {
+  startKeepalive();
+  await safePlay(getAudio());
+};
+
+const webResume = async (_opts?: any): Promise<void> => {
+  startKeepalive();
+  await safePlay(getAudio());
+};
+
+const webPause = async (_opts?: any): Promise<void> => {
+  getAudio().pause();
+  stopKeepalive();
+};
+
+const webStop = async (_opts?: any): Promise<void> => {
+  const a = getAudio();
+  a.pause();
+  a.currentTime = 0;
+  stopKeepalive();
+};
+
+const webUnload = async (_opts?: any): Promise<void> => {
+  if (_audio) { _audio.src = ''; _audio = null; }
+  stopKeepalive();
+};
+
+const webSeek   = async ({ time }:   any): Promise<void> => { getAudio().currentTime = time; };
+const webVolume = async ({ volume }: any): Promise<void> => { getAudio().volume = volume; };
+
+const webDuration    = async (_opts?: any) => ({ duration:    getAudio().duration    ?? 0 });
+const webCurrentTime = async (_opts?: any) => ({ currentTime: getAudio().currentTime ?? 0 });
+
+const webAddListener = (event: string, cb: (data: any) => void) => {
+  const a = getAudio();
+
+  if (event === 'complete') {
+    const handler = () => cb({ assetId: ASSET_ID });
+    a.addEventListener('ended', handler);
+    return Promise.resolve({ remove: () => a.removeEventListener('ended', handler) });
+  }
+
+  if (event === 'currentTime') {
+    // Polling drives the seekbar on web
+    const interval = setInterval(() => {
+      if (a.paused || !a.src) return;
+      cb({
+        assetId:     ASSET_ID,
+        currentTime: a.currentTime,
+        duration:    isFinite(a.duration) ? a.duration : 0,
+      });
+    }, 500);
+    return Promise.resolve({ remove: () => clearInterval(interval) });
+  }
+
+  if (event === 'playbackState') {
+    // Mirror HTML audio events
+    const onPlay  = () => cb({ assetId: ASSET_ID, state: 'playing'   });
+    const onPause = () => cb({ assetId: ASSET_ID, state: 'paused'    });
+    const onEnded = () => cb({ assetId: ASSET_ID, state: 'completed' });
+    a.addEventListener('play',  onPlay);
+    a.addEventListener('pause', onPause);
+    a.addEventListener('ended', onEnded);
+
+    // Wire lock screen / notification controls
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play',          () => cb({ assetId: ASSET_ID, state: 'playing'       }));
+      navigator.mediaSession.setActionHandler('pause',         () => cb({ assetId: ASSET_ID, state: 'paused'        }));
+      navigator.mediaSession.setActionHandler('nexttrack',     () => cb({ assetId: ASSET_ID, state: 'nextTrack'     }));
+      navigator.mediaSession.setActionHandler('previoustrack', () => cb({ assetId: ASSET_ID, state: 'previousTrack' }));
+    }
+
+    return Promise.resolve({
+      remove: () => {
+        a.removeEventListener('play',  onPlay);
+        a.removeEventListener('pause', onPause);
+        a.removeEventListener('ended', onEnded);
+        if ('mediaSession' in navigator) {
+          (['play', 'pause', 'nexttrack', 'previoustrack'] as MediaSessionAction[])
+            .forEach(action => navigator.mediaSession.setActionHandler(action, null));
+        }
+      },
+    });
+  }
+
+  return Promise.resolve({ remove: () => {} });
+};
+
+// ─── Unified backend ──────────────────────────────────────────────────────────
+export const backend = IS_NATIVE
+  ? {
+      configure:      NativeAudio.configure.bind(NativeAudio),
+      preload:        NativeAudio.preload.bind(NativeAudio),
+      play:           NativeAudio.play.bind(NativeAudio),
+      pause:          NativeAudio.pause.bind(NativeAudio),
+      resume:         NativeAudio.resume.bind(NativeAudio),
+      stop:           NativeAudio.stop.bind(NativeAudio),
+      unload:         NativeAudio.unload.bind(NativeAudio),
+      setCurrentTime: NativeAudio.setCurrentTime.bind(NativeAudio),
+      setVolume:      NativeAudio.setVolume.bind(NativeAudio),
+      getDuration:    NativeAudio.getDuration.bind(NativeAudio),
+      getCurrentTime: NativeAudio.getCurrentTime.bind(NativeAudio),
+      addListener:    NativeAudio.addListener.bind(NativeAudio),
+    }
+  : {
+      configure:      webConfigure,
+      preload:        webPreload,
+      play:           webPlay,
+      pause:          webPause,
+      resume:         webResume,
+      stop:           webStop,
+      unload:         webUnload,
+      setCurrentTime: webSeek,
+      setVolume:      webVolume,
+      getDuration:    webDuration,
+      getCurrentTime: webCurrentTime,
+      addListener:    webAddListener,
+    };
