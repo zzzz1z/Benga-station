@@ -6,7 +6,6 @@ import useAuthModal from '@/hooks/useAuthModal';
 import { useUser } from '@/hooks/useUser';
 import YTSearchItem, { YTResult } from '@/app/search/components/YTSearchItem';
 
-const EXTRACT_TIMEOUT_MS = 30000;
 const EXTRACT_RETRY_TIMEOUT_MS = 45000;
 
 const preExtract = async (videoId: string, signal?: AbortSignal): Promise<boolean> => {
@@ -61,8 +60,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     const phraseTimerRef = useRef<NodeJS.Timeout | null>(null);
     const phraseIndexRef = useRef(0);
     const availableIdsRef = useRef<Set<string>>(new Set());
-    const stuckTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-    const scheduledIdsRef = useRef<Set<string>>(new Set());
     const isFetchingMoreRef = useRef(false);
     const nextPageTokenRef = useRef<string | null>(null);
     const currentQueryRef = useRef<string>('');
@@ -84,62 +81,9 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         setBannerPhrase(null);
     };
 
-    const clearStuckTimers = () => {
-        stuckTimersRef.current.forEach(t => clearTimeout(t));
-        stuckTimersRef.current.clear();
-    };
-
     useEffect(() => {
-        return () => {
-            stopPhraseCycle();
-            clearStuckTimers();
-        };
+        return () => { stopPhraseCycle(); };
     }, []);
-
-    const markUnavailable = useCallback((videoId: string) => {
-        setUnavailableIds(prev => new Set([...prev, videoId]));
-        setLoadingIds(prev => {
-            const next = new Set(prev);
-            next.delete(videoId);
-            return next;
-        });
-        stuckTimersRef.current.delete(videoId);
-    }, []);
-
-    const scheduleStuckCheck = useCallback((videoId: string, completedCountRef: { value: number }, total: number) => {
-        if (scheduledIdsRef.current.has(videoId)) return;
-        scheduledIdsRef.current.add(videoId);
-
-        const t = setTimeout(async () => {
-            if (!availableIdsRef.current.has(videoId)) {
-                const retryAbort = new AbortController();
-                const retryTimeout = setTimeout(() => retryAbort.abort(), EXTRACT_RETRY_TIMEOUT_MS);
-                const success = await preExtract(videoId, retryAbort.signal);
-                clearTimeout(retryTimeout);
-
-                if (success) {
-                    availableIdsRef.current.add(videoId);
-                    setReadyIds(prev => new Set([...prev, videoId]));
-                    setLoadingIds(prev => {
-                        const next = new Set(prev);
-                        next.delete(videoId);
-                        return next;
-                    });
-                } else {
-                    markUnavailable(videoId);
-                }
-
-                completedCountRef.value++;
-                if (completedCountRef.value === total) {
-                    stopPhraseCycle();
-                    setAllReady(true);
-                }
-            }
-            stuckTimersRef.current.delete(videoId);
-        }, EXTRACT_TIMEOUT_MS);
-
-        stuckTimersRef.current.set(videoId, t);
-    }, [markUnavailable]);
 
     const fetchMoreAndAppend = useCallback(async () => {
         if (isFetchingMoreRef.current) return;
@@ -170,9 +114,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             const available = extractResults.filter(x => x.ok).map(x => x.r);
             if (!available.length) return;
 
-            available.forEach(r => {
-                availableIdsRef.current.add(r.videoId);
-            });
+            available.forEach(r => { availableIdsRef.current.add(r.videoId); });
             setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
             setResults(prev => [...prev, ...newResults]);
 
@@ -188,7 +130,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             }));
 
             usePlayer.getState().appendToQueue(newSongs as any);
-
         } catch (err) {
             console.error('fetchMoreAndAppend error:', err);
         } finally {
@@ -202,9 +143,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         const currentIndex = playerIds.findIndex(id => id === activeID);
         if (currentIndex === -1) return;
         const songsLeft = playerIds.length - 1 - currentIndex;
-        if (songsLeft <= 2) {
-            fetchMoreAndAppend();
-        }
+        if (songsLeft <= 2) fetchMoreAndAppend();
     }, [activeID, playerIds, fetchMoreAndAppend]);
 
     useEffect(() => {
@@ -215,12 +154,10 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             setUnavailableIds(new Set());
             setAllReady(false);
             availableIdsRef.current = new Set();
-            scheduledIdsRef.current = new Set();
             nextPageTokenRef.current = null;
             currentQueryRef.current = '';
             isFetchingMoreRef.current = false;
             stopPhraseCycle();
-            clearStuckTimers();
             return;
         }
 
@@ -228,17 +165,16 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         abortRef.current = new AbortController();
         extractAbortRef.current = new AbortController();
 
+        setResults([]);
         setReadyIds(new Set());
         setLoadingIds(new Set());
         setUnavailableIds(new Set());
         setAllReady(false);
         availableIdsRef.current = new Set();
-        scheduledIdsRef.current = new Set();
         nextPageTokenRef.current = null;
         currentQueryRef.current = query;
         isFetchingMoreRef.current = false;
         stopPhraseCycle();
-        clearStuckTimers();
 
         const doSearch = async () => {
             setIsSearching(true);
@@ -264,47 +200,42 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
                 setLoadingIds(new Set(fetchedResults.map(r => r.videoId)));
                 startPhraseCycle();
 
-                const total = fetchedResults.length;
-                const completedCountRef = { value: 0 };
+                const processSequentially = async () => {
+                    let completed = 0;
+                    for (const result of fetchedResults) {
+                        if (extractAbortRef.current?.signal.aborted) break;
 
-                fetchedResults.forEach(result => {
-                    if (extractAbortRef.current?.signal.aborted) return;
+                        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
 
-                    scheduleStuckCheck(result.videoId, completedCountRef, total);
+                        if (success) {
+                            availableIdsRef.current.add(result.videoId);
+                            setReadyIds(prev => new Set([...prev, result.videoId]));
+                        } else {
+                            setUnavailableIds(prev => new Set([...prev, result.videoId]));
+                        }
 
-                    preExtract(result.videoId, extractAbortRef.current?.signal)
-                        .then(success => {
-                            const t = stuckTimersRef.current.get(result.videoId);
-                            if (t) {
-                                clearTimeout(t);
-                                stuckTimersRef.current.delete(result.videoId);
-                            }
-
-                            if (success) {
-                                availableIdsRef.current.add(result.videoId);
-                                setReadyIds(prev => new Set([...prev, result.videoId]));
-                            } else {
-                                setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                            }
-                            setLoadingIds(prev => {
-                                const next = new Set(prev);
-                                next.delete(result.videoId);
-                                return next;
-                            });
-                        })
-                        .finally(() => {
-                            completedCountRef.value++;
-                            if (completedCountRef.value === total) {
-                                stopPhraseCycle();
-                                setAllReady(true);
-                            }
+                        setLoadingIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(result.videoId);
+                            return next;
                         });
-                });
+
+                        completed++;
+                        if (completed === fetchedResults.length) {
+                            stopPhraseCycle();
+                            setAllReady(true);
+                        }
+
+                        // Visible stagger between items
+                        await new Promise(r => setTimeout(r, 120));
+                    }
+                };
+
+                processSequentially();
 
             } catch (err: any) {
                 if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
                 stopPhraseCycle();
-                clearStuckTimers();
             } finally {
                 setIsSearching(false);
             }
@@ -316,9 +247,8 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             abortRef.current?.abort();
             extractAbortRef.current?.abort();
             stopPhraseCycle();
-            clearStuckTimers();
         };
-    }, [query, scheduleStuckCheck]);
+    }, [query]);
 
     const handlePlay = async (result: YTResult) => {
         if (!user) { authModal.onOpen('sign_up'); return; }
