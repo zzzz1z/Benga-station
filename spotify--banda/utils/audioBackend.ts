@@ -120,37 +120,34 @@ const webDuration    = async (_opts?: any) => ({ duration:    getAudio().duratio
 const webCurrentTime = async (_opts?: any) => ({ currentTime: getAudio().currentTime ?? 0 });
 
 const webAddListener = (event: string, cb: (data: any) => void) => {
-  const a = getAudio();
-
-  if (event === 'complete') {
-    const handler = () => cb({ assetId: ASSET_ID });
-    a.addEventListener('ended', handler);
-    return Promise.resolve({ remove: () => a.removeEventListener('ended', handler) });
-  }
-
   if (event === 'currentTime') {
-    // Polling drives the seekbar on web
     const interval = setInterval(() => {
-      if (a.paused || !a.src) return;
+      const current = getAudio();
+      if (current.paused || !current.src) return;
       cb({
         assetId:     ASSET_ID,
-        currentTime: a.currentTime,
-        duration:    isFinite(a.duration) ? a.duration : 0,
+        currentTime: current.currentTime,
+        duration:    isFinite(current.duration) ? current.duration : 0,
       });
     }, 500);
     return Promise.resolve({ remove: () => clearInterval(interval) });
   }
 
+  if (event === 'complete') {
+    const onEnded = () => cb({ assetId: ASSET_ID });
+    getAudio().addEventListener('ended', onEnded);
+    return Promise.resolve({ remove: () => getAudio().removeEventListener('ended', onEnded) });
+  }
+
   if (event === 'playbackState') {
-    // Mirror HTML audio events
     const onPlay  = () => cb({ assetId: ASSET_ID, state: 'playing'   });
     const onPause = () => cb({ assetId: ASSET_ID, state: 'paused'    });
     const onEnded = () => cb({ assetId: ASSET_ID, state: 'completed' });
-    a.addEventListener('play',  onPlay);
-    a.addEventListener('pause', onPause);
-    a.addEventListener('ended', onEnded);
 
-    // Wire lock screen / notification controls
+    getAudio().addEventListener('play',  onPlay);
+    getAudio().addEventListener('pause', onPause);
+    getAudio().addEventListener('ended', onEnded);
+
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play',          () => cb({ assetId: ASSET_ID, state: 'playing'       }));
       navigator.mediaSession.setActionHandler('pause',         () => cb({ assetId: ASSET_ID, state: 'paused'        }));
@@ -160,9 +157,9 @@ const webAddListener = (event: string, cb: (data: any) => void) => {
 
     return Promise.resolve({
       remove: () => {
-        a.removeEventListener('play',  onPlay);
-        a.removeEventListener('pause', onPause);
-        a.removeEventListener('ended', onEnded);
+        getAudio().removeEventListener('play',  onPlay);
+        getAudio().removeEventListener('pause', onPause);
+        getAudio().removeEventListener('ended', onEnded);
         if ('mediaSession' in navigator) {
           (['play', 'pause', 'nexttrack', 'previoustrack'] as MediaSessionAction[])
             .forEach(action => navigator.mediaSession.setActionHandler(action, null));
