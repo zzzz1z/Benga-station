@@ -100,7 +100,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
             nextPageTokenRef.current = data.nextPageToken ?? null;
 
-            const newResults: YTResult[] = data.results.slice(0, 20);
+            const newResults: YTResult[] = data.results.slice(0, 8);
 
             const extractResults = await Promise.all(
                 newResults.map(async r => {
@@ -193,7 +193,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
                 nextPageTokenRef.current = data.nextPageToken ?? null;
 
-                const fetchedResults: YTResult[] = (data.results || []).slice(0, 50);
+                const fetchedResults: YTResult[] = (data.results || []).slice(0, 8);
                 setResults(fetchedResults);
                 setLoadingIds(new Set(fetchedResults.map(r => r.videoId)));
                 startPhraseCycle();
@@ -247,6 +247,11 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             stopPhraseCycle();
         };
     }, [query]);
+
+  useEffect(() => {
+        return () => { stopPhraseCycle(); };
+    }, []); 
+
 
     const handlePlay = async (result: YTResult) => {
         if (!user) { authModal.onOpen('sign_up'); return; }
@@ -314,9 +319,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             </p>
         );
     }
-  useEffect(() => {
-        return () => { stopPhraseCycle(); };
-    }, []); 
 
     return (
         <div className="flex flex-col w-full">
