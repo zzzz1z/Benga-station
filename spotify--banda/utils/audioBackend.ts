@@ -34,7 +34,7 @@ const safePlay = async (a: HTMLAudioElement) => {
   }
 };
 
-// ─── Keepalive (keeps audio context alive when screen locks / app backgrounded)
+// ─── Keepalive ────────────────────────────────────────────────────────────────
 const SILENT_SRC = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU2LjQxAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAANVVV';
 let silentAudio: HTMLAudioElement | null = null;
 
@@ -55,6 +55,21 @@ const stopKeepalive = () => {
   }
 };
 
+// ─── Callback registry (survives audio element recreation) ───────────────────
+const _cbs: {
+  complete?: (data: any) => void;
+  playbackState?: (data: any) => void;
+} = {};
+
+const attachElementListeners = (a: HTMLAudioElement) => {
+  a.addEventListener('ended', () => {
+    _cbs.complete?.({ assetId: ASSET_ID });
+    _cbs.playbackState?.({ assetId: ASSET_ID, state: 'completed' });
+  });
+  a.addEventListener('play',  () => _cbs.playbackState?.({ assetId: ASSET_ID, state: 'playing' }));
+  a.addEventListener('pause', () => _cbs.playbackState?.({ assetId: ASSET_ID, state: 'paused'  }));
+};
+
 // ─── Web shims ────────────────────────────────────────────────────────────────
 
 const webConfigure = async (_opts?: any): Promise<void> => {};
@@ -63,6 +78,9 @@ const webPreload = async (opts: any): Promise<void> => {
   const a = getAudio();
   a.src = opts.assetPath;
   a.load();
+
+  // Re-attach on every song load so the new element always has listeners
+  attachElementListeners(a);
 
   if ('mediaSession' in navigator && opts.notificationMetadata) {
     const m = opts.notificationMetadata;
@@ -75,14 +93,8 @@ const webPreload = async (opts: any): Promise<void> => {
   }
 
   await new Promise<void>((resolve, reject) => {
-    const onReady = () => { cleanup(); resolve(); };
-    const onError = () => { cleanup(); reject(); };
-    const cleanup = () => {
-      a.removeEventListener('canplay', onReady);
-      a.removeEventListener('error',   onError);
-    };
-    a.addEventListener('canplay', onReady, { once: true });
-    a.addEventListener('error',   onError, { once: true });
+    a.addEventListener('canplay', () => resolve(), { once: true });
+    a.addEventListener('error',   () => reject(),  { once: true });
   });
 };
 
@@ -120,6 +132,11 @@ const webDuration    = async (_opts?: any) => ({ duration:    getAudio().duratio
 const webCurrentTime = async (_opts?: any) => ({ currentTime: getAudio().currentTime ?? 0 });
 
 const webAddListener = (event: string, cb: (data: any) => void) => {
+  if (event === 'complete') {
+    _cbs.complete = cb;
+    return Promise.resolve({ remove: () => { delete _cbs.complete; } });
+  }
+
   if (event === 'currentTime') {
     const interval = setInterval(() => {
       const current = getAudio();
@@ -133,20 +150,8 @@ const webAddListener = (event: string, cb: (data: any) => void) => {
     return Promise.resolve({ remove: () => clearInterval(interval) });
   }
 
-  if (event === 'complete') {
-    const onEnded = () => cb({ assetId: ASSET_ID });
-    getAudio().addEventListener('ended', onEnded);
-    return Promise.resolve({ remove: () => getAudio().removeEventListener('ended', onEnded) });
-  }
-
   if (event === 'playbackState') {
-    const onPlay  = () => cb({ assetId: ASSET_ID, state: 'playing'   });
-    const onPause = () => cb({ assetId: ASSET_ID, state: 'paused'    });
-    const onEnded = () => cb({ assetId: ASSET_ID, state: 'completed' });
-
-    getAudio().addEventListener('play',  onPlay);
-    getAudio().addEventListener('pause', onPause);
-    getAudio().addEventListener('ended', onEnded);
+    _cbs.playbackState = cb;
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play',          () => cb({ assetId: ASSET_ID, state: 'playing'       }));
@@ -157,9 +162,7 @@ const webAddListener = (event: string, cb: (data: any) => void) => {
 
     return Promise.resolve({
       remove: () => {
-        getAudio().removeEventListener('play',  onPlay);
-        getAudio().removeEventListener('pause', onPause);
-        getAudio().removeEventListener('ended', onEnded);
+        delete _cbs.playbackState;
         if ('mediaSession' in navigator) {
           (['play', 'pause', 'nexttrack', 'previoustrack'] as MediaSessionAction[])
             .forEach(action => navigator.mediaSession.setActionHandler(action, null));
