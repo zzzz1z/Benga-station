@@ -81,9 +81,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         setBannerPhrase(null);
     };
 
-    useEffect(() => {
-        return () => { stopPhraseCycle(); };
-    }, []);
 
     const fetchMoreAndAppend = useCallback(async () => {
         if (isFetchingMoreRef.current) return;
@@ -96,13 +93,14 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             const res = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
                 { signal: abortRef.current!.signal }
-            );
+  
+       );
             const data = await res.json();
             if (data.error || !data.results?.length) return;
 
             nextPageTokenRef.current = data.nextPageToken ?? null;
 
-            const newResults: YTResult[] = data.results.slice(0, 50);
+            const newResults: YTResult[] = data.results.slice(0, 20);
 
             const extractResults = await Promise.all(
                 newResults.map(async r => {
@@ -136,7 +134,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             isFetchingMoreRef.current = false;
         }
     }, []);
-
+    
     useEffect(() => {
         if (!activeID || !playerIds.length) return;
         if (isFetchingMoreRef.current) return;
@@ -195,7 +193,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
                 nextPageTokenRef.current = data.nextPageToken ?? null;
 
-                const fetchedResults: YTResult[] = (data.results || []).slice(0, 8);
+                const fetchedResults: YTResult[] = (data.results || []).slice(0, 50);
                 setResults(fetchedResults);
                 setLoadingIds(new Set(fetchedResults.map(r => r.videoId)));
                 startPhraseCycle();
@@ -316,6 +314,9 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             </p>
         );
     }
+  useEffect(() => {
+        return () => { stopPhraseCycle(); };
+    }, []); 
 
     return (
         <div className="flex flex-col w-full">
