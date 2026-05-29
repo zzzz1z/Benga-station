@@ -88,25 +88,31 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     setShowModal(true);
   };
 
-  const handleAddToPlaylist = async (playlistId: string) => {
-    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
-      method: 'POST',
-      body: JSON.stringify({
-        playlistId,
-        song: {
-          title: result.title,
-          author: result.artist,
-          source: 'youtube',
-          youtube_video_id: result.videoId,
-          image_path: result.thumbnail,
-        },
-      }),
-    });
-    if (res.status === 409) toast.error('Música já está na playlist');
-    else if (!res.ok) toast.error('Erro ao adicionar música');
-    else toast.success('Adicionado à playlist!');
-    setShowModal(false);
-  };
+const handleAddToPlaylist = async (playlistId: string) => {
+  // 1. Upsert the youtube song to get a real song_id
+  const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: result.title,
+      author: result.artist,
+      youtube_video_id: result.videoId,
+      image_path: result.thumbnail,
+    }),
+  });
+  const { id: song_id } = await upsertRes.json();
+  if (!song_id) { toast.error('Erro ao obter música'); return; }
+
+  // 2. Add to playlist with correct keys
+  const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+    method: 'POST',
+    body: JSON.stringify({ playlist_id: playlistId, song_id }),
+  });
+
+  if (res.status === 409) toast.error('Música já está na playlist');
+  else if (!res.ok) toast.error('Erro ao adicionar música');
+  else toast.success('Adicionado à playlist!');
+  setShowModal(false);
+};
 
   const handleInfo = async (e: React.MouseEvent) => {
     e.stopPropagation();

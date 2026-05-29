@@ -10,6 +10,7 @@ export interface ImportState {
   total: number;
   failed: number;
   playlistId?: string;
+  failedSongs: { title: string; artist: string }[];
 }
 
 const initialState: ImportState = {
@@ -18,30 +19,28 @@ const initialState: ImportState = {
   imported: 0,
   total: 0,
   failed: 0,
+  failedSongs: [],
 };
 
-export  function useImportPlaylist() {
+export function useImportPlaylist() {
   const [state, setState] = useState<ImportState>(initialState);
-
-
 
   const importPlaylist = useCallback(async (url: string) => {
     setState({ ...initialState, status: 'fetching', message: 'A iniciar...' });
 
-    try {  
+    try {
       const supabase = createClient();
-const { data: { session } } = await supabase.auth.getSession();
-const token = session?.access_token;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  },
-  body: JSON.stringify({ url }),
-});
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ url }),
+      });
 
       if (!res.ok || !res.body) {
         setState(prev => ({ ...prev, status: 'error', message: 'Erro ao ligar ao servidor.' }));
@@ -62,24 +61,45 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/import-playlist`
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-
           const payload = line.slice(6);
-
-          // Sentinel — server signals clean end
-          if (payload === '[DONE]') {
-            reader.cancel();
-            return;
-          }
+          if (payload === '[DONE]') { reader.cancel(); return; }
 
           try {
             const event = JSON.parse(payload);
+
+            const isTerminal = event.status === 'done' || event.status === 'error';
+            const isStarting = event.status === 'starting';
+            const isFailed   = event.status === 'not_found' || event.status === 'db_error' || event.status === 'error';
+            const isImported = event.status === 'imported';
+
             setState(prev => ({
               ...prev,
-              status: event.status ?? prev.status,
-              message: event.message ?? prev.message,
-              imported: event.imported ?? prev.imported,
-              total: event.total ?? prev.total,
-              failed: event.failed ?? prev.failed,
+              status: isTerminal ? event.status
+                    : isStarting ? 'matching'
+                    : (isImported || isFailed) ? 'progress'
+                    : event.status ?? prev.status,
+
+              message: isTerminal && event.status === 'done'
+                ? `Importadas ${event.imported ?? prev.imported} músicas!`
+                : isTerminal && event.status === 'error'
+                ? (event.error ?? 'Erro desconhecido.')
+                : isStarting
+                ? 'A corresponder músicas...'
+                : prev.message,
+
+              total:    event.total    ?? prev.total,
+              imported: isTerminal     ? (event.imported ?? prev.imported)
+                      : isImported     ? prev.imported + 1
+                      : prev.imported,
+
+              failed:   isTerminal     ? (event.failed ?? prev.failed)
+                      : isFailed       ? prev.failed + 1
+                      : prev.failed,
+
+              failedSongs: isFailed && event.title
+                ? [...prev.failedSongs, { title: event.title, artist: event.artist ?? '' }]
+                : prev.failedSongs,
+
               playlistId: event.playlistId ?? prev.playlistId,
             }));
           } catch {}

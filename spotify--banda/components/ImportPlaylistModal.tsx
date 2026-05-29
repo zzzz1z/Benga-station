@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { IoClose } from 'react-icons/io5';
@@ -19,9 +19,14 @@ function detectPlatform(url: string): 'spotify' | 'youtube' | null {
   return null;
 }
 
+const SUMMARY_TIMEOUT = 30;
+
 const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClose }) => {
   const [url, setUrl] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [countdown, setCountdown] = useState(SUMMARY_TIMEOUT);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { state, importPlaylist, reset } = useImportPlaylist();
   const router = useRouter();
 
@@ -36,10 +41,43 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
     ? Math.round((state.imported / state.total) * 100)
     : 0;
 
+  // When import finishes, show summary modal then reload
+  useEffect(() => {
+    if (!isDone) return;
+
+    setShowSummary(true);
+    setCountdown(SUMMARY_TIMEOUT);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          handleReload();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [isDone]);
+
+  const handleReload = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setShowSummary(false);
+    markDataStale();
+    onClose();
+    router.refresh();
+    window.location.reload();
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setTimeout(reset, 300);
       setUrl('');
+      setShowSummary(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     }
   }, [isOpen, reset]);
 
@@ -48,30 +86,67 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
     importPlaylist(url.trim());
   };
 
-  const handleDone = () => {
-    if (state.playlistId) {
-      router.push(`/playlists/${state.playlistId}`);
-      markDataStale();
-      router.refresh();
-    }
-    onClose();
-  };
-
   if (!mounted || !isOpen) return null;
+
+  // Summary modal shown after done
+  if (showSummary) {
+    return createPortal(
+      <div className="fixed inset-0 flex items-end sm:items-center justify-center" style={{ zIndex: 9999 }}>
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        <div className="relative w-full sm:max-w-md bg-neutral-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col gap-y-4" style={{ zIndex: 10000 }}>
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-white font-bold text-lg">Importação concluída</h2>
+            <button onClick={handleReload} className="text-neutral-400 hover:text-white transition">
+              <IoClose size={22} />
+            </button>
+          </div>
+
+          <div className="flex gap-x-6 text-sm">
+            <div className="flex flex-col items-center gap-y-1">
+              <span className="text-2xl font-black text-white">{state.imported}</span>
+              <span className="text-neutral-500 text-xs">importadas</span>
+            </div>
+            {state.failed > 0 && (
+              <div className="flex flex-col items-center gap-y-1">
+                <span className="text-2xl font-black text-red-400">{state.failed}</span>
+                <span className="text-neutral-500 text-xs">falharam</span>
+              </div>
+            )}
+          </div>
+
+          {state.failedSongs.length > 0 && (
+            <div className="flex flex-col gap-y-1 max-h-48 overflow-y-auto">
+              <p className="text-neutral-500 text-xs uppercase tracking-widest mb-1">Não encontradas</p>
+              {state.failedSongs.map((s, i) => (
+                <div key={i} className="flex flex-col px-3 py-2 bg-neutral-800 rounded-lg">
+                  <span className="text-white text-sm font-medium truncate">{s.title}</span>
+                  <span className="text-neutral-500 text-xs truncate">{s.artist}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={handleReload}
+            className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-neutral-200 active:scale-95 transition"
+          >
+            Ver Playlist ({countdown}s)
+          </button>
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   const modal = (
     <div className="fixed inset-0 flex items-end sm:items-center justify-center" style={{ zIndex: 9999 }}>
-      {/* Backdrop — covers everything including player */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={!isRunning ? onClose : undefined}
       />
+      <div className="relative w-full sm:max-w-md bg-neutral-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col gap-y-5" style={{ zIndex: 10000 }}>
 
-      {/* Modal panel */}
-      <div className="relative w-full sm:max-w-md bg-neutral-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col gap-y-5"
-        style={{ zIndex: 10000 }}>
-
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-white font-bold text-lg">Importar Playlist</h2>
           {!isRunning && (
@@ -81,7 +156,6 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
           )}
         </div>
 
-        {/* Idle / input state */}
         {!isRunning && !isDone && (
           <>
             <p className="text-neutral-400 text-sm">
@@ -124,7 +198,6 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
           </>
         )}
 
-        {/* Running state */}
         {isRunning && (
           <div className="flex flex-col gap-y-4">
             <p className="text-neutral-300 text-sm">{state.message}</p>
@@ -143,27 +216,6 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
             <p className="text-neutral-600 text-xs text-center">
               Não feches esta janela enquanto importa...
             </p>
-          </div>
-        )}
-
-        {/* Done state */}
-        {isDone && (
-          <div className="flex flex-col gap-y-4 items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-              <span className="text-2xl">✓</span>
-            </div>
-            <p className="text-white font-semibold">{state.message}</p>
-            {state.failed > 0 && (
-              <p className="text-neutral-500 text-xs">
-                {state.failed} músicas não foram encontradas no YouTube.
-              </p>
-            )}
-            <button
-              onClick={handleDone}
-              className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-neutral-200 active:scale-95 transition"
-            >
-              Ver Playlist
-            </button>
           </div>
         )}
       </div>
