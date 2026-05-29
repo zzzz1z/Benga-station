@@ -102,7 +102,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
             nextPageTokenRef.current = data.nextPageToken ?? null;
 
-            const newResults: YTResult[] = data.results.slice(0, 8);
+            const newResults: YTResult[] = data.results.slice(0, 50);
 
             const extractResults = await Promise.all(
                 newResults.map(async r => {
