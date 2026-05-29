@@ -99,20 +99,25 @@ const handleAddToPlaylist = async (playlistId: string) => {
       image_path: result.thumbnail,
     }),
   });
-  const { id: song_id } = await upsertRes.json();
-  if (!song_id) { toast.error('Erro ao obter música'); return; }
-
+const { id: song_id } = await upsertRes.json();
+console.log('upsert result:', { song_id, status: upsertRes.status });
   // 2. Add to playlist with correct keys
   const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
     method: 'POST',
     body: JSON.stringify({ playlist_id: playlistId, song_id }),
   });
 
+  
+
   if (res.status === 409) toast.error('Música já está na playlist');
   else if (!res.ok) toast.error('Erro ao adicionar música');
   else toast.success('Adicionado à playlist!');
   setShowModal(false);
+
+  
 };
+
+
 
   const handleInfo = async (e: React.MouseEvent) => {
     e.stopPropagation();
