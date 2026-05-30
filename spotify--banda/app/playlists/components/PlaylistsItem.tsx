@@ -19,8 +19,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ data, onClick }) => {
     const router = useRouter();
 
     const handleClick = () => {
-        router.push(`/playlists/${data?.id}`);
-        if (onClick) onClick(data.id);
+router.push(`/playlists?id=${data?.id}`);        if (onClick) onClick(data.id);
     };
 
     return (

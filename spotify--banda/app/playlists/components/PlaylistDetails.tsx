@@ -15,6 +15,7 @@ import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
 import useOnPlay from '@/hooks/useOnPlay';
 import { useRefresh } from '@/hooks/useRefresh';
 import PlaySongsFromPlaylist from './playSongsFromPlaylist';
+import Header from '@/components/Header';
 
 const supabase = createClient();
 
@@ -146,6 +147,9 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
   if (!playlist) return <div className="p-20 text-white">Playlist não encontrada.</div>;
 
   return (
+
+    <>
+    <Header />
     <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative z-0">
       <div className="relative overflow-hidden" style={{ isolation: 'isolate' }}>
         <div className="absolute inset-0 pointer-events-none z-0"
@@ -240,13 +244,12 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
               <MediaItem
                 key={song.id}
                 data={song}
-                onClick={() => onPlay(getSongPlayerId(song), songs)}
-              />
+                onClick={() => onPlay(getSongPlayerId(song), songs)} />
             ))}
           </ul>
         )}
       </div>
-    </div>
+    </div></>
   );
 };
 
