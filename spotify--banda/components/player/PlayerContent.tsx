@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { Song } from "@/types";
 import useLoadImage from "@/hooks/useLoadImage";
-import LikedButton from "./LikedButton";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { HiSpeakerWave, HiSpeakerXMark, HiSignal } from "react-icons/hi2";
-import Slider from "./Slider";
-import MusicSlider from "./MusicSlider";
 import Image from "next/image";
-import SessionPanel from "./SessionPanel";
 import { SessionInfo } from "@/hooks/useSession";
 import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
+import LikedButton from '../LikedButton';
+import MusicSlider from '../MusicSlider';
+import SessionPanel from '../SessionPanel';
+import Slider from '../Slider';
 
 interface PlayerContentProps {
   song: Song;

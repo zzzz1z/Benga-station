@@ -224,8 +224,8 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
       </div>
 
       <div className="flex justify-center md:justify-start items-center gap-4 px-8 py-6">
-        <PlaySongsFromPlaylist songs={songs} />
-        <ShuffleSongs songs={songs} />
+<PlaySongsFromPlaylist songs={songs} playlistId={String(playlist.id)} playlistName={playlist.title} />
+<ShuffleSongs songs={songs} playlistId={String(playlist.id)} playlistName={playlist.title} />
         <div className="h-8 w-px bg-neutral-800 mx-2" />
         <AddNewSongs playlistId={playlist.id} refreshPlaylist={fetchPlaylist} />
         <DeletePlaylist data={playlist} />

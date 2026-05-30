@@ -2,8 +2,6 @@
 
 import { Song } from "@/types";
 import usePlayer from "@/hooks/usePlayer";
-import LikedButton from "./LikedButton";
-import MusicSlider from "./MusicSlider";
 import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
@@ -14,8 +12,10 @@ import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useCallback, useEffect } from "react";
-import LyricsFlipCard from "./LyricsFlipCard";
 import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
+import LikedButton from "../LikedButton";
+import MusicSlider from "../MusicSlider";
+import LyricsFlipCard from "./LyricsFlipCard";
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -102,6 +102,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   onPlay, onNext, onPrevious, onSeek, onClose,
   queueStatus, queueFetchMore,
 }) => {
+  const queueContext = usePlayer(s => s.queueContext);
   const router = useRouter();
   const imageUrl = useLoadImage(song);
 
@@ -299,10 +300,16 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
             <IoChevronDown size={28} />
           </button>
 
-          <div className="flex flex-col items-center gap-y-0.5">
-            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">A tocar agora</p>
-            <p className="text-white font-black uppercase tracking-tight truncate max-w-[180px] text-sm">{song.title}</p>
-          </div>
+<div className="flex flex-col items-center gap-y-0.5">
+  <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
+    {queueContext.source === 'playlist' && queueContext.playlistName
+      ? `▶ ${queueContext.playlistName}`
+      : queueContext.source === 'search' && queueContext.searchQuery
+      ? `⌕ ${queueContext.searchQuery}`
+      : 'A tocar agora'}
+  </p>
+  <p className="text-white font-black uppercase tracking-tight truncate max-w-[180px] text-sm">{song.title}</p>
+</div>
 
           <button
             onClick={handleClose}

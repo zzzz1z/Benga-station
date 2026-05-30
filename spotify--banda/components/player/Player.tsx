@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import useLoadSongUrl from "@/hooks/useLoadSongUrl";
 import usePlayer, { loadFromSession } from "@/hooks/usePlayer";
-import PlayerContent from "./PlayerContent";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
 import { useQueueExtender } from '@/hooks/useQueueExtender';
 import { preextractWindow } from "@/utils/player";
 import { backend as NativeAudio } from '@/utils/audioBackend';
+import PlayerContent from "./PlayerContent";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 

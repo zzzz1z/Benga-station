@@ -3,6 +3,15 @@ import { create } from 'zustand';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
+export type QueueSource = 'playlist' | 'home' | 'search';
+
+export interface QueueContext {
+  source: QueueSource;
+  playlistId?: string;
+  playlistName?: string;
+  searchQuery?: string;
+}
+
 interface PlayerStore {
   ids: string[];
   originalIds: string[];
@@ -12,9 +21,10 @@ interface PlayerStore {
   failedIds: Set<string>;
   shuffleOn: boolean;
   repeatMode: RepeatMode;
+  queueContext: QueueContext;
   setId: (id: string) => void;
   setIds: (ids: string[]) => void;
-  setQueue: (songs: Song[], startId?: string) => void;
+  setQueue: (songs: Song[], startId?: string, context?: QueueContext) => void;
   appendToQueue: (songs: Song[]) => void;
   reset: () => void;
   playNext: () => void;
@@ -61,6 +71,7 @@ const saveToSession = (state: {
   activeID?: string;
   shuffleOn: boolean;
   repeatMode: RepeatMode;
+  queueContext: QueueContext;
 }) => {
   try { sessionStorage.setItem(SS_KEY, JSON.stringify(state)); } catch (_) {}
 };
@@ -72,6 +83,7 @@ export const loadFromSession = (): {
   activeID?: string;
   shuffleOn: boolean;
   repeatMode: RepeatMode;
+  queueContext?: QueueContext;
 } | null => {
   try {
     const raw = sessionStorage.getItem(SS_KEY);
@@ -79,6 +91,8 @@ export const loadFromSession = (): {
     return JSON.parse(raw);
   } catch (_) { return null; }
 };
+
+const DEFAULT_CONTEXT: QueueContext = { source: 'home' };
 
 const usePlayer = create<PlayerStore>((set, get) => ({
   ids: [],
@@ -89,6 +103,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
   failedIds: new Set(),
   shuffleOn: false,
   repeatMode: 'off',
+  queueContext: DEFAULT_CONTEXT,
 
   setId: (id) => {
     set({ activeID: id });
@@ -100,6 +115,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       activeID: id,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
@@ -113,10 +129,11 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       activeID: s.activeID,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
-  setQueue: (songs, startId) => {
+  setQueue: (songs, startId, context) => {
     if (!songs.length) return;
     const songMap = songs.reduce<Record<string, Song>>((acc, song) => {
       acc[getSongPlayerId(song)] = song;
@@ -125,17 +142,17 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     const ids = songs.map(getSongPlayerId);
     const activeID = startId ?? ids[0];
     const { shuffleOn, repeatMode } = get();
+    const newContext = context ?? DEFAULT_CONTEXT;
 
     let finalIds = ids;
     if (shuffleOn) {
-      // New queue with shuffle on — put start song first, shuffle the rest
       const rest = ids.filter(id => id !== activeID);
       finalIds = [activeID, ...shuffleArray(rest)];
     }
 
-    set({ ids: finalIds, originalIds: ids, songs: songMap, activeID });
+    set({ ids: finalIds, originalIds: ids, songs: songMap, activeID, queueContext: newContext });
     preExtractQueue(finalIds.slice(0, 5));
-    saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode });
+    saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode, queueContext: newContext });
   },
 
   appendToQueue: (songs) => {
@@ -164,11 +181,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       activeID: s.activeID,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
   reset: () => {
-    set({ ids: [], originalIds: [], songs: {}, activeID: undefined, failedIds: new Set() });
+    set({ ids: [], originalIds: [], songs: {}, activeID: undefined, failedIds: new Set(), queueContext: DEFAULT_CONTEXT });
     try { sessionStorage.removeItem(SS_KEY); } catch (_) {}
   },
 
@@ -186,6 +204,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       activeID: s.activeID,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
@@ -194,8 +213,6 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     const currentIndex = ids.indexOf(activeID ?? '');
 
     if (value) {
-      // Keep songs up to and including current untouched
-      // Shuffle only songs after current
       const before = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
       const after = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
       const shuffledAfter = shuffleArray(after);
@@ -212,28 +229,24 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         activeID: s.activeID,
         shuffleOn: true,
         repeatMode: s.repeatMode,
+        queueContext: s.queueContext,
       });
     } else {
-      // Restore original order, find current song, keep it as active
-const originalIndex = originalIds.indexOf(activeID ?? '');
-const restored = originalIndex >= 0 ? [...originalIds] : originalIds;
+      const originalIndex = originalIds.indexOf(activeID ?? '');
+      const restored = originalIndex >= 0 ? [...originalIds] : originalIds;
 
-set({ shuffleOn: false, ids: restored, activeID: activeID ?? undefined });
-const s = get();
-saveToSession({
-  ids: restored,
-  originalIds: s.originalIds,
-  songs: s.songs,
-  activeID: activeID ?? undefined,
-  shuffleOn: false,
-  repeatMode: s.repeatMode,
-});
-
-      console.log('originalIds', originalIds);
-console.log('restored', restored);
+      set({ shuffleOn: false, ids: restored, activeID: activeID ?? undefined });
+      const s = get();
+      saveToSession({
+        ids: restored,
+        originalIds: s.originalIds,
+        songs: s.songs,
+        activeID: activeID ?? undefined,
+        shuffleOn: false,
+        repeatMode: s.repeatMode,
+        queueContext: s.queueContext,
+      });
     }
-
-    
   },
 
   setRepeatMode: (mode) => {
@@ -246,6 +259,7 @@ console.log('restored', restored);
       activeID: s.activeID,
       shuffleOn: s.shuffleOn,
       repeatMode: mode,
+      queueContext: s.queueContext,
     });
   },
 
@@ -272,6 +286,7 @@ console.log('restored', restored);
         activeID: nextId,
         shuffleOn: s.shuffleOn,
         repeatMode: s.repeatMode,
+        queueContext: s.queueContext,
       });
       return;
     }
@@ -287,6 +302,7 @@ console.log('restored', restored);
       activeID: nextId,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
@@ -304,6 +320,7 @@ console.log('restored', restored);
       activeID: prevId,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 
@@ -323,6 +340,7 @@ console.log('restored', restored);
       activeID: randomId,
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
+      queueContext: s.queueContext,
     });
   },
 

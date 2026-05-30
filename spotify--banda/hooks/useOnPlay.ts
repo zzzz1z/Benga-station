@@ -1,5 +1,5 @@
 import { Song } from "@/types";
-import usePlayer from "./usePlayer";
+import usePlayer, { QueueContext } from "./usePlayer";
 import useAuthModal from "./useAuthModal";
 import { useUser } from "./useUser";
 
@@ -9,7 +9,7 @@ export const getSongPlayerId = (song: Song): string =>
     : String(song.id);
 
 const preExtractSong = (videoId: string): void => {
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoId }),
@@ -22,7 +22,7 @@ const useOnPlay = (defaultSongs?: Song[]) => {
   const authModal = useAuthModal();
   const { user } = useUser();
 
-  const onPlay = (id: string, callSongs?: Song[]) => {
+  const onPlay = (id: string, callSongs?: Song[], context?: QueueContext) => {
     if (!user) return authModal.onOpen('sign_up');
 
     const songs = callSongs ?? defaultSongs ?? [];
@@ -30,12 +30,11 @@ const useOnPlay = (defaultSongs?: Song[]) => {
     if (player.activeID === id) return;
 
     const tappedSong = songs.find(s => getSongPlayerId(s) === id);
-
     if (tappedSong?.source === 'youtube' && tappedSong.youtube_video_id) {
       preExtractSong(tappedSong.youtube_video_id);
     }
 
-    player.setQueue(songs, id);
+    player.setQueue(songs, id, context ?? { source: 'home' });
   };
 
   return onPlay;

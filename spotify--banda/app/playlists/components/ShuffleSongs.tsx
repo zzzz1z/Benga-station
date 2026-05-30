@@ -5,9 +5,12 @@ import { Song } from '@/types';
 import { CiShuffle } from 'react-icons/ci';
 import usePlayer from '@/hooks/usePlayer';
 import toast from 'react-hot-toast';
+import { QueueContext } from '@/hooks/usePlayer';
 
 interface ShuffleSongsProps {
   songs: Song[];
+  playlistId?: string;
+  playlistName?: string;
 }
 
 const getSongPlayerId = (song: Song): string =>
@@ -15,7 +18,7 @@ const getSongPlayerId = (song: Song): string =>
         ? `yt_${song.youtube_video_id}`
         : String(song.id);
 
-const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
+const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs, playlistId, playlistName }) => {
   const player = usePlayer();
 
   const handleShufflePlay = () => {
@@ -24,10 +27,14 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
       return;
     }
 
-    // Pick a truly random song to start from
     const randomIndex = Math.floor(Math.random() * songs.length);
     const startId = getSongPlayerId(songs[randomIndex]);
-    player.setQueue(songs, startId);
+    const context: QueueContext = {
+      source: 'playlist',
+      playlistId: playlistId ? String(playlistId) : undefined,
+      playlistName,
+    };
+    player.setQueue(songs, startId, context);
     player.setShuffleOn(true);
   };
 

@@ -287,8 +287,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
                 youtube_video_id: r.videoId,
             }));
 
-        player.setQueue(baseSongs as any, targetId);
-        setPlayingId(result.videoId);
+player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });        setPlayingId(result.videoId);
     };
 
     if (!query || query.trim().length < 2) {

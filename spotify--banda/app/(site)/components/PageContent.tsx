@@ -40,13 +40,13 @@ const PageContent: React.FC<PageContentProps> = ({ songs, allSongs }) => {
 
     if (activeID === clickedId) return;
 
-    if (ids.length > 0) {
-      const alreadyInQueue = ids.includes(clickedId);
-      if (!alreadyInQueue) player.appendToQueue([song]);
-      player.setId(clickedId);
-    } else {
-      player.setQueue(allSongs, clickedId);
-    }
+if (ids.length > 0) {
+  const alreadyInQueue = ids.includes(clickedId);
+  if (!alreadyInQueue) player.appendToQueue([song]);
+  player.setId(clickedId);
+} else {
+  player.setQueue(allSongs, clickedId, { source: 'home' });
+}
   };
 
   if (songs.length === 0) {
