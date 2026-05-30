@@ -10,6 +10,7 @@ export interface ImportState {
   total: number;
   failed: number;
   playlistId?: string;
+  playlistName?: string;
   failedSongs: { title: string; artist: string }[];
 }
 
@@ -84,23 +85,24 @@ export function useImportPlaylist() {
                 : isTerminal && event.status === 'error'
                 ? (event.error ?? 'Erro desconhecido.')
                 : isStarting
-                ? 'A corresponder músicas...'
+                ? `A importar "${event.playlistName ?? 'playlist'}"...`
                 : prev.message,
 
-              total:    event.total    ?? prev.total,
-              imported: isTerminal     ? (event.imported ?? prev.imported)
-                      : isImported     ? prev.imported + 1
+              total:    event.total ?? prev.total,
+              imported: isTerminal  ? (event.imported ?? prev.imported)
+                      : isImported  ? prev.imported + 1
                       : prev.imported,
 
-              failed:   isTerminal     ? (event.failed ?? prev.failed)
-                      : isFailed       ? prev.failed + 1
+              failed:   isTerminal  ? (event.failed ?? prev.failed)
+                      : isFailed    ? prev.failed + 1
                       : prev.failed,
 
               failedSongs: isFailed && event.title
                 ? [...prev.failedSongs, { title: event.title, artist: event.artist ?? '' }]
                 : prev.failedSongs,
 
-              playlistId: event.playlistId ?? prev.playlistId,
+              playlistId:   event.playlistId   ?? prev.playlistId,
+              playlistName: event.playlistName ?? prev.playlistName,
             }));
           } catch {}
         }

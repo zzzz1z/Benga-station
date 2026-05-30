@@ -41,7 +41,6 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
     ? Math.round((state.imported / state.total) * 100)
     : 0;
 
-  // When import finishes, show summary modal then reload
   useEffect(() => {
     if (!isDone) return;
 
@@ -88,7 +87,6 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
 
   if (!mounted || !isOpen) return null;
 
-  // Summary modal shown after done
   if (showSummary) {
     return createPortal(
       <div className="fixed inset-0 flex items-end sm:items-center justify-center" style={{ zIndex: 9999 }}>
@@ -96,7 +94,12 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
         <div className="relative w-full sm:max-w-md bg-neutral-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl p-6 flex flex-col gap-y-4" style={{ zIndex: 10000 }}>
 
           <div className="flex items-center justify-between">
-            <h2 className="text-white font-bold text-lg">Importação concluída</h2>
+            <div className="flex flex-col gap-y-0.5">
+              <h2 className="text-white font-bold text-lg">Importação concluída</h2>
+              {state.playlistName && (
+                <p className="text-neutral-500 text-xs truncate max-w-[280px]">{state.playlistName}</p>
+              )}
+            </div>
             <button onClick={handleReload} className="text-neutral-400 hover:text-white transition">
               <IoClose size={22} />
             </button>
