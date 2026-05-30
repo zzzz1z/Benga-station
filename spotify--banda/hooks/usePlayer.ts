@@ -193,31 +193,32 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     });
   },
 
-  setShuffleOn: (value) => {
+setShuffleOn: (value) => {
     const { ids, originalIds, activeID } = get();
+    const currentIndex = ids.indexOf(activeID ?? '');
 
     if (value) {
-      const preShuffleIds = [...ids];
-      const rest = ids.filter(id => id !== activeID);
-      const shuffled = activeID ? [activeID, ...shuffleArray(rest)] : shuffleArray(ids);
+      // Only shuffle songs AFTER current — played songs stay untouched
+      const played = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
+      const upcoming = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
+      const shuffledUpcoming = shuffleArray(upcoming);
+      const shuffled = [...played, ...shuffledUpcoming];
 
-      set({ shuffleOn: true, ids: shuffled, originalIds: preShuffleIds });
+      set({ shuffleOn: true, ids: shuffled, originalIds: ids });
 
-      // Preextract full shuffled queue
-      preExtractQueue(shuffled);
+      preExtractQueue(shuffledUpcoming);
 
       const s = get();
       saveToSession({
         ids: shuffled,
-        originalIds: preShuffleIds,
+        originalIds: ids,
         songs: s.songs,
         activeID: s.activeID,
         shuffleOn: true,
         repeatMode: s.repeatMode,
       });
     } else {
-      const currentIdx = ids.indexOf(activeID ?? '');
-      const played = currentIdx >= 0 ? ids.slice(0, currentIdx + 1) : (activeID ? [activeID] : []);
+      const played = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
       const playedSet = new Set(played);
       const remainingOriginal = originalIds.filter(id => !playedSet.has(id));
       const restored = [...played, ...remainingOriginal];
@@ -235,6 +236,32 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     }
   },
 
+  playRandom: () => {
+    const { ids, activeID } = get();
+    if (!ids.length) return;
+
+    // Only pick from upcoming songs, not already played ones
+    const currentIndex = ids.indexOf(activeID ?? '');
+    const upcoming = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
+
+    if (!upcoming.length) {
+      // Queue exhausted — nothing to play
+      return;
+    }
+
+    const idx = Math.floor(Math.random() * upcoming.length);
+    const randomId = upcoming[idx];
+    set({ activeID: randomId });
+    const s = get();
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: randomId,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
+  },
   setRepeatMode: (mode) => {
     set({ repeatMode: mode });
     const s = get();
@@ -307,24 +334,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     });
   },
 
-  playRandom: () => {
-    const { ids, activeID } = get();
-    if (!ids.length) return;
-    let idx: number;
-    do { idx = Math.floor(Math.random() * ids.length); }
-    while (ids.length > 1 && ids[idx] === activeID);
-    const randomId = ids[idx];
-    set({ activeID: randomId });
-    const s = get();
-    saveToSession({
-      ids: s.ids,
-      originalIds: s.originalIds,
-      songs: s.songs,
-      activeID: randomId,
-      shuffleOn: s.shuffleOn,
-      repeatMode: s.repeatMode,
-    });
-  },
+
 
   hasPrevious: () => {
     const { ids, activeID } = get();

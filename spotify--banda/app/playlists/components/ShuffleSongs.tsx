@@ -24,12 +24,11 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs }) => {
       return;
     }
 
-    // FIX: Don't pre-shuffle the array — pass original order and let the
-    // store's playRandom handle shuffle consistently with the expanded player.
-    // This means both shuffle buttons now use the same code path.
-    const firstId = getSongPlayerId(songs[0]);
-    player.setQueue(songs, firstId);
-    player.setShuffleOn(true); // store picks next song randomly via playRandom()
+    // Pick a truly random song to start from
+    const randomIndex = Math.floor(Math.random() * songs.length);
+    const startId = getSongPlayerId(songs[randomIndex]);
+    player.setQueue(songs, startId);
+    player.setShuffleOn(true);
   };
 
   return (
