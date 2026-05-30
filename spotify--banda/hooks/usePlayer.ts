@@ -215,21 +215,19 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       });
     } else {
       // Restore original order, find current song, keep it as active
-      const originalIndex = originalIds.indexOf(activeID ?? '');
-      const restored = originalIndex >= 0
-        ? originalIds
-        : [...(activeID ? [activeID] : []), ...originalIds.filter(id => id !== activeID)];
+const originalIndex = originalIds.indexOf(activeID ?? '');
+const restored = originalIndex >= 0 ? [...originalIds] : originalIds;
 
-      set({ shuffleOn: false, ids: restored });
-      const s = get();
-      saveToSession({
-        ids: restored,
-        originalIds: s.originalIds,
-        songs: s.songs,
-        activeID: s.activeID,
-        shuffleOn: false,
-        repeatMode: s.repeatMode,
-      });
+set({ shuffleOn: false, ids: restored, activeID: activeID ?? undefined });
+const s = get();
+saveToSession({
+  ids: restored,
+  originalIds: s.originalIds,
+  songs: s.songs,
+  activeID: activeID ?? undefined,
+  shuffleOn: false,
+  repeatMode: s.repeatMode,
+});
 
       console.log('originalIds', originalIds);
 console.log('restored', restored);

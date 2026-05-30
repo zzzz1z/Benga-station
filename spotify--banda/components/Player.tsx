@@ -24,12 +24,11 @@ const getArtworkUrl = (song: Song): string => {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/imagens/${song.image_path}`;
 };
 
-// ─── component ────────────────────────────────────────────────────────────────
+// ─── componen
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
-  const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
-
+  useQueueExtender({ enabled: true });
   // ── restore session on mount ───────────────────────────────────────────────
   useEffect(() => {
     const saved = loadFromSession();
@@ -327,12 +326,11 @@ const Player = () => {
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;
 
-  const sharedProps = {
-    song, isPlaying, isLoading, position, duration, volume,
-    onPlay: handlePlay, onNext: handleNext, onPrevious: handlePrevious,
-    onSeek: handleSeek, onVolumeChange: setVolume, onToggleMute: toggleMute,
-    queueStatus, queueFetchMore,
-  };
+const sharedProps = {
+  song, isPlaying, isLoading, position, duration, volume,
+  onPlay: handlePlay, onNext: handleNext, onPrevious: handlePrevious,
+  onSeek: handleSeek, onVolumeChange: setVolume, onToggleMute: toggleMute,
+};
 
   return (
     <>
