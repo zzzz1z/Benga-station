@@ -48,9 +48,9 @@ const PlaylistContent: React.FC<LikedPlaylistsProps> = ({ playlists: initialPlay
         return playlistModal.onOpen();
     };
 
-    const onPlaylistClick = (playlistId: string) => {
-        router.push(`/playlists/${playlistId}`);
-    };
+const onPlaylistClick = (playlistId: string) => {
+    router.push(`/playlists?id=${playlistId}`);
+};
 
     if (!mounted) return null;
 

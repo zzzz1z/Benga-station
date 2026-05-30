@@ -28,7 +28,7 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
 
   return (
     <div
-      onClick={() => router.push(`/playlists/${playlist.id}`)}
+      onClick={() => router.push(`/playlists?id=${playlist?.id}`)}
       className="flex items-center gap-x-3 p-2 cursor-pointer active:bg-red-500/5 transition border-l-2 border-transparent active:border-red-500 group"
     >
       <div className="relative w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 border border-red-900/20">
