@@ -1,17 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from "@/components/Header";
 import Image from "next/image";
 import ImportPlaylistButton from "@/components/ImportPlaylistButton";
 import PlaylistContent from "./components/PlaylistContent";
 import { createClient } from '@/utils/supabase/client';
 import { Playlist } from '@/types';
+import PlaylistDetails from './components/PlaylistDetails'
 
 const supabase = createClient();
 
 const PlaylistsPage = () => {
-const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get('id');
 
   useEffect(() => {
     supabase
@@ -20,6 +24,11 @@ const [playlists, setPlaylists] = useState<Playlist[]>([]);
       .order('created_at', { ascending: false })
       .then(({ data }) => setPlaylists(data ?? []));
   }, []);
+
+  // If ?id= is present, show that playlist directly
+if (selectedId) {
+  return <PlaylistDetails id={selectedId} />;
+}
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
@@ -42,7 +51,7 @@ const [playlists, setPlaylists] = useState<Playlist[]>([]);
             </div>
             <div className="flex flex-col gap-y-3 mt-4 md:mt-0 items-center md:items-start w-full">
               <p className="hidden md:block font-bold text-xs uppercase tracking-widest text-red-500">
-                ▶ Biblioteca
+                Biblioteca
               </p>
               <h1
                 className="text-white text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight"

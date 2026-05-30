@@ -62,14 +62,17 @@ const ImportPlaylistModal: React.FC<ImportPlaylistModalProps> = ({ isOpen, onClo
     };
   }, [isDone]);
 
-  const handleReload = () => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    setShowSummary(false);
-    markDataStale();
-    onClose();
-    router.refresh();
+const handleReload = () => {
+  if (countdownRef.current) clearInterval(countdownRef.current);
+  setShowSummary(false);
+  markDataStale();
+  onClose();
+  if (state.playlistId) {
+    window.location.href = `/playlists?id=${state.playlistId}`;
+  } else {
     window.location.reload();
-  };
+  }
+};
 
   useEffect(() => {
     if (!isOpen) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
 import { Playlist } from '@/types';
@@ -37,8 +37,12 @@ const SkeletonRow = () => (
   </div>
 );
 
-const PlaylistDetails: React.FC = () => {
-  const { id } = useParams();
+const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
+  
+  
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const id = props.id ?? params?.id ?? searchParams.get('id');
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
