@@ -230,7 +230,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         shuffleOn: false,
         repeatMode: s.repeatMode,
       });
+
+      console.log('originalIds', originalIds);
+console.log('restored', restored);
     }
+
+    
   },
 
   setRepeatMode: (mode) => {
