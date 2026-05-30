@@ -45,7 +45,7 @@ const preExtractQueue = (ids: string[]) => {
     .filter(id => id.startsWith('yt_'))
     .map(id => id.slice(3));
   if (!videoIds.length) return;
-fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ videoIds }),
@@ -128,15 +128,13 @@ const usePlayer = create<PlayerStore>((set, get) => ({
 
     let finalIds = ids;
     if (shuffleOn) {
+      // New queue with shuffle on — put start song first, shuffle the rest
       const rest = ids.filter(id => id !== activeID);
       finalIds = [activeID, ...shuffleArray(rest)];
     }
 
     set({ ids: finalIds, originalIds: ids, songs: songMap, activeID });
-
-    // Preextract entire queue on the worker — fire and forget
-    preExtractQueue(finalIds);
-
+    preExtractQueue(finalIds.slice(0, 5));
     saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode });
   },
 
@@ -156,8 +154,6 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     const newOriginalIds = [...originalIds, ...newSongs.map(getSongPlayerId)];
 
     set({ songs: { ...currentSongs, ...addedMap }, ids: newIds, originalIds: newOriginalIds });
-
-    // Preextract newly appended songs too
     preExtractQueue(newSongs.map(getSongPlayerId));
 
     const s = get();
@@ -193,20 +189,20 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     });
   },
 
-setShuffleOn: (value) => {
+  setShuffleOn: (value) => {
     const { ids, originalIds, activeID } = get();
     const currentIndex = ids.indexOf(activeID ?? '');
 
     if (value) {
-      // Only shuffle songs AFTER current — played songs stay untouched
-      const played = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
-      const upcoming = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
-      const shuffledUpcoming = shuffleArray(upcoming);
-      const shuffled = [...played, ...shuffledUpcoming];
+      // Keep songs up to and including current untouched
+      // Shuffle only songs after current
+      const before = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
+      const after = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
+      const shuffledAfter = shuffleArray(after);
+      const shuffled = [...before, ...shuffledAfter];
 
       set({ shuffleOn: true, ids: shuffled, originalIds: ids });
-
-      preExtractQueue(shuffledUpcoming);
+      preExtractQueue(shuffledAfter.slice(0, 5));
 
       const s = get();
       saveToSession({
@@ -218,10 +214,11 @@ setShuffleOn: (value) => {
         repeatMode: s.repeatMode,
       });
     } else {
-      const played = currentIndex >= 0 ? ids.slice(0, currentIndex + 1) : (activeID ? [activeID] : []);
-      const playedSet = new Set(played);
-      const remainingOriginal = originalIds.filter(id => !playedSet.has(id));
-      const restored = [...played, ...remainingOriginal];
+      // Restore original order, find current song, keep it as active
+      const originalIndex = originalIds.indexOf(activeID ?? '');
+      const restored = originalIndex >= 0
+        ? originalIds
+        : [...(activeID ? [activeID] : []), ...originalIds.filter(id => id !== activeID)];
 
       set({ shuffleOn: false, ids: restored });
       const s = get();
@@ -236,32 +233,6 @@ setShuffleOn: (value) => {
     }
   },
 
-  playRandom: () => {
-    const { ids, activeID } = get();
-    if (!ids.length) return;
-
-    // Only pick from upcoming songs, not already played ones
-    const currentIndex = ids.indexOf(activeID ?? '');
-    const upcoming = currentIndex >= 0 ? ids.slice(currentIndex + 1) : ids;
-
-    if (!upcoming.length) {
-      // Queue exhausted — nothing to play
-      return;
-    }
-
-    const idx = Math.floor(Math.random() * upcoming.length);
-    const randomId = upcoming[idx];
-    set({ activeID: randomId });
-    const s = get();
-    saveToSession({
-      ids: s.ids,
-      originalIds: s.originalIds,
-      songs: s.songs,
-      activeID: randomId,
-      shuffleOn: s.shuffleOn,
-      repeatMode: s.repeatMode,
-    });
-  },
   setRepeatMode: (mode) => {
     set({ repeatMode: mode });
     const s = get();
@@ -276,14 +247,13 @@ setShuffleOn: (value) => {
   },
 
   playNext: () => {
-    const { ids, activeID, repeatMode, shuffleOn, playRandom, playCount } = get();
+    const { ids, activeID, repeatMode, playCount } = get();
 
     if (repeatMode === 'one' && activeID) {
       set({ playCount: playCount + 1 });
       return;
     }
-    if (!ids.length || activeID === undefined) { playRandom(); return; }
-    if (shuffleOn) { playRandom(); return; }
+    if (!ids.length || activeID === undefined) return;
 
     const currentIndex = ids.indexOf(activeID);
 
@@ -334,7 +304,24 @@ setShuffleOn: (value) => {
     });
   },
 
-
+  playRandom: () => {
+    const { ids, activeID } = get();
+    if (!ids.length) return;
+    let idx: number;
+    do { idx = Math.floor(Math.random() * ids.length); }
+    while (ids.length > 1 && ids[idx] === activeID);
+    const randomId = ids[idx];
+    set({ activeID: randomId });
+    const s = get();
+    saveToSession({
+      ids: s.ids,
+      originalIds: s.originalIds,
+      songs: s.songs,
+      activeID: randomId,
+      shuffleOn: s.shuffleOn,
+      repeatMode: s.repeatMode,
+    });
+  },
 
   hasPrevious: () => {
     const { ids, activeID } = get();
