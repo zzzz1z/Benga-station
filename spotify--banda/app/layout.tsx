@@ -1,5 +1,4 @@
 import './globals.css';
-import Player from '@/components/Player';
 import ToasterProvider from '@/hooks/ToasterProvider';
 import ModalProvider from '@/providers/ModalProvider';
 import UserProvider from '@/providers/userProvider';
@@ -11,6 +10,7 @@ import { RefreshProvider } from '@/hooks/useRefresh';
 import { PageTransitionProvider } from '@/providers/PageTransitionProvider';
 import KeepAlive from '@/components/KeepAlive';
 import AccessGuard from '@/components/AcessGuard';
+import Player from '@/components/player/Player';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
