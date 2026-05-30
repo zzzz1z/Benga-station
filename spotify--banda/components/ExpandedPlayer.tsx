@@ -8,13 +8,14 @@ import { BsPauseFill, BsPlayFill } from "react-icons/bs";
 import { AiFillStepBackward, AiFillStepForward } from "react-icons/ai";
 import { IoChevronDown, IoChevronUp } from "react-icons/io5";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import { TbRepeat, TbRepeatOnce, TbArrowsShuffle } from "react-icons/tb";
+import { TbRepeat, TbRepeatOnce, TbArrowsShuffle, TbDatabaseImport } from "react-icons/tb";
 import { MdDragHandle, MdClose } from "react-icons/md";
 import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useCallback, useEffect } from "react";
 import LyricsFlipCard from "./LyricsFlipCard";
+import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -30,7 +31,8 @@ interface ExpandedPlayerProps {
   onVolumeChange: (value: number) => void;
   onToggleMute: () => void;
   onClose: () => void;
-
+  queueStatus: QueueExtenderStatus;
+  queueFetchMore: () => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -98,7 +100,7 @@ const QueueRow = ({
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   song, isPlaying, isLoading, position, duration,
   onPlay, onNext, onPrevious, onSeek, onClose,
-
+  queueStatus, queueFetchMore,
 }) => {
   const router = useRouter();
   const imageUrl = useLoadImage(song);
@@ -415,6 +417,28 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
         <div className="flex-shrink-0">
        <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
         </div>
+
+        {/* Queue extender */}
+        {(queueStatus === 'fetching' || queueStatus === 'exhausted') && (
+          <div className="flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
+            {queueStatus === 'fetching' && (
+              <div className="flex items-center gap-x-3 px-4 py-3">
+                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                <span className="text-neutral-400 text-xs font-mono">A procurar mais músicas...</span>
+              </div>
+            )}
+            {queueStatus === 'exhausted' && (
+              <button onClick={queueFetchMore}
+                className="w-full flex items-center gap-x-3 px-4 py-3 active:bg-white/5 transition text-left">
+                <TbDatabaseImport size={18} className="text-red-400 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-white text-xs font-semibold">Fila a acabar</span>
+                  <span className="text-neutral-500 text-[10px]">Toca aqui para buscar mais músicas</span>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Queue */}
         {hasQueue && (

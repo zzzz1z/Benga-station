@@ -12,6 +12,7 @@ import MusicSlider from "./MusicSlider";
 import Image from "next/image";
 import SessionPanel from "./SessionPanel";
 import { SessionInfo } from "@/hooks/useSession";
+import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
 
 interface PlayerContentProps {
   song: Song;
@@ -28,13 +29,14 @@ interface PlayerContentProps {
   onToggleMute: () => void;
   onExpand: () => void;
   session: SessionInfo | null;
-
+  queueStatus: QueueExtenderStatus;
+  queueFetchMore: () => void;
 }
 
 const PlayerContent: React.FC<PlayerContentProps> = ({
   song, isPlaying, isLoading, position, duration, volume,
   onPlay, onNext, onPrevious, onSeek, onVolumeChange, onToggleMute, onExpand,
-  session
+  session, queueStatus, queueFetchMore,
 }) => {
   const imageUrl   = useLoadImage(song);
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
@@ -71,12 +73,23 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
     </button>
   );
 
+  const showBanner = queueStatus === 'fetching' || queueStatus === 'done';
 
   return (
     <>
       {showSession && <SessionPanel onClose={() => setShowSession(false)} />}
 
-
+      {showBanner && (
+        <div className={`absolute bottom-full left-0 right-0 flex items-center justify-center gap-x-2 py-1 px-3 text-[9px] font-mono uppercase tracking-widest pointer-events-none
+          ${queueStatus === 'fetching'
+            ? 'bg-neutral-950/90 text-red-400/80 border-t border-red-900/30'
+            : 'bg-neutral-950/90 text-green-400/80 border-t border-green-900/30'
+          }`}
+        >
+          {queueStatus === 'fetching' && (<><div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />A carregar mais músicas...</>)}
+          {queueStatus === 'done' && (<><div className="w-1.5 h-1.5 rounded-full bg-green-500" />Músicas adicionadas à fila</>)}
+        </div>
+      )}
 
       <div className="flex flex-col h-full justify-center relative">
         {/* top glow line */}
