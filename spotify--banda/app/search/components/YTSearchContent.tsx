@@ -135,14 +135,19 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         }
     }, []);
     
-    useEffect(() => {
-        if (!activeID || !playerIds.length) return;
-        if (isFetchingMoreRef.current) return;
-        const currentIndex = playerIds.findIndex(id => id === activeID);
-        if (currentIndex === -1) return;
-        const songsLeft = playerIds.length - 1 - currentIndex;
-        if (songsLeft <= 2) fetchMoreAndAppend();
-    }, [activeID, playerIds, fetchMoreAndAppend]);
+useEffect(() => {
+    if (!activeID || !playerIds.length) return;
+    if (isFetchingMoreRef.current) return;
+    
+    // Only extend if currently playing from search
+    const { queueContext } = usePlayer.getState();
+    if (queueContext.source !== 'search') return;
+    
+    const currentIndex = playerIds.findIndex(id => id === activeID);
+    if (currentIndex === -1) return;
+    const songsLeft = playerIds.length - 1 - currentIndex;
+    if (songsLeft <= 2) fetchMoreAndAppend();
+}, [activeID, playerIds, fetchMoreAndAppend]);
 
     useEffect(() => {
         if (!query || query.trim().length < 2) {

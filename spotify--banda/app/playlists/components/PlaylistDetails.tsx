@@ -12,7 +12,7 @@ import ShuffleSongs from './ShuffleSongs';
 import EditPlaylist from './EditPlaylist';
 import toast from 'react-hot-toast';
 import { MdOutlineAddPhotoAlternate } from 'react-icons/md';
-import useOnPlay from '@/hooks/useOnPlay';
+import useOnPlay, { getSongPlayerId } from '@/hooks/useOnPlay';
 import { useRefresh } from '@/hooks/useRefresh';
 import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import Header from '@/components/Header';
@@ -22,11 +22,7 @@ const supabase = createClient();
 const GAMER_CUT = "polygon(12% 0%, 100% 0%, 100% 88%, 88% 100%, 0% 100%, 0% 12%)";
 const BADGE_CUT = "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)";
 
-const getSongPlayerId = (song: any): string => {
-  if (!song) return '';
-  if (song.source === 'youtube' && song.youtube_video_id) return `yt_${song.youtube_video_id}`;
-  return String(song.id);
-};
+
 
 const SkeletonRow = () => (
   <div className="flex items-center gap-x-3 px-2 py-2 animate-pulse">

@@ -6,6 +6,7 @@ import { CiShuffle } from 'react-icons/ci';
 import usePlayer from '@/hooks/usePlayer';
 import toast from 'react-hot-toast';
 import { QueueContext } from '@/hooks/usePlayer';
+import { getSongPlayerId } from '@/hooks/useOnPlay';
 
 interface ShuffleSongsProps {
   songs: Song[];
@@ -13,10 +14,6 @@ interface ShuffleSongsProps {
   playlistName?: string;
 }
 
-const getSongPlayerId = (song: Song): string =>
-    song.source === 'youtube' && song.youtube_video_id
-        ? `yt_${song.youtube_video_id}`
-        : String(song.id);
 
 const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs, playlistId, playlistName }) => {
   const player = usePlayer();

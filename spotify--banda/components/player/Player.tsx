@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import useLoadSongUrl from "@/hooks/useLoadSongUrl";
-import usePlayer, { loadFromSession } from "@/hooks/usePlayer";
+import usePlayer, { DEFAULT_CONTEXT, loadFromSession } from "@/hooks/usePlayer";
 import ExpandedPlayer from "./ExpandedPlayer";
 import { Song } from "@/types";
 import { useSessionContext } from "@/providers/SessionContext";
@@ -34,14 +34,16 @@ const Player = () => {
   useEffect(() => {
     const saved = loadFromSession();
     if (saved?.activeID && saved.ids.length > 0) {
-      usePlayer.setState({
-        ids: saved.ids,
-        originalIds: saved.originalIds ?? saved.ids,
-        songs: saved.songs,
-        activeID: saved.activeID,
-        shuffleOn: saved.shuffleOn,
-        repeatMode: saved.repeatMode,
-      });
+usePlayer.setState({
+  ids: saved.ids,
+  originalIds: saved.originalIds ?? saved.ids,
+  songs: saved.songs,
+  activeID: saved.activeID,
+  shuffleOn: saved.shuffleOn,
+  repeatMode: saved.repeatMode,
+  queueContext: saved.queueContext ?? DEFAULT_CONTEXT,
+  history: saved.history ?? [],
+});
     }
     setIsMounted(true);
   }, []);

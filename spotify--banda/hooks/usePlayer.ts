@@ -1,5 +1,6 @@
 import { Song } from '@/types';
 import { create } from 'zustand';
+import { getSongPlayerId } from './useOnPlay';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
@@ -22,6 +23,7 @@ interface PlayerStore {
   shuffleOn: boolean;
   repeatMode: RepeatMode;
   queueContext: QueueContext;
+  history: string[];
   setId: (id: string) => void;
   setIds: (ids: string[]) => void;
   setQueue: (songs: Song[], startId?: string, context?: QueueContext) => void;
@@ -36,10 +38,6 @@ interface PlayerStore {
   setRepeatMode: (mode: RepeatMode) => void;
 }
 
-const getSongPlayerId = (song: Song): string =>
-  song.source === 'youtube' && song.youtube_video_id
-    ? `yt_${song.youtube_video_id}`
-    : String(song.id);
 
 const shuffleArray = <T,>(arr: T[]): T[] => {
   const a = [...arr];
@@ -64,6 +62,11 @@ const preExtractQueue = (ids: string[]) => {
 
 const SS_KEY = 'benga_player_state';
 
+const pushHistory = (history: string[], id: string): string[] => {
+  const next = [...history, id];
+  return next.length > 20 ? next.slice(-20) : next;
+};
+
 const saveToSession = (state: {
   ids: string[];
   originalIds: string[];
@@ -72,6 +75,7 @@ const saveToSession = (state: {
   shuffleOn: boolean;
   repeatMode: RepeatMode;
   queueContext: QueueContext;
+  history: string[];
 }) => {
   try { sessionStorage.setItem(SS_KEY, JSON.stringify(state)); } catch (_) {}
 };
@@ -84,6 +88,7 @@ export const loadFromSession = (): {
   shuffleOn: boolean;
   repeatMode: RepeatMode;
   queueContext?: QueueContext;
+  history?: string[];
 } | null => {
   try {
     const raw = sessionStorage.getItem(SS_KEY);
@@ -92,7 +97,7 @@ export const loadFromSession = (): {
   } catch (_) { return null; }
 };
 
-const DEFAULT_CONTEXT: QueueContext = { source: 'home' };
+export const DEFAULT_CONTEXT: QueueContext = { source: 'home' };
 
 const usePlayer = create<PlayerStore>((set, get) => ({
   ids: [],
@@ -104,9 +109,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
   shuffleOn: false,
   repeatMode: 'off',
   queueContext: DEFAULT_CONTEXT,
+  history: [],
 
   setId: (id) => {
-    set({ activeID: id });
+    const { activeID, history } = get();
+    const newHistory = activeID && activeID !== id ? pushHistory(history, activeID) : history;
+    set({ activeID: id, history: newHistory });
     const s = get();
     saveToSession({
       ids: s.ids,
@@ -116,6 +124,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
       queueContext: s.queueContext,
+      history: newHistory,
     });
   },
 
@@ -130,6 +139,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
       queueContext: s.queueContext,
+      history: s.history,
     });
   },
 
@@ -141,8 +151,11 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     }, {});
     const ids = songs.map(getSongPlayerId);
     const activeID = startId ?? ids[0];
-    const { shuffleOn, repeatMode } = get();
+    const { shuffleOn, repeatMode, activeID: prevActiveID, history } = get();
     const newContext = context ?? DEFAULT_CONTEXT;
+    const newHistory = prevActiveID && prevActiveID !== activeID
+      ? pushHistory(history, prevActiveID)
+      : history;
 
     let finalIds = ids;
     if (shuffleOn) {
@@ -150,9 +163,9 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       finalIds = [activeID, ...shuffleArray(rest)];
     }
 
-    set({ ids: finalIds, originalIds: ids, songs: songMap, activeID, queueContext: newContext });
+    set({ ids: finalIds, originalIds: ids, songs: songMap, activeID, queueContext: newContext, history: newHistory });
     preExtractQueue(finalIds.slice(0, 5));
-    saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode, queueContext: newContext });
+    saveToSession({ ids: finalIds, originalIds: ids, songs: songMap, activeID, shuffleOn, repeatMode, queueContext: newContext, history: newHistory });
   },
 
   appendToQueue: (songs) => {
@@ -182,11 +195,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
       queueContext: s.queueContext,
+      history: s.history,
     });
   },
 
   reset: () => {
-    set({ ids: [], originalIds: [], songs: {}, activeID: undefined, failedIds: new Set(), queueContext: DEFAULT_CONTEXT });
+    set({ ids: [], originalIds: [], songs: {}, activeID: undefined, failedIds: new Set(), queueContext: DEFAULT_CONTEXT, history: [] });
     try { sessionStorage.removeItem(SS_KEY); } catch (_) {}
   },
 
@@ -205,6 +219,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       shuffleOn: s.shuffleOn,
       repeatMode: s.repeatMode,
       queueContext: s.queueContext,
+      history: s.history,
     });
   },
 
@@ -230,6 +245,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         shuffleOn: true,
         repeatMode: s.repeatMode,
         queueContext: s.queueContext,
+        history: s.history,
       });
     } else {
       const originalIndex = originalIds.indexOf(activeID ?? '');
@@ -245,6 +261,7 @@ const usePlayer = create<PlayerStore>((set, get) => ({
         shuffleOn: false,
         repeatMode: s.repeatMode,
         queueContext: s.queueContext,
+        history: s.history,
       });
     }
   },
@@ -260,11 +277,12 @@ const usePlayer = create<PlayerStore>((set, get) => ({
       shuffleOn: s.shuffleOn,
       repeatMode: mode,
       queueContext: s.queueContext,
+      history: s.history,
     });
   },
 
   playNext: () => {
-    const { ids, activeID, repeatMode, playCount } = get();
+    const { ids, activeID, repeatMode, playCount, queueContext, history } = get();
 
     if (repeatMode === 'one' && activeID) {
       set({ playCount: playCount + 1 });
@@ -273,79 +291,91 @@ const usePlayer = create<PlayerStore>((set, get) => ({
     if (!ids.length || activeID === undefined) return;
 
     const currentIndex = ids.indexOf(activeID);
+    const newHistory = pushHistory(history, activeID);
 
     if (repeatMode === 'all') {
       const nextIndex = currentIndex === ids.length - 1 ? 0 : currentIndex + 1;
       const nextId = ids[nextIndex];
-      set({ activeID: nextId });
+      set({ activeID: nextId, history: newHistory });
       const s = get();
       saveToSession({
-        ids: s.ids,
-        originalIds: s.originalIds,
-        songs: s.songs,
-        activeID: nextId,
-        shuffleOn: s.shuffleOn,
-        repeatMode: s.repeatMode,
-        queueContext: s.queueContext,
+        ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+        activeID: nextId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+        queueContext: s.queueContext, history: newHistory,
+      });
+      return;
+    }
+
+    if (currentIndex === ids.length - 1 && queueContext.source === 'playlist') {
+      const nextId = ids[0];
+      set({ activeID: nextId, history: newHistory });
+      const s = get();
+      saveToSession({
+        ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+        activeID: nextId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+        queueContext: s.queueContext, history: newHistory,
       });
       return;
     }
 
     if (currentIndex === -1 || currentIndex === ids.length - 1) return;
     const nextId = ids[currentIndex + 1];
-    set({ activeID: nextId });
+    set({ activeID: nextId, history: newHistory });
     const s = get();
     saveToSession({
-      ids: s.ids,
-      originalIds: s.originalIds,
-      songs: s.songs,
-      activeID: nextId,
-      shuffleOn: s.shuffleOn,
-      repeatMode: s.repeatMode,
-      queueContext: s.queueContext,
+      ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+      activeID: nextId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+      queueContext: s.queueContext, history: newHistory,
     });
   },
 
   playPrevious: () => {
-    const { ids, activeID } = get();
+    const { ids, activeID, history } = get();
     if (!ids.length || !activeID) return;
-    const currentIndex = ids.indexOf(activeID);
-    const prevId = currentIndex <= 0 ? activeID : ids[currentIndex - 1];
-    set({ activeID: prevId });
+
+    if (history.length > 0) {
+      const newHistory = [...history];
+      const prevId = newHistory.pop()!;
+      set({ activeID: prevId, history: newHistory });
+      const s = get();
+      saveToSession({
+        ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+        activeID: prevId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+        queueContext: s.queueContext, history: newHistory,
+      });
+      return;
+    }
+
+    // No history — stay on current song
+    set({ activeID });
     const s = get();
     saveToSession({
-      ids: s.ids,
-      originalIds: s.originalIds,
-      songs: s.songs,
-      activeID: prevId,
-      shuffleOn: s.shuffleOn,
-      repeatMode: s.repeatMode,
-      queueContext: s.queueContext,
+      ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+      activeID, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+      queueContext: s.queueContext, history: s.history,
     });
   },
 
   playRandom: () => {
-    const { ids, activeID } = get();
+    const { ids, activeID, history } = get();
     if (!ids.length) return;
     let idx: number;
     do { idx = Math.floor(Math.random() * ids.length); }
     while (ids.length > 1 && ids[idx] === activeID);
     const randomId = ids[idx];
-    set({ activeID: randomId });
+    const newHistory = activeID ? pushHistory(history, activeID) : history;
+    set({ activeID: randomId, history: newHistory });
     const s = get();
     saveToSession({
-      ids: s.ids,
-      originalIds: s.originalIds,
-      songs: s.songs,
-      activeID: randomId,
-      shuffleOn: s.shuffleOn,
-      repeatMode: s.repeatMode,
-      queueContext: s.queueContext,
+      ids: s.ids, originalIds: s.originalIds, songs: s.songs,
+      activeID: randomId, shuffleOn: s.shuffleOn, repeatMode: s.repeatMode,
+      queueContext: s.queueContext, history: newHistory,
     });
   },
 
   hasPrevious: () => {
-    const { ids, activeID } = get();
+    const { history, ids, activeID } = get();
+    if (history.length > 0) return true;
     if (!ids.length || !activeID) return false;
     return ids.indexOf(activeID) > 0;
   },

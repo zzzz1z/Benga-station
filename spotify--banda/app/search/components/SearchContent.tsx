@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import MediaItem from '@/components/MediaItem';
-import useOnPlay from '@/hooks/useOnPlay';
+import useOnPlay, { getSongPlayerId } from '@/hooks/useOnPlay';
 import { Song } from '@/types';
 
 interface SearchContentProps {
@@ -11,10 +11,7 @@ interface SearchContentProps {
   query: string;
 }
 
-const getSongPlayerId = (song: Song): string =>
-  song.source === 'youtube' && song.youtube_video_id
-    ? `yt_${song.youtube_video_id}`
-    : String(song.id);
+
 
 const LuandaSkeleton = ({ index }: { index: number }) => {
   const delays = ['0ms', '120ms', '240ms'];

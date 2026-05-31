@@ -74,15 +74,15 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         setShowModal(true);
     };
 
-    const handleAddToPlaylist = async (playlistId: string) => {
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
-            method: 'POST',
-            body: JSON.stringify({ playlistId, song: data }),
-        });
-        if (res.status === 409) toast.error('Música já existe na playlist');
-        else if (res.ok) toast.success('Adicionado!');
-        setShowModal(false);
-    };
+const handleAddToPlaylist = async (playlistId: string) => {
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+        method: 'POST',
+        body: JSON.stringify({ playlist_id: playlistId, song_id: data.id }),
+    });
+    if (res.status === 409) toast.error('Música já existe na playlist');
+    else if (res.ok) toast.success('Adicionado!');
+    setShowModal(false);
+};
 
     const handleInfo = (e: React.MouseEvent) => {
         e.stopPropagation();

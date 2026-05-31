@@ -3,7 +3,7 @@
 import { Song, Playlist } from '@/types';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import useOnPlay from '@/hooks/useOnPlay';
+import useOnPlay, { getSongPlayerId } from '@/hooks/useOnPlay';
 import useLoadImagePlaylist from '@/hooks/useLoadImagePlaylist';
 import { AiFillHeart } from 'react-icons/ai';
 import { SlPlaylist } from 'react-icons/sl';
@@ -17,10 +17,7 @@ interface CasaTabProps {
   playlists: Playlist[];
 }
 
-const getSongPlayerId = (song: Song): string =>
-  song.source === 'youtube' && song.youtube_video_id
-    ? `yt_${song.youtube_video_id}`
-    : String(song.id);
+
 
 const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   const imageUrl = useLoadImagePlaylist(playlist);

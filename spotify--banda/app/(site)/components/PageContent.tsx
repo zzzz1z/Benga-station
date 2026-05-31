@@ -1,23 +1,20 @@
 'use client';
 
 import { Song } from "@/types";
-import SongItem from "@/components/SongItem";
+import SongItem from "@/app/(site)/components/SongItem";
 import usePlayer from "@/hooks/usePlayer";
 import { useUser } from "@/hooks/useUser";
 import useAuthModal from "@/hooks/useAuthModal";
 import { useMemo } from "react";
 import { HiFire } from "react-icons/hi";
 import { useQueueExtender } from "@/hooks/useQueueExtender";
+import { getSongPlayerId } from "@/hooks/useOnPlay";
 
 interface PageContentProps {
   songs: Song[];
   allSongs: Song[];
 }
 
-const getSongPlayerId = (song: Song): string =>
-  song.source === 'youtube' && song.youtube_video_id
-    ? `yt_${song.youtube_video_id}`
-    : String(song.id);
 
 const PageContent: React.FC<PageContentProps> = ({ songs, allSongs }) => {
   const player = usePlayer();

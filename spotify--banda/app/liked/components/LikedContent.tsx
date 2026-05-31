@@ -2,7 +2,7 @@
 
 import LikedButton from "@/components/LikedButton";
 import MediaItem from "@/components/MediaItem";
-import useOnPlay from "@/hooks/useOnPlay";
+import useOnPlay, { getSongPlayerId } from "@/hooks/useOnPlay";
 import { useUser } from "@/hooks/useUser";
 import { Song } from "@/types";
 import { useRouter } from "next/navigation";
@@ -18,10 +18,6 @@ interface LikedContentProps {
     songs: Song[];
 }
 
-const getSongPlayerId = (song: Song): string =>
-    song.source === 'youtube' && song.youtube_video_id
-        ? `yt_${song.youtube_video_id}`
-        : String(song.id);
 
 const SLASH_CUT = "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)";
 
