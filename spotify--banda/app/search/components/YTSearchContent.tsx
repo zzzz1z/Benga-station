@@ -258,42 +258,49 @@ useEffect(() => {
     }, []); 
 
 
-    const handlePlay = async (result: YTResult) => {
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        if (loadingId === result.videoId) return;
-        if (unavailableIds.has(result.videoId)) return;
-        if (failedIds.has(`yt_${result.videoId}`)) return;
+const handlePlay = async (result: YTResult) => {
+    if (!user) { authModal.onOpen('sign_up'); return; }
+    if (loadingId === result.videoId) return;
+    if (unavailableIds.has(result.videoId)) return;
+    if (failedIds.has(`yt_${result.videoId}`)) return;
 
-        if (!readyIds.has(result.videoId)) {
-            setLoadingId(result.videoId);
-            const success = await preExtract(result.videoId);
-            setLoadingId(null);
-            if (success) {
-                availableIdsRef.current.add(result.videoId);
-                setReadyIds(prev => new Set([...prev, result.videoId]));
-            } else {
-                setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                return;
-            }
+    if (!readyIds.has(result.videoId)) {
+        setLoadingId(result.videoId);
+        const success = await preExtract(result.videoId);
+        setLoadingId(null);
+        if (success) {
+            availableIdsRef.current.add(result.videoId);
+            setReadyIds(prev => new Set([...prev, result.videoId]));
+        } else {
+            setUnavailableIds(prev => new Set([...prev, result.videoId]));
+            return;
         }
+    }
 
-        const targetId = `yt_${result.videoId}`;
+    // Fire single preextract for immediate playback
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: result.videoId }),
+    }).catch(() => {});
 
-        const baseSongs = results
-            .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
-            .map(r => ({
-                id: `yt_${r.videoId}`,
-                user_id: 'youtube',
-                author: r.artist,
-                title: r.title,
-                song_path: r.videoId,
-                image_path: r.thumbnail,
-                source: 'youtube' as const,
-                youtube_video_id: r.videoId,
-            }));
+    const targetId = `yt_${result.videoId}`;
+    const baseSongs = results
+        .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
+        .map(r => ({
+            id: `yt_${r.videoId}`,
+            user_id: 'youtube',
+            author: r.artist,
+            title: r.title,
+            song_path: r.videoId,
+            image_path: r.thumbnail,
+            source: 'youtube' as const,
+            youtube_video_id: r.videoId,
+        }));
 
-player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });        setPlayingId(result.videoId);
-    };
+    player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
+    setPlayingId(result.videoId);
+};
 
     if (!query || query.trim().length < 2) {
         return (
