@@ -32,22 +32,16 @@ const PageContent: React.FC<PageContentProps> = ({ songs, allSongs }) => {
     [songs]
   );
 
-  const handleClick = (song: Song) => {
-    if (!user) { authModal.onOpen('sign_up'); return; }
+const handleClick = (song: Song) => {
+  if (!user) { authModal.onOpen('sign_up'); return; }
 
-    const clickedId = getSongPlayerId(song);
-    const { ids, activeID } = usePlayer.getState();
+  const clickedId = getSongPlayerId(song);
+  const { activeID } = usePlayer.getState();
 
-    if (activeID === clickedId) return;
+  if (activeID === clickedId) return;
 
-if (ids.length > 0) {
-  const alreadyInQueue = ids.includes(clickedId);
-  if (!alreadyInQueue) player.appendToQueue([song]);
-  player.setId(clickedId);
-} else {
   player.setQueue(allSongs, clickedId, { source: 'home' });
-}
-  };
+};
 
   if (songs.length === 0) {
     return (
