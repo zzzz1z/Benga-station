@@ -22,6 +22,8 @@ const handleSubmit = async () => {
     });
     const json = await res.json();
 
+    
+
     if (json.valid) {
         localStorage.setItem('access_granted', '1');
         router.replace('/');
