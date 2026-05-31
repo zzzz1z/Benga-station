@@ -93,8 +93,12 @@ const webPreload = async (opts: any): Promise<void> => {
   }
 
   await new Promise<void>((resolve, reject) => {
-    a.addEventListener('canplay', () => resolve(), { once: true });
-    a.addEventListener('error',   () => reject(),  { once: true });
+    const timeout = setTimeout(() => reject(new Error('preload timeout')), 35000);
+    a.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
+    a.addEventListener('error', () => {
+      // Server may still be extracting — retry after delay
+      setTimeout(() => { a.load(); }, 3000);
+    }, { once: true });
   });
 };
 
