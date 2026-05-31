@@ -92,28 +92,14 @@ const webPreload = async (opts: any): Promise<void> => {
     });
   }
 
-await new Promise<void>((resolve, reject) => {
-  const timeout = setTimeout(() => reject(new Error('preload timeout')), 35000);
-  
-  const onCanPlay = () => {
-    clearTimeout(timeout);
-    a.removeEventListener('error', onError);
-    resolve();
-  };
-  
-  const onError = () => {
-    a.removeEventListener('canplay', onCanPlay);
-    // Retry load after delay — server may still be extracting
-    setTimeout(() => {
-      a.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
-      a.addEventListener('error', () => { clearTimeout(timeout); reject(); }, { once: true });
-      a.load();
-    }, 2000);
-  };
-
-  a.addEventListener('canplay', onCanPlay, { once: true });
-  a.addEventListener('error', onError, { once: true });
-});
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('preload timeout')), 35000);
+    a.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
+    a.addEventListener('error', () => {
+      // Server may still be extracting — retry after delay
+      setTimeout(() => { a.load(); }, 3000);
+    }, { once: true });
+  });
 };
 
 const webPlay = async (_opts?: any): Promise<void> => {
