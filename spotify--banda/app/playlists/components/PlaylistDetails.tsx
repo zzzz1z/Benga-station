@@ -240,7 +240,11 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
               <MediaItem
                 key={song.id}
                 data={song}
-                onClick={() => onPlay(getSongPlayerId(song), songs)} />
+                onClick={() => onPlay(getSongPlayerId(song), songs, {
+  source: 'playlist',
+  playlistId: String(playlist.id),
+  playlistName: playlist.title,
+})} />
             ))}
           </ul>
         )}

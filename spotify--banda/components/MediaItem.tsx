@@ -88,16 +88,16 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
         setShowModal(true);
     };
 
-    const handleAddToPlaylist = async (playlistId: string) => {
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
-            method: 'POST',
-            body: JSON.stringify({ playlistId, song: data }),
-        });
-        if (res.status === 409) toast.error('Música já está na playlist');
-        else if (!res.ok) toast.error('Erro ao adicionar música');
-        else toast.success('Adicionado à playlist!');
-        setShowModal(false);
-    };
+ const handleAddToPlaylist = async (playlistId: string) => {
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/add-song`, {
+        method: 'POST',
+        body: JSON.stringify({ playlist_id: playlistId, song_id: data.id }),
+    });
+    if (res.status === 409) toast.error('Música já está na playlist');
+    else if (!res.ok) toast.error('Erro ao adicionar música');
+    else toast.success('Adicionado à playlist!');
+    setShowModal(false);
+};
 
     const handleInfo = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -181,6 +181,20 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                   
                 </div>
             )}
+
+             <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="Adicionar à playlist" description="Escolhe uma playlist para adicionar esta música">
+        <div className="flex flex-col gap-y-2">
+          {playlists.length === 0
+            ? <p className="text-neutral-400 text-sm text-center py-4">Sem playlists criadas</p>
+            : playlists.map(pl => (
+              <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
+                className="w-full text-left px-4 py-3 text-sm text-white bg-neutral-700 hover:bg-neutral-600 rounded-md transition truncate">
+                {pl.title}
+              </button>
+            ))
+          }
+        </div>
+      </Modal>
         </>
     );
 };
