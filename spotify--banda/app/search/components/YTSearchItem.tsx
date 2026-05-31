@@ -207,6 +207,8 @@ console.log('upsert result:', { song_id, status: upsertRes.status });
             </button>
 
             {showMenu && (
+
+              
               <div className="absolute right-0 bottom-full mb-1 w-44 bg-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden border border-neutral-700">
                 <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition">
                   {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} className="text-neutral-400" />}
