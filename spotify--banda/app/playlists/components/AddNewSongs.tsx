@@ -130,29 +130,27 @@ const res = await fetch(
       setYtLoadingIds(new Set(results.map(r => r.videoId)));
 
       // preextract all in parallel
-      results.forEach(async r => {
-        try {
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
-
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoId: r.videoId }),
-          });
-          if (res.ok) {
-            setYtReadyIds(prev => new Set([...prev, r.videoId]));
-          } else {
-            setYtUnavailableIds(prev => new Set([...prev, r.videoId]));
-          }
-        } catch {
-          setYtUnavailableIds(prev => new Set([...prev, r.videoId]));
-        } finally {
-          setYtLoadingIds(prev => {
-            const next = new Set(prev);
-            next.delete(r.videoId);
-            return next;
-          });
-        }
+// Replace the results.forEach block in handleYtSearch with this:
+await Promise.all(
+  results.map(async r => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: r.videoId }),
       });
+      if (res.ok) {
+        setYtReadyIds(prev => new Set([...prev, r.videoId]));
+      } else {
+        setYtUnavailableIds(prev => new Set([...prev, r.videoId]));
+      }
+    } catch {
+      setYtUnavailableIds(prev => new Set([...prev, r.videoId]));
+    } finally {
+      setYtLoadingIds(prev => { const n = new Set(prev); n.delete(r.videoId); return n; });
+    }
+  })
+);
     } catch (err: any) {
       if (err.name !== 'AbortError') toast.error('Erro ao pesquisar.');
     } finally {

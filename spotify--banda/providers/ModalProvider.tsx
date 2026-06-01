@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import UploadModal from '@/components/UploadModal';
-import PlaylistModal from '@/components/PlaylistModal';
+import PlaylistModal from '@/app/playlists/components/PlaylistModal';
 import AdminModal from '@/components/AdminModal';
 
 
