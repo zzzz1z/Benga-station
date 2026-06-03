@@ -73,6 +73,9 @@ const LuandaSkeleton = ({ index }: { index: number }) => {
               animation: 'luanda-shimmer 1.6s ease-in-out infinite',
               animationDelay: delays[index % 3],
             }}
+
+
+            
           />
         </div>
         <div
