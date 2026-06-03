@@ -82,58 +82,58 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     };
 
 
-    const fetchMoreAndAppend = useCallback(async () => {
-        if (isFetchingMoreRef.current) return;
-        if (!nextPageTokenRef.current) return;
-        if (!currentQueryRef.current) return;
+const fetchMoreAndAppend = useCallback(async () => {
+    if (isFetchingMoreRef.current) return;
+    if (!currentQueryRef.current) return;
 
-        isFetchingMoreRef.current = true;
+    isFetchingMoreRef.current = true;
 
-        try {
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
-                { signal: abortRef.current!.signal }
-  
-       );
-            const data = await res.json();
-            if (data.error || !data.results?.length) return;
+    try {
+        const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
+            { signal: abortRef.current!.signal }
+        );
+        const data = await res.json();
+        if (data.error || !data.results?.length) return;
 
-            nextPageTokenRef.current = data.nextPageToken ?? null;
+        const newResults: YTResult[] = data.results
+            .slice(0, 12)
+            .filter((r: YTResult) => !availableIdsRef.current.has(r.videoId));
 
-            const newResults: YTResult[] = data.results.slice(0, 8);
+        if (!newResults.length) return;
 
-            const extractResults = await Promise.all(
-                newResults.map(async r => {
-                    const ok = await preExtract(r.videoId);
-                    return { r, ok };
-                })
-            );
+        const extractResults = await Promise.all(
+            newResults.map(async r => {
+                const ok = await preExtract(r.videoId);
+                return { r, ok };
+            })
+        );
 
-            const available = extractResults.filter(x => x.ok).map(x => x.r);
-            if (!available.length) return;
+        const available = extractResults.filter(x => x.ok).map(x => x.r);
+        if (!available.length) return;
 
-            available.forEach(r => { availableIdsRef.current.add(r.videoId); });
-            setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
-            setResults(prev => [...prev, ...newResults]);
+        available.forEach(r => availableIdsRef.current.add(r.videoId));
+        setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
+        setResults(prev => [...prev, ...available]);
 
-            const newSongs = available.map(r => ({
-                id: `yt_${r.videoId}`,
-                user_id: 'youtube',
-                author: r.artist,
-                title: r.title,
-                song_path: r.videoId,
-                image_path: r.thumbnail,
-                source: 'youtube' as const,
-                youtube_video_id: r.videoId,
-            }));
+        const newSongs = available.map(r => ({
+            id: `yt_${r.videoId}`,
+            user_id: 'youtube',
+            author: r.artist,
+            title: r.title,
+            song_path: r.videoId,
+            image_path: r.thumbnail,
+            source: 'youtube' as const,
+            youtube_video_id: r.videoId,
+        }));
 
-            usePlayer.getState().appendToQueue(newSongs as any);
-        } catch (err) {
-            console.error('fetchMoreAndAppend error:', err);
-        } finally {
-            isFetchingMoreRef.current = false;
-        }
-    }, []);
+        usePlayer.getState().appendToQueue(newSongs as any);
+    } catch (err) {
+        console.error('fetchMoreAndAppend error:', err);
+    } finally {
+        isFetchingMoreRef.current = false;
+    }
+}, []);
     
 useEffect(() => {
     if (!activeID || !playerIds.length) return;
@@ -179,70 +179,94 @@ useEffect(() => {
         isFetchingMoreRef.current = false;
         stopPhraseCycle();
 
-        const doSearch = async () => {
-            setIsSearching(true);
-            setError(null);
+const TARGET = 8;
 
-            try {
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
-                    { signal: abortRef.current!.signal }
-                );
-                const data = await res.json();
+const doSearch = async () => {
+  setIsSearching(true);
+  setError(null);
 
-                if (data.error) {
-                    setError('ERROR: GLOBAL_UPLINK_FAILURE');
-                    setResults([]);
-                    return;
-                }
+  try {
+    const seenIds = new Set<string>();
+    const validResults: YTResult[] = [];
 
-                nextPageTokenRef.current = data.nextPageToken ?? null;
+    const fetchAndFilter = async (): Promise<void> => {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
+        { signal: abortRef.current!.signal }
+      );
+      const data = await res.json();
+      if (data.error) throw new Error('search error');
 
-                const fetchedResults: YTResult[] = (data.results || []).slice(0, 8);
-                setResults(fetchedResults);
-                setLoadingIds(new Set(fetchedResults.map(r => r.videoId)));
-                startPhraseCycle();
+      const batch: YTResult[] = (data.results || [])
+        .slice(0, 12)
+        .filter((r: YTResult) => !seenIds.has(r.videoId));
 
-                const processSequentially = async () => {
-                    let completed = 0;
-                    for (const result of fetchedResults) {
-                        if (extractAbortRef.current?.signal.aborted) break;
+      batch.forEach(r => seenIds.add(r.videoId));
 
-                        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
+      // Show what we have so far immediately
+      setResults([...validResults, ...batch]);
+      setLoadingIds(new Set(batch.map(r => r.videoId)));
+      if (validResults.length === 0) startPhraseCycle();
 
-                        if (success) {
-                            availableIdsRef.current.add(result.videoId);
-                            setReadyIds(prev => new Set([...prev, result.videoId]));
-                        } else {
-                            setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                        }
+      // Preextract batch sequentially
+      for (const result of batch) {
+        if (extractAbortRef.current?.signal.aborted) return;
+        if (validResults.length >= TARGET) break;
 
-                        setLoadingIds(prev => {
-                            const next = new Set(prev);
-                            next.delete(result.videoId);
-                            return next;
-                        });
+        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
 
-                        completed++;
-                        if (completed === fetchedResults.length) {
-                            stopPhraseCycle();
-                            setAllReady(true);
-                        }
+        if (success) {
+          validResults.push(result);
+          availableIdsRef.current.add(result.videoId);
+          setReadyIds(prev => new Set([...prev, result.videoId]));
+        } else {
+          // Remove failed from visible results
+          setUnavailableIds(prev => new Set([...prev, result.videoId]));
+          setResults(prev => prev.filter(r => r.videoId !== result.videoId));
+        }
 
-                        // Visible stagger between items
-                        await new Promise(r => setTimeout(r, 120));
-                    }
-                };
+        setLoadingIds(prev => {
+          const next = new Set(prev);
+          next.delete(result.videoId);
+          return next;
+        });
 
-                processSequentially();
+        await new Promise(r => setTimeout(r, 120));
+      }
 
-            } catch (err: any) {
-                if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
-                stopPhraseCycle();
-            } finally {
-                setIsSearching(false);
-            }
-        };
+      // If we still need more, fetch another batch
+      if (validResults.length < TARGET && !extractAbortRef.current?.signal.aborted) {
+        await fetchAndFilter();
+      }
+    };
+
+    await fetchAndFilter();
+
+    stopPhraseCycle();
+    setAllReady(true);
+
+    // Final queue setup with only valid results
+    const validSongs = validResults.map(r => ({
+      id: `yt_${r.videoId}`,
+      user_id: 'youtube',
+      author: r.artist,
+      title: r.title,
+      song_path: r.videoId,
+      image_path: r.thumbnail,
+      source: 'youtube' as const,
+      youtube_video_id: r.videoId,
+    }));
+
+    nextPageTokenRef.current = null;
+    currentQueryRef.current = query;
+
+  } catch (err: any) {
+    if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
+    stopPhraseCycle();
+  } finally {
+    setIsSearching(false);
+  }
+};
 
         doSearch();
 

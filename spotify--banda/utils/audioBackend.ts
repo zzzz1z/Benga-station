@@ -79,7 +79,6 @@ const webPreload = async (opts: any): Promise<void> => {
   a.src = opts.assetPath;
   a.load();
 
-  // Re-attach on every song load so the new element always has listeners
   attachElementListeners(a);
 
   if ('mediaSession' in navigator && opts.notificationMetadata) {
@@ -94,11 +93,44 @@ const webPreload = async (opts: any): Promise<void> => {
 
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('preload timeout')), 35000);
-    a.addEventListener('canplay', () => { clearTimeout(timeout); resolve(); }, { once: true });
-    a.addEventListener('error', () => {
-      // Server may still be extracting — retry after delay
-      setTimeout(() => { a.load(); }, 3000);
-    }, { once: true });
+
+    const onCanPlay = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+
+    const onError = async () => {
+      // If it's a YouTube stream, force re-extract then retry once
+      const isYT = opts.assetPath?.includes('/api/youtube/stream');
+      if (isYT) {
+        try {
+          const videoId = new URL(opts.assetPath).searchParams.get('videoId');
+          if (videoId) {
+            // Tell the worker to bust the cache and re-extract
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ videoId, force: true }),
+            });
+          }
+        } catch {}
+        // Small delay for worker to finish extraction, then retry
+        setTimeout(() => {
+          a.addEventListener('canplay', onCanPlay, { once: true });
+          a.addEventListener('error', () => {
+            clearTimeout(timeout);
+            reject(new Error('stream unavailable after retry'));
+          }, { once: true });
+          a.load();
+        }, 3000);
+      } else {
+        clearTimeout(timeout);
+        reject(new Error('audio error'));
+      }
+    };
+
+    a.addEventListener('canplay', onCanPlay, { once: true });
+    a.addEventListener('error', onError, { once: true });
   });
 };
 

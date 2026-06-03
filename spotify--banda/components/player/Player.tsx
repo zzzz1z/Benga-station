@@ -194,70 +194,71 @@ usePlayer.setState({
 
     let cancelled = false;
 
-    const load = async () => {
-      isLoadedRef.current = false;
-      isLoadingRef.current = true;
-      setIsLoading(true);
-      setIsPlaying(false);
-      setPosition(0);
-      endedFiredRef.current = false;
+const load = async () => {
+  isLoadedRef.current = false;
+  isLoadingRef.current = true;
+  setIsLoading(true);
+  setIsPlaying(false);
+  setPosition(0);
+  endedFiredRef.current = false;
 
-      // stop + unload any previous track
-      try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
-      try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
+  try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
+  try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
 
-      if (cancelled) return;
+  if (cancelled) return;
 
-      const artworkUrl = getArtworkUrl(song);
+  const artworkUrl = getArtworkUrl(song);
 
-      try {
-        await NativeAudio.preload({
-          assetId: ASSET_ID,
-          assetPath: songUrl,
-          isUrl: true,
-          notificationMetadata: {
-            title: song.title,
-            artist: song.author,
-            album: 'Benga Station',
-            artworkUrl,
-          },
-        } as any);
-      } catch (e) {
-        if (cancelled) return;
-        setIsLoading(false);
-        isLoadingRef.current = false;
-        return;
-      }
+  try {
+    await NativeAudio.preload({
+      assetId: ASSET_ID,
+      assetPath: songUrl,
+      isUrl: true,
+      notificationMetadata: {
+        title: song.title,
+        artist: song.author,
+        album: 'Benga Station',
+        artworkUrl,
+      },
+    } as any);
+  } catch (e) {
+    if (cancelled) return;
+    console.warn('[Player] preload failed, skipping:', song.title, e);
+    setIsLoading(false);
+    isLoadingRef.current = false;
+    if (activeID) playerRef.current.markFailed(activeID);
+    playerRef.current.playNext();
+    return;
+  }
 
-      if (cancelled) return;
+  if (cancelled) return;
 
-      isLoadedRef.current = true;
-      isLoadingRef.current = false;
+  isLoadedRef.current = true;
+  isLoadingRef.current = false;
 
-      // get duration (may not be available yet for streams)
-      try {
-        const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
-        if (d.duration > 0) setDuration(d.duration);
-        else if (song.duration && song.duration > 0) setDuration(song.duration);
-      } catch {
-        if (song.duration && song.duration > 0) setDuration(song.duration);
-      }
+  try {
+    const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
+    if (d.duration > 0) setDuration(d.duration);
+    else if (song.duration && song.duration > 0) setDuration(song.duration);
+  } catch {
+    if (song.duration && song.duration > 0) setDuration(song.duration);
+  }
 
-      if (cancelled) return;
+  if (cancelled) return;
 
-      await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
+  await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
 
-      try {
-        await NativeAudio.play({ assetId: ASSET_ID });
-        if (!cancelled) {
-          setIsPlaying(true);
-          setIsLoading(false);
-          setTimeout(broadcastCurrentState, 100);
-        }
-      } catch {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
+  try {
+    await NativeAudio.play({ assetId: ASSET_ID });
+    if (!cancelled) {
+      setIsPlaying(true);
+      setIsLoading(false);
+      setTimeout(broadcastCurrentState, 100);
+    }
+  } catch {
+    if (!cancelled) setIsLoading(false);
+  }
+};
 
     load();
 
