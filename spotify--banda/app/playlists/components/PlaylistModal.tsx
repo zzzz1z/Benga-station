@@ -143,7 +143,7 @@ const PlaylistModal: React.FC = () => {
         </div>
       ) : (
         /* After creation — AddNewSongs has both DB + YT tabs built in */
-        <AddNewSongs playlistId={playlistId} refreshPlaylist={handleClose} />
+<AddNewSongs playlistId={playlistId} refreshPlaylist={handleClose} inlineOpen />
       )}
     </Modal>
   );

@@ -50,7 +50,7 @@ const Modal: React.FC<ModalProps> = ({
           focus:outline-none
           flex
           flex-col
-          overflow-auto
+          overflow-visible
         '>
           <Dialog.Title className='text-xl text-center font-bold mb-4'>
             {title}
