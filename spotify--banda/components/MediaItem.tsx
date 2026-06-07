@@ -132,10 +132,10 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove }) => {
                     </p>
                 </div>
 
-                <div
-                    className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 opacity-0 group-hover:opacity-100 transition translate-x-4 group-hover:translate-x-0"
-                    onClick={e => e.stopPropagation()}
-                >
+<div
+    className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 transition"
+    onClick={e => e.stopPropagation()}
+>
                     <button onClick={handleLike} className="text-neutral-500 hover:text-red-500 transition">
                         {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
                     </button>
