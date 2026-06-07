@@ -19,10 +19,11 @@ interface MediaItemProps {
     data: Song;
     onClick?: () => void;
     onRemove?: () => void;
+    playlistMode?: boolean;
 
 }
 
-const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove }) => {
+const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlistMode }) => {
     const imageUrl = useLoadImage(data);
     const player = usePlayer();
     const { user } = useUser();
@@ -136,22 +137,25 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove }) => {
     className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 transition"
     onClick={e => e.stopPropagation()}
 >
-                    <button onClick={handleLike} className="text-neutral-500 hover:text-red-500 transition">
-                        {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
-                    </button>
-                    <button onClick={handlePlaylistClick} className="text-neutral-500 hover:text-red-500 transition">
-                        <MdPlaylistAdd size={20} />
-                    </button>
-                    <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
-                        <AiOutlineInfoCircle size={18} />
-                    </button>
-
-                    {onRemove && (
-    <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-neutral-500 hover:text-red-500 transition">
-        <MdOutlineNotInterested size={18} />
+    <button onClick={handleLike} className="text-neutral-500 hover:text-red-500 transition">
+        {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
     </button>
-)}
-                </div>
+    {!playlistMode && (
+        <button onClick={handlePlaylistClick} className="text-neutral-500 hover:text-red-500 transition">
+            <MdPlaylistAdd size={20} />
+        </button>
+    )}
+    {!playlistMode && (
+        <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
+            <AiOutlineInfoCircle size={18} />
+        </button>
+    )}
+    {onRemove && (
+        <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-neutral-500 hover:text-red-500 transition">
+            <MdOutlineNotInterested size={18} />
+        </button>
+    )}
+</div>
 
                 <div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
                     <button
@@ -176,18 +180,21 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove }) => {
                     style={{ top: menuPos.top, right: menuPos.right, transform: 'translateY(-100%)' }}
                     onClick={e => e.stopPropagation()}
                 >
-                    <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-                        {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
-                        {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
-                    </button>
-                    <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-                        <MdPlaylistAdd size={16} /> Add_Playlist
-                    </button>
-                    <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-                        <AiOutlineInfoCircle size={16} /> Ver_Metadata
-                    </button>
-
-                    {onRemove && (
+<button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+    {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
+    {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
+</button>
+{!playlistMode && (
+    <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+        <MdPlaylistAdd size={16} /> Add_Playlist
+    </button>
+)}
+{!playlistMode && (
+    <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+        <AiOutlineInfoCircle size={16} /> Ver_Metadata
+    </button>
+)}
+{onRemove && (
     <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500 active:bg-red-600/10 transition">
         <MdOutlineNotInterested size={16} /> Remover_Playlist
     </button>

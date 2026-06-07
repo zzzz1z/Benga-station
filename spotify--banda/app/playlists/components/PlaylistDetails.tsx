@@ -260,6 +260,7 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
         playlistName: playlist.title,
     })}
     onRemove={() => handleRemoveSong(String(song.id))}
+    playlistMode
 />
             ))}
           </ul>
