@@ -6,7 +6,7 @@ import { Song, Playlist } from "@/types";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { AiFillHeart, AiOutlineHeart, AiOutlineInfoCircle } from "react-icons/ai";
-import { MdPlaylistAdd } from "react-icons/md";
+import { MdOutlineNotInterested, MdPlaylistAdd } from "react-icons/md";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { useUser } from "@/hooks/useUser";
 import useAuthModal from "@/hooks/useAuthModal";
@@ -18,9 +18,11 @@ import { authedFetch } from "@/utils/api";
 interface MediaItemProps {
     data: Song;
     onClick?: () => void;
+    onRemove?: () => void;
+
 }
 
-const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
+const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove }) => {
     const imageUrl = useLoadImage(data);
     const player = usePlayer();
     const { user } = useUser();
@@ -143,6 +145,12 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
                         <AiOutlineInfoCircle size={18} />
                     </button>
+
+                    {onRemove && (
+    <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-neutral-500 hover:text-red-500 transition">
+        <MdOutlineNotInterested size={18} />
+    </button>
+)}
                 </div>
 
                 <div className="relative md:hidden flex-shrink-0" onClick={e => e.stopPropagation()}>
@@ -178,6 +186,12 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
                     <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
                         <AiOutlineInfoCircle size={16} /> Ver_Metadata
                     </button>
+
+                    {onRemove && (
+    <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500 active:bg-red-600/10 transition">
+        <MdOutlineNotInterested size={16} /> Remover_Playlist
+    </button>
+)}
                   
                 </div>
             )}

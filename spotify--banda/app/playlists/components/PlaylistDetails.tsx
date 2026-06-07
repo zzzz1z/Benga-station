@@ -118,6 +118,20 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
     }
   };
 
+
+  const handleRemoveSong = async (songId: string) => {
+    const { error } = await supabase
+        .from('playlist_songs')
+        .delete()
+        .eq('playlist_id', id)
+        .eq('song_id', songId);
+    if (error) toast.error('Erro ao remover música.');
+    else {
+        setSongs(prev => prev.filter(s => String(s.id) !== songId));
+        toast.success('Música removida!');
+    }
+};
+
   if (error) return (
     <div className="p-20 text-white flex flex-col gap-y-4">
       <p>{error}</p>
@@ -237,14 +251,16 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
         ) : (
           <ul className="flex flex-col gap-y-1">
             {songs.map((song) => (
-              <MediaItem
-                key={song.id}
-                data={song}
-                onClick={() => onPlay(getSongPlayerId(song), songs, {
-  source: 'playlist',
-  playlistId: String(playlist.id),
-  playlistName: playlist.title,
-})} />
+<MediaItem
+    key={song.id}
+    data={song}
+    onClick={() => onPlay(getSongPlayerId(song), songs, {
+        source: 'playlist',
+        playlistId: String(playlist.id),
+        playlistName: playlist.title,
+    })}
+    onRemove={() => handleRemoveSong(String(song.id))}
+/>
             ))}
           </ul>
         )}
