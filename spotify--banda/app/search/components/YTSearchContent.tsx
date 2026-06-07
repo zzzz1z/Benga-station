@@ -97,7 +97,7 @@ const fetchMoreAndAppend = useCallback(async () => {
         if (data.error || !data.results?.length) return;
 
         const newResults: YTResult[] = data.results
-            .slice(0, 12)
+            .slice(0, 35)
             .filter((r: YTResult) => !availableIdsRef.current.has(r.videoId));
 
         if (!newResults.length) return;
@@ -179,7 +179,7 @@ useEffect(() => {
         isFetchingMoreRef.current = false;
         stopPhraseCycle();
 
-const TARGET = 8;
+const TARGET = 30;
 
 const doSearch = async () => {
   setIsSearching(true);
@@ -198,7 +198,7 @@ const doSearch = async () => {
       if (data.error) throw new Error('search error');
 
       const batch: YTResult[] = (data.results || [])
-        .slice(0, 12)
+        .slice(0, 35)
         .filter((r: YTResult) => !seenIds.has(r.videoId));
 
       batch.forEach(r => seenIds.add(r.videoId));

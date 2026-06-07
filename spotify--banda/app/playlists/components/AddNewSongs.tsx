@@ -376,7 +376,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
             </button>
           </div>
 
-          <div className="max-h-64 overflow-y-auto flex flex-col gap-y-1">
+          <div className=" overflow-y-auto flex flex-col gap-y-1">
             {ytResults.map(r => {
               const isUnavailable = ytUnavailableIds.has(r.videoId);
               const isLoading = ytLoadingIds.has(r.videoId);

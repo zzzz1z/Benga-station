@@ -91,7 +91,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
       />
 
       {/* List */}
-      <div className="max-h-64 overflow-y-auto flex flex-col gap-y-0.5 pr-1">
+      <div className=" overflow-y-auto flex flex-col gap-y-0.5 pr-1">
         {isLoading && (
           <div className="flex items-center justify-center py-8 gap-x-2">
             <div className="w-4 h-4 border-2 border-red-600 border-t-transparent animate-spin" />

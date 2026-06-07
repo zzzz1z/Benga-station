@@ -186,7 +186,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
 </button>
 {!playlistMode && (
     <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-        <MdPlaylistAdd size={16} /> Add_Playlist
+        <MdPlaylistAdd size={16} /> adicionar a uma playlist
     </button>
 )}
 {!playlistMode && (
@@ -196,7 +196,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
 )}
 {onRemove && (
     <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500 active:bg-red-600/10 transition">
-        <MdOutlineNotInterested size={16} /> Remover_Playlist
+        <MdOutlineNotInterested size={16} /> remover da playlist
     </button>
 )}
                   
