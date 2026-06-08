@@ -64,6 +64,16 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     const nextPageTokenRef = useRef<string | null>(null);
     const currentQueryRef = useRef<string>('');
 
+    // FIX: always-fresh results ref so handlePlay never closes over stale state
+    const resultsRef = useRef<YTResult[]>([]);
+    useEffect(() => { resultsRef.current = results; }, [results]);
+
+    // FIX: always-fresh failedIds ref
+    const failedIdsRef = useRef<Set<string>>(new Set());
+    useEffect(() => { failedIdsRef.current = failedIds; }, [failedIds]);
+
+    const isHandlingPlayRef = useRef(false);
+
     const startPhraseCycle = () => {
         phraseIndexRef.current = 0;
         setBannerPhrase(LOADING_PHRASES[0]);
@@ -81,73 +91,71 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         setBannerPhrase(null);
     };
 
+    const fetchMoreAndAppend = useCallback(async () => {
+        if (isFetchingMoreRef.current) return;
+        if (!currentQueryRef.current) return;
+        if (isHandlingPlayRef.current) return;
+        isFetchingMoreRef.current = true;
 
-const fetchMoreAndAppend = useCallback(async () => {
- if (isFetchingMoreRef.current) return;
-    if (!currentQueryRef.current) return;
-    if (isHandlingPlayRef.current) return;
-    isFetchingMoreRef.current = true;
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
+                { signal: abortRef.current!.signal }
+            );
+            const data = await res.json();
+            if (data.error || !data.results?.length) return;
 
-    try {
-        const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
-            { signal: abortRef.current!.signal }
-        );
-        const data = await res.json();
-        if (data.error || !data.results?.length) return;
+            const newResults: YTResult[] = data.results
+                .slice(0, 35)
+                .filter((r: YTResult) => !availableIdsRef.current.has(r.videoId));
 
-        const newResults: YTResult[] = data.results
-            .slice(0, 35)
-            .filter((r: YTResult) => !availableIdsRef.current.has(r.videoId));
+            if (!newResults.length) return;
 
-        if (!newResults.length) return;
+            const extractResults = await Promise.all(
+                newResults.map(async r => {
+                    const ok = await preExtract(r.videoId);
+                    return { r, ok };
+                })
+            );
 
-        const extractResults = await Promise.all(
-            newResults.map(async r => {
-                const ok = await preExtract(r.videoId);
-                return { r, ok };
-            })
-        );
+            const available = extractResults.filter(x => x.ok).map(x => x.r);
+            if (!available.length) return;
 
-        const available = extractResults.filter(x => x.ok).map(x => x.r);
-        if (!available.length) return;
+            available.forEach(r => availableIdsRef.current.add(r.videoId));
+            setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
+            setResults(prev => [...prev, ...available]);
 
-        available.forEach(r => availableIdsRef.current.add(r.videoId));
-        setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
-        setResults(prev => [...prev, ...available]);
+            const newSongs = available.map(r => ({
+                id: `yt_${r.videoId}`,
+                user_id: 'youtube',
+                author: r.artist,
+                title: r.title,
+                song_path: r.videoId,
+                image_path: r.thumbnail,
+                source: 'youtube' as const,
+                youtube_video_id: r.videoId,
+            }));
 
-        const newSongs = available.map(r => ({
-            id: `yt_${r.videoId}`,
-            user_id: 'youtube',
-            author: r.artist,
-            title: r.title,
-            song_path: r.videoId,
-            image_path: r.thumbnail,
-            source: 'youtube' as const,
-            youtube_video_id: r.videoId,
-        }));
+            usePlayer.getState().appendToQueue(newSongs as any);
+        } catch (err) {
+            console.error('fetchMoreAndAppend error:', err);
+        } finally {
+            isFetchingMoreRef.current = false;
+        }
+    }, []);
 
-        usePlayer.getState().appendToQueue(newSongs as any);
-    } catch (err) {
-        console.error('fetchMoreAndAppend error:', err);
-    } finally {
-        isFetchingMoreRef.current = false;
-    }
-}, []);
-    
-useEffect(() => {
-    if (!activeID || !playerIds.length) return;
-    if (isFetchingMoreRef.current) return;
-    
-    // Only extend if currently playing from search
-    const { queueContext } = usePlayer.getState();
-    if (queueContext.source !== 'search') return;
-    
-    const currentIndex = playerIds.findIndex(id => id === activeID);
-    if (currentIndex === -1) return;
-    const songsLeft = playerIds.length - 1 - currentIndex;
-    if (songsLeft <= 2) fetchMoreAndAppend();
-}, [activeID, playerIds, fetchMoreAndAppend]);
+    useEffect(() => {
+        if (!activeID || !playerIds.length) return;
+        if (isFetchingMoreRef.current) return;
+
+        const { queueContext } = usePlayer.getState();
+        if (queueContext.source !== 'search') return;
+
+        const currentIndex = playerIds.findIndex(id => id === activeID);
+        if (currentIndex === -1) return;
+        const songsLeft = playerIds.length - 1 - currentIndex;
+        if (songsLeft <= 2) fetchMoreAndAppend();
+    }, [activeID, playerIds, fetchMoreAndAppend]);
 
     useEffect(() => {
         if (!query || query.trim().length < 2) {
@@ -179,86 +187,85 @@ useEffect(() => {
         isFetchingMoreRef.current = false;
         stopPhraseCycle();
 
-const TARGET = 30;
+        const TARGET = 30;
 
-const doSearch = async () => {
-  setIsSearching(true);
-  setError(null);
+        const doSearch = async () => {
+            setIsSearching(true);
+            setError(null);
 
-  try {
-    const seenIds = new Set<string>();
-    const validResults: YTResult[] = [];
+            try {
+                const seenIds = new Set<string>();
+                const validResults: YTResult[] = [];
 
-    const fetchAndFilter = async (isFirst: boolean = false): Promise<void> => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
-        { signal: abortRef.current!.signal }
-      );
-      const data = await res.json();
-      if (data.error) throw new Error('search error');
+                const fetchAndFilter = async (isFirst: boolean = false): Promise<void> => {
+                    const res = await fetch(
+                        `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
+                        { signal: abortRef.current!.signal }
+                    );
+                    const data = await res.json();
+                    if (data.error) throw new Error('search error');
 
-      const batch: YTResult[] = (data.results || [])
-        .slice(0, 35)
-        .filter((r: YTResult) => !seenIds.has(r.videoId));
+                    const batch: YTResult[] = (data.results || [])
+                        .slice(0, 35)
+                        .filter((r: YTResult) => !seenIds.has(r.videoId));
 
-      batch.forEach(r => seenIds.add(r.videoId));
+                    batch.forEach(r => seenIds.add(r.videoId));
 
-      // Show results immediately and flip loading off
-      setResults(prev => {
-        const existingIds = new Set(prev.map(r => r.videoId));
-        return [...prev, ...batch.filter(r => !existingIds.has(r.videoId))];
-      });
-      setLoadingIds(new Set(batch.map(r => r.videoId)));
-      
-      if (isFirst) {
-        setIsSearching(false); // flip off so results render
-        startPhraseCycle();    // banner starts
-      }
+                    setResults(prev => {
+                        const existingIds = new Set(prev.map(r => r.videoId));
+                        return [...prev, ...batch.filter(r => !existingIds.has(r.videoId))];
+                    });
+                    setLoadingIds(new Set(batch.map(r => r.videoId)));
 
-      for (const result of batch) {
-        if (extractAbortRef.current?.signal.aborted) return;
-        if (validResults.length >= TARGET) break;
+                    if (isFirst) {
+                        setIsSearching(false);
+                        startPhraseCycle();
+                    }
 
-        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
+                    for (const result of batch) {
+                        if (extractAbortRef.current?.signal.aborted) return;
+                        if (validResults.length >= TARGET) break;
 
-        if (success) {
-          validResults.push(result);
-          availableIdsRef.current.add(result.videoId);
-          setReadyIds(prev => new Set([...prev, result.videoId]));
-        } else {
-          setUnavailableIds(prev => new Set([...prev, result.videoId]));
-          setResults(prev => prev.filter(r => r.videoId !== result.videoId));
-        }
+                        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
 
-        setLoadingIds(prev => {
-          const next = new Set(prev);
-          next.delete(result.videoId);
-          return next;
-        });
+                        if (success) {
+                            validResults.push(result);
+                            availableIdsRef.current.add(result.videoId);
+                            setReadyIds(prev => new Set([...prev, result.videoId]));
+                        } else {
+                            setUnavailableIds(prev => new Set([...prev, result.videoId]));
+                            setResults(prev => prev.filter(r => r.videoId !== result.videoId));
+                        }
 
-        await new Promise(r => setTimeout(r, 120));
-      }
+                        setLoadingIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(result.videoId);
+                            return next;
+                        });
 
-      if (validResults.length < TARGET && !extractAbortRef.current?.signal.aborted) {
-        await fetchAndFilter(false);
-      }
-    };
+                        await new Promise(r => setTimeout(r, 120));
+                    }
 
-    await fetchAndFilter(true);
+                    if (validResults.length < TARGET && !extractAbortRef.current?.signal.aborted) {
+                        await fetchAndFilter(false);
+                    }
+                };
 
-    stopPhraseCycle();
-    setAllReady(true);
-    currentQueryRef.current = query;
+                await fetchAndFilter(true);
 
-  } catch (err: any) {
-    if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
-    stopPhraseCycle();
-    setIsSearching(false);
-  } finally {
-    // only for safety — isSearching already flipped in fetchAndFilter
-    setIsSearching(false);
-  }
-};
+                stopPhraseCycle();
+                setAllReady(true);
+                currentQueryRef.current = query;
+
+            } catch (err: any) {
+                if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
+                stopPhraseCycle();
+                setIsSearching(false);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
         doSearch();
 
         return () => {
@@ -268,62 +275,62 @@ const doSearch = async () => {
         };
     }, [query]);
 
-  useEffect(() => {
+    useEffect(() => {
         return () => { stopPhraseCycle(); };
-    }, []); 
+    }, []);
 
+    // FIX: stable useCallback; reads fresh data via refs instead of closing over state
+    const handlePlay = useCallback(async (result: YTResult) => {
+        if (!user) { authModal.onOpen('sign_up'); return; }
+        if (isHandlingPlayRef.current) return;
+        if (loadingId === result.videoId) return;
+        if (unavailableIds.has(result.videoId)) return;
+        if (failedIdsRef.current.has(`yt_${result.videoId}`)) return;
 
-const isHandlingPlayRef = useRef(false);
+        isHandlingPlayRef.current = true;
 
-const handlePlay = async (result: YTResult) => {
-    if (!user) { authModal.onOpen('sign_up'); return; }
-    if (isHandlingPlayRef.current) return;
-    if (loadingId === result.videoId) return;
-    if (unavailableIds.has(result.videoId)) return;
-    if (failedIds.has(`yt_${result.videoId}`)) return;
-
-    isHandlingPlayRef.current = true;
-
-    if (!readyIds.has(result.videoId)) {
-        setLoadingId(result.videoId);
-        const success = await preExtract(result.videoId);
-        setLoadingId(null);
-        if (success) {
-            availableIdsRef.current.add(result.videoId);
-            setReadyIds(prev => new Set([...prev, result.videoId]));
-        } else {
-            setUnavailableIds(prev => new Set([...prev, result.videoId]));
-            isHandlingPlayRef.current = false;
-            return;
+        if (!availableIdsRef.current.has(result.videoId)) {
+            setLoadingId(result.videoId);
+            const success = await preExtract(result.videoId);
+            setLoadingId(null);
+            if (success) {
+                availableIdsRef.current.add(result.videoId);
+                setReadyIds(prev => new Set([...prev, result.videoId]));
+            } else {
+                setUnavailableIds(prev => new Set([...prev, result.videoId]));
+                isHandlingPlayRef.current = false;
+                return;
+            }
         }
-    }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId: result.videoId }),
-    }).catch(() => {});
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoId: result.videoId }),
+        }).catch(() => {});
 
-    const targetId = `yt_${result.videoId}`;
-    const baseSongs = results
-        .filter(r => availableIdsRef.current.has(r.videoId) && !failedIds.has(`yt_${r.videoId}`))
-        .map(r => ({
-            id: `yt_${r.videoId}`,
-            user_id: 'youtube',
-            author: r.artist,
-            title: r.title,
-            song_path: r.videoId,
-            image_path: r.thumbnail,
-            source: 'youtube' as const,
-            youtube_video_id: r.videoId,
-        }));
+        const targetId = `yt_${result.videoId}`;
 
-    player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
-    setPlayingId(result.videoId);
-    
-    // Keep locked for 3s to prevent any queue interference during native preload
-    setTimeout(() => { isHandlingPlayRef.current = false; }, 3000);
-};
+        // FIX: read from ref so we always get the latest results list
+        const baseSongs = resultsRef.current
+            .filter(r => availableIdsRef.current.has(r.videoId) && !failedIdsRef.current.has(`yt_${r.videoId}`))
+            .map(r => ({
+                id: `yt_${r.videoId}`,
+                user_id: 'youtube',
+                author: r.artist,
+                title: r.title,
+                song_path: r.videoId,
+                image_path: r.thumbnail,
+                source: 'youtube' as const,
+                youtube_video_id: r.videoId,
+            }));
+
+        player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
+        setPlayingId(result.videoId);
+
+        // FIX: was 3000ms — dropped to 300ms since manualLoadRef now handles the real race
+        setTimeout(() => { isHandlingPlayRef.current = false; }, 300);
+    }, [user, authModal, player, query, loadingId, unavailableIds]);
 
     if (!query || query.trim().length < 2) {
         return (

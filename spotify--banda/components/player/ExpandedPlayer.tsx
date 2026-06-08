@@ -197,7 +197,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-window.addEventListener('touchmove', onMove as any, { passive: false });
+    window.addEventListener('touchmove', onMove as any, { passive: false });
     window.addEventListener('touchend', onUp);
   }, [startQueueDrag, moveQueueDrag, endQueueDrag]);
 
@@ -206,25 +206,18 @@ window.addEventListener('touchmove', onMove as any, { passive: false });
     setIds(ids.filter((_, i) => i !== globalIndex));
   }, [ids, setIds]);
 
-
-
-
-
-const handleQueueRowClick = useCallback((globalIndex: number) => {
+  const handleQueueRowClick = useCallback((globalIndex: number) => {
     const clickedId = ids[globalIndex];
     if (!clickedId) return;
     if (clickedId.startsWith('yt_')) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoIds: [clickedId.slice(3)] }),
-        }).catch(() => {});
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract-queue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoIds: [clickedId.slice(3)] }),
+      }).catch(() => {});
     }
     setId(clickedId);
-}, [ids, setId]);
-
-
-
+  }, [ids, setId]);
 
   const handleNext = () => { if (repeatMode === 'one') { onSeek(0); return; } onNext(); };
   const cycleRepeat = () => setRepeatMode(repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off');
@@ -279,7 +272,7 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
           style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
       </div>
 
-{/* Top drag zone — respects iPhone safe area */}
+      {/* Top drag zone — respects iPhone safe area */}
       <div
         className="flex-shrink-0 select-none touch-none relative z-10 border-b border-white/5"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -291,7 +284,7 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
         </div>
 
         {/* header row */}
-<div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-5 py-4">
           <button
             onClick={handleClose}
             className="text-neutral-400 active:text-white transition p-3 -ml-3"
@@ -300,21 +293,21 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
             <IoChevronDown size={28} />
           </button>
 
-<div className="flex flex-col items-center gap-y-0.5">
-  <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
-    {queueContext.source === 'playlist' && queueContext.playlistName
-      ? `▶ ${queueContext.playlistName}`
-      : queueContext.source === 'search' && queueContext.searchQuery
-      ? `⌕ ${queueContext.searchQuery}`
-      : 'A tocar agora'}
-  </p>
- <p
-  className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
-  style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
->
-  {song.title}
-</p>
-</div>
+          <div className="flex flex-col items-center gap-y-0.5">
+            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
+              {queueContext.source === 'playlist' && queueContext.playlistName
+                ? `▶ ${queueContext.playlistName}`
+                : queueContext.source === 'search' && queueContext.searchQuery
+                ? `⌕ ${queueContext.searchQuery}`
+                : 'A tocar agora'}
+            </p>
+            <p
+              className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
+              style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
+            >
+              {song.title}
+            </p>
+          </div>
 
           <button
             onClick={handleClose}
@@ -325,6 +318,7 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
           </button>
         </div>
       </div>
+
       {/* Scrollable content */}
       <div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 overflow-y-auto relative z-10">
 
@@ -350,17 +344,17 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
         </div>
 
         {/* Song info + like */}
-<div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
-         <p
-  className="text-white font-black uppercase tracking-tighter leading-tight whitespace-nowrap overflow-hidden"
-  style={{
-    textShadow: '0 0 20px rgba(239,68,68,0.2)',
-    fontSize: `clamp(0.75rem, ${Math.max(1, 4 - song.title.length * 0.06)}rem, 2.5rem)`,
-  }}
->
-  {song.title}
-</p>
+            <p
+              className="text-white font-black uppercase tracking-tighter leading-tight whitespace-nowrap overflow-hidden"
+              style={{
+                textShadow: '0 0 20px rgba(239,68,68,0.2)',
+                fontSize: `clamp(0.75rem, ${Math.max(1, 4 - song.title.length * 0.06)}rem, 2.5rem)`,
+              }}
+            >
+              {song.title}
+            </p>
             <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>
           </div>
           <LikedButton songId={String(song.id)} />
@@ -384,12 +378,18 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
             <TbArrowsShuffle size={22} />
           </button>
 
-          <AiFillStepBackward onClick={onPrevious} size={32}
-            className="text-neutral-300 cursor-pointer active:scale-90 transition active:text-white" />
+          {/* FIX: was bare icon with onClick — now a proper button */}
+          <button
+            onClick={onPrevious}
+            className="text-neutral-300 active:scale-90 transition active:text-white p-2"
+          >
+            <AiFillStepBackward size={32} />
+          </button>
 
-          <div
+          {/* FIX: was a div — now a proper button */}
+          <button
             onClick={onPlay}
-            className="flex items-center justify-center rounded-full cursor-pointer active:scale-95 transition-transform"
+            className="flex items-center justify-center rounded-full active:scale-95 transition-transform"
             style={{
               width: 70, height: 70,
               background: 'linear-gradient(135deg, #dc2626, #7f1d1d)',
@@ -399,10 +399,15 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
             }}
           >
             {renderPlayButton()}
-          </div>
+          </button>
 
-          <AiFillStepForward onClick={handleNext} size={32}
-            className="text-neutral-300 cursor-pointer active:scale-90 transition active:text-white" />
+          {/* FIX: was bare icon with onClick — now a proper button */}
+          <button
+            onClick={handleNext}
+            className="text-neutral-300 active:scale-90 transition active:text-white p-2"
+          >
+            <AiFillStepForward size={32} />
+          </button>
 
           <button
             onClick={cycleRepeat}
@@ -424,7 +429,7 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
 
         {/* Lyrics flip card */}
         <div className="flex-shrink-0">
-       <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
+          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
         </div>
 
         {/* Queue extender */}
