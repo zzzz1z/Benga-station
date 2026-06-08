@@ -80,8 +80,6 @@ usePlayer.setState({
   const endedFiredRef  = useRef(false);
   const volumeRef      = useRef(1);
   const isPlayingRef   = useRef(false);
-  const isIntentionalStopRef = useRef(false);
-
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -172,9 +170,8 @@ usePlayer.setState({
         } else {
           cur.playPrevious();
         }
-} else if (state === 'stopped' || state === 'completed') {
+} else if (state === 'completed') {
     if (endedFiredRef.current) return;
-    if (isIntentionalStopRef.current) return;
     endedFiredRef.current = true;
     playerRef.current.playNext();
     setTimeout(() => { endedFiredRef.current = false; }, 1000);
@@ -197,22 +194,13 @@ usePlayer.setState({
 
     let cancelled = false;
 
-
-
-
 const load = async () => {
-  const hadPreviousTrack = isLoadedRef.current || isPlayingRef.current;
-  
   isLoadedRef.current = false;
   isLoadingRef.current = true;
   setIsLoading(true);
   setIsPlaying(false);
   setPosition(0);
   endedFiredRef.current = false;
-
-  if (hadPreviousTrack) {
-    isIntentionalStopRef.current = true;
-  }
 
   try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
   try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
@@ -233,9 +221,7 @@ const load = async () => {
         artworkUrl,
       },
     } as any);
-    isIntentionalStopRef.current = false;
   } catch (e) {
-    isIntentionalStopRef.current = false;
     if (cancelled) return;
     console.warn('[Player] preload failed, skipping:', song.title, e);
     setIsLoading(false);
@@ -273,6 +259,7 @@ const load = async () => {
     if (!cancelled) setIsLoading(false);
   }
 };
+
     load();
 
     return () => { cancelled = true; };
