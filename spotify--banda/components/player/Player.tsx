@@ -58,17 +58,14 @@ usePlayer.setState({
   const songsMap  = usePlayer(s => s.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
-  const songFromStore   = activeID ? songsMap[activeID] : null;
-  if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
-  const song = songFromStore ?? lastGoodSongRef.current;
-
+const songFromStore   = activeID ? songsMap[activeID] : null;
+if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
+const song    = songFromStore ?? lastGoodSongRef.current;
+const songForLoad = songFromStore;
   const currentSongRef = useRef<Song | null>(null);
   useEffect(() => { currentSongRef.current = song ?? null; }, [song]);
 
-  const songUrl = useLoadSongUrl((song ?? {}) as Song);
-
-  // ── playback state ────────────────────────────────────────────────────────
-  const [isPlaying,  setIsPlaying]  = useState(false);
+const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);  const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
   const [volume,     setVolume]     = useState(1);
   const [duration,   setDuration]   = useState(0);
@@ -189,9 +186,8 @@ usePlayer.setState({
   }, []);
 
   // ── load + play when songUrl changes ─────────────────────────────────────
-  useEffect(() => {
-    if (!songUrl || !song) return;
-
+useEffect(() => {
+    if (!songUrl || !songForLoad) return;
     let cancelled = false;
 
 const load = async () => {
@@ -207,7 +203,7 @@ const load = async () => {
 
   if (cancelled) return;
 
-  const artworkUrl = getArtworkUrl(song);
+  const artworkUrl = getArtworkUrl(songForLoad);
 
   try {
     await NativeAudio.preload({
@@ -215,15 +211,15 @@ const load = async () => {
       assetPath: songUrl,
       isUrl: true,
       notificationMetadata: {
-        title: song.title,
-        artist: song.author,
+        title: songForLoad.title,
+        artist: songForLoad.author,
         album: 'Benga Station',
         artworkUrl,
       },
     } as any);
   } catch (e) {
     if (cancelled) return;
-    console.warn('[Player] preload failed, skipping:', song.title, e);
+    console.warn('[Player] preload failed, skipping:', songForLoad.title, e);
     setIsLoading(false);
     isLoadingRef.current = false;
     if (activeID) playerRef.current.markFailed(activeID);
@@ -239,9 +235,9 @@ const load = async () => {
   try {
     const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
     if (d.duration > 0) setDuration(d.duration);
-    else if (song.duration && song.duration > 0) setDuration(song.duration);
+    else if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
   } catch {
-    if (song.duration && song.duration > 0) setDuration(song.duration);
+    if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
   }
 
   if (cancelled) return;
