@@ -115,8 +115,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           {/* top row — art + info + controls */}
           <div className="flex items-center gap-x-3">
 
-            {/* album art — bigger, tappable to expand */}
-            <div
+            {/* album art — tappable to expand */}
+            <button
               onClick={onExpand}
               className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{ width: 56, height: 56 }}
@@ -130,34 +130,41 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               {isPlaying && (
                 <div className="absolute inset-0 border border-red-500/40 animate-ping rounded-none" style={{ animationDuration: '2s' }} />
               )}
-            </div>
+            </button>
 
             {/* song info — tappable to expand */}
-            <div onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer">
+            <button onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer text-left">
               <p className="text-white text-sm font-black uppercase tracking-tighter truncate leading-tight">{song.title}</p>
               <p className="text-red-500/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
-            </div>
+            </button>
 
             {/* controls */}
             <div className="flex items-center gap-x-2 flex-shrink-0">
               <SessionButton small />
-              <AiFillStepBackward
-                onClick={onPrevious} size={22}
+              <button
+                onClick={onPrevious}
+                disabled={!!isGuest}
                 className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
-              />
-              <div
+              >
+                <AiFillStepBackward size={22} />
+              </button>
+              <button
                 onClick={onPlay}
+                disabled={!!isGuest}
                 className={`flex items-center justify-center rounded-full transition active:scale-90
                   ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer'}
                   bg-neutral-800 border border-red-600/30 shadow-[0_0_12px_rgba(239,68,68,0.2)]`}
                 style={{ width: 42, height: 42 }}
               >
                 {renderPlayButton(22)}
-              </div>
-              <AiFillStepForward
-                onClick={onNext} size={22}
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!!isGuest}
                 className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
-              />
+              >
+                <AiFillStepForward size={22} />
+              </button>
             </div>
           </div>
 
@@ -171,30 +178,42 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
         <div className="hidden md:flex flex-row items-center w-full h-full px-2">
 
           <div className="flex items-center gap-x-3 flex-1 min-w-0 overflow-hidden">
-            <div onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
+            <button onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
                 className="object-cover grayscale-[0.3] group-hover:grayscale-0 transition" sizes="52px" unoptimized />
-            </div>
-            <div onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer overflow-hidden">
+            </button>
+            <button onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer overflow-hidden text-left">
               <p className="text-white text-sm font-black uppercase tracking-tighter truncate">{song.title}</p>
               <p className="text-red-600/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
-            </div>
+            </button>
             <div className="flex-shrink-0">
               <LikedButton songId={song.id} initialLiked={true} />
-
             </div>
           </div>
 
           <div className="flex flex-col items-center justify-center flex-shrink-0 w-[340px] xl:w-[420px] mx-6 gap-y-1.5">
             <div className="flex items-center gap-x-7">
-              <AiFillStepBackward onClick={onPrevious} size={22}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`} />
-              <div onClick={onPlay}
-                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer'}`}>
+              <button
+                onClick={onPrevious}
+                disabled={!!isGuest}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+              >
+                <AiFillStepBackward size={22} />
+              </button>
+              <button
+                onClick={onPlay}
+                disabled={!!isGuest}
+                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer'}`}
+              >
                 {renderPlayButton(22)}
-              </div>
-              <AiFillStepForward onClick={onNext} size={22}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`} />
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!!isGuest}
+                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+              >
+                <AiFillStepForward size={22} />
+              </button>
             </div>
             <div className="w-full">
               <MusicSlider value={position} onChange={onSeek} max={duration} />
@@ -203,8 +222,9 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
           <div className="flex items-center justify-end gap-x-3 flex-1 min-w-0">
             <SessionButton />
-            <VolumeIcon onClick={onToggleMute}
-              className="text-neutral-500 cursor-pointer transition flex-shrink-0" size={20} />
+            <button onClick={onToggleMute} className="text-neutral-500 cursor-pointer transition flex-shrink-0">
+              <VolumeIcon size={20} />
+            </button>
             <div className="w-28 flex-shrink-0">
               <Slider value={volume} onChange={onVolumeChange} />
             </div>
