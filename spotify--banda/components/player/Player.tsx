@@ -211,11 +211,8 @@ const load = async () => {
 
   try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
   try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
-  
-  isIntentionalStopRef.current = false;
 
   if (cancelled) return;
-  // ... rest unchanged
 
   const artworkUrl = getArtworkUrl(song);
 
@@ -231,7 +228,9 @@ const load = async () => {
         artworkUrl,
       },
     } as any);
+    isIntentionalStopRef.current = false; // ← only clear AFTER preload
   } catch (e) {
+    isIntentionalStopRef.current = false;
     if (cancelled) return;
     console.warn('[Player] preload failed, skipping:', song.title, e);
     setIsLoading(false);
@@ -269,7 +268,6 @@ const load = async () => {
     if (!cancelled) setIsLoading(false);
   }
 };
-
     load();
 
     return () => { cancelled = true; };
