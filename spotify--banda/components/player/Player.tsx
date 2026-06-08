@@ -11,11 +11,8 @@ import { preextractWindow } from "@/utils/player";
 import { backend as NativeAudio } from '@/utils/audioBackend';
 import PlayerContent from "./PlayerContent";
 
-// ─── constants ────────────────────────────────────────────────────────────────
-
 const ASSET_ID = 'benga_track';
 
-// Helper: derive artworkUrl from a Song (same logic as old useMediaSession)
 const getArtworkUrl = (song: Song): string => {
   if (!song?.image_path) return '';
   if (song.source === 'youtube' || song.image_path.startsWith('http')) {
@@ -24,31 +21,33 @@ const getArtworkUrl = (song: Song): string => {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/imagens/${song.image_path}`;
 };
 
-// ─── component ────────────────────────────────────────────────────────────────
-
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
 
-  // ── restore session on mount ───────────────────────────────────────────────
+  // debug overlay
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const addLog = useCallback((msg: string) => {
+    setDebugLog(prev => [...prev.slice(-15), `${Date.now()}: ${msg}`]);
+  }, []);
+
   useEffect(() => {
     const saved = loadFromSession();
     if (saved?.activeID && saved.ids.length > 0) {
-usePlayer.setState({
-  ids: saved.ids,
-  originalIds: saved.originalIds ?? saved.ids,
-  songs: saved.songs,
-  activeID: saved.activeID,
-  shuffleOn: saved.shuffleOn,
-  repeatMode: saved.repeatMode,
-  queueContext: saved.queueContext ?? DEFAULT_CONTEXT,
-  history: saved.history ?? [],
-});
+      usePlayer.setState({
+        ids: saved.ids,
+        originalIds: saved.originalIds ?? saved.ids,
+        songs: saved.songs,
+        activeID: saved.activeID,
+        shuffleOn: saved.shuffleOn,
+        repeatMode: saved.repeatMode,
+        queueContext: saved.queueContext ?? DEFAULT_CONTEXT,
+        history: saved.history ?? [],
+      });
     }
     setIsMounted(true);
   }, []);
 
-  // ── player store ──────────────────────────────────────────────────────────
   const player    = usePlayer();
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
@@ -58,35 +57,36 @@ usePlayer.setState({
   const songsMap  = usePlayer(s => s.songs);
 
   const lastGoodSongRef = useRef<Song | null>(null);
-const songFromStore   = activeID ? songsMap[activeID] : null;
-if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
-const song    = songFromStore ?? lastGoodSongRef.current;
-const songForLoad = songFromStore;
+  const songFromStore   = activeID ? songsMap[activeID] : null;
+  if (songFromStore && activeID) lastGoodSongRef.current = songFromStore;
+  const song        = songFromStore ?? lastGoodSongRef.current;
+  const songForLoad = songFromStore;
+
   const currentSongRef = useRef<Song | null>(null);
   useEffect(() => { currentSongRef.current = song ?? null; }, [song]);
 
-const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);  const [isPlaying,  setIsPlaying]  = useState(false);
+  const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);
+
+  const [isPlaying,  setIsPlaying]  = useState(false);
   const [isLoading,  setIsLoading]  = useState(false);
   const [volume,     setVolume]     = useState(1);
   const [duration,   setDuration]   = useState(0);
   const [position,   setPosition]   = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const isLoadingRef   = useRef(false);
-  const isLoadedRef    = useRef(false);   // true once preload resolves for current url
-  const endedFiredRef  = useRef(false);
-  const volumeRef      = useRef(1);
-  const isPlayingRef   = useRef(false);
+  const isLoadingRef  = useRef(false);
+  const isLoadedRef   = useRef(false);
+  const endedFiredRef = useRef(false);
+  const volumeRef     = useRef(1);
+  const isPlayingRef  = useRef(false);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
-  // ── session (multi-device) ────────────────────────────────────────────────
   const { session, broadcastState, broadcastQueue, registerPlayer } = useSessionContext();
   const sessionRef = useRef(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
-  // audioRef kept only so SessionContext registerPlayer contract is satisfied
   const audioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     registerPlayer({ audioRef, setIsPlaying, setPosition });
@@ -113,14 +113,12 @@ const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);  const [isP
     if (sessionRef.current?.isHost) broadcastQueue(ids, songMap, aid ?? '');
   });
 
-  // ── preextract window on song change ──────────────────────────────────────
   useEffect(() => {
     if (!activeID) return;
     const { ids } = usePlayer.getState();
     preextractWindow(activeID, ids);
   }, [activeID]);
 
-  // ── one-time configure ────────────────────────────────────────────────────
   useEffect(() => {
     NativeAudio.configure({
       showNotification: true,
@@ -128,28 +126,26 @@ const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);  const [isP
     } as any).catch(() => {});
   }, []);
 
-  // ── event listeners (complete + currentTime + playbackState) ─────────────
   useEffect(() => {
-    // complete → play next
     const completeSub = NativeAudio.addListener('complete', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
+      addLog(`complete fired endedFired:${endedFiredRef.current}`);
       if (endedFiredRef.current) return;
       endedFiredRef.current = true;
       playerRef.current.playNext();
       setTimeout(() => { endedFiredRef.current = false; }, 1000);
     });
 
-    // currentTime → update position + duration bar
     const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
       if (data.currentTime !== undefined) setPosition(data.currentTime);
       if (data.duration && data.duration > 0) setDuration(data.duration);
     });
 
-    // playbackState → lock screen / notification controls fire this
     const stateSub = NativeAudio.addListener('playbackState', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
       const state: string = data.state ?? '';
+      addLog(`playbackState:${state}`);
 
       if (state === 'playing') {
         setIsPlaying(true);
@@ -167,94 +163,98 @@ const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);  const [isP
         } else {
           cur.playPrevious();
         }
-} else if (state === 'completed') {
-    if (endedFiredRef.current) return;
-    endedFiredRef.current = true;
-    playerRef.current.playNext();
-    setTimeout(() => { endedFiredRef.current = false; }, 1000);
-}
+      } else if (state === 'completed') {
+        addLog(`playbackState:completed endedFired:${endedFiredRef.current}`);
+        if (endedFiredRef.current) return;
+        endedFiredRef.current = true;
+        playerRef.current.playNext();
+        setTimeout(() => { endedFiredRef.current = false; }, 1000);
+      }
     });
 
     return () => {
       completeSub.then(h => h.remove()).catch(() => {});
       timeSub.then(h => h.remove()).catch(() => {});
       stateSub.then(h => h.remove()).catch(() => {});
-      // stop + unload on unmount
       NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
       NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
     };
-  }, []);
+  }, [addLog]);
 
-  // ── load + play when songUrl changes ─────────────────────────────────────
-useEffect(() => {
+  useEffect(() => {
     if (!songUrl || !songForLoad) return;
     let cancelled = false;
 
-const load = async () => {
-  isLoadedRef.current = false;
-  isLoadingRef.current = true;
-  setIsLoading(true);
-  setIsPlaying(false);
-  setPosition(0);
-  endedFiredRef.current = false;
+    const load = async () => {
+      addLog(`load start: ${songForLoad.title}`);
+      isLoadedRef.current = false;
+      isLoadingRef.current = true;
+      setIsLoading(true);
+      setIsPlaying(false);
+      setPosition(0);
+      endedFiredRef.current = false;
 
-  try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
-  try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
+      try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
+      try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
+      addLog(`stopped+unloaded`);
 
-  if (cancelled) return;
+      if (cancelled) { addLog('cancelled after unload'); return; }
 
-  const artworkUrl = getArtworkUrl(songForLoad);
+      const artworkUrl = getArtworkUrl(songForLoad);
 
-  try {
-    await NativeAudio.preload({
-      assetId: ASSET_ID,
-      assetPath: songUrl,
-      isUrl: true,
-      notificationMetadata: {
-        title: songForLoad.title,
-        artist: songForLoad.author,
-        album: 'Benga Station',
-        artworkUrl,
-      },
-    } as any);
-  } catch (e) {
-    if (cancelled) return;
-    console.warn('[Player] preload failed, skipping:', songForLoad.title, e);
-    setIsLoading(false);
-    isLoadingRef.current = false;
-    if (activeID) playerRef.current.markFailed(activeID);
-    playerRef.current.playNext();
-    return;
-  }
+      try {
+        await NativeAudio.preload({
+          assetId: ASSET_ID,
+          assetPath: songUrl,
+          isUrl: true,
+          notificationMetadata: {
+            title: songForLoad.title,
+            artist: songForLoad.author,
+            album: 'Benga Station',
+            artworkUrl,
+          },
+        } as any);
+        addLog(`preload ok`);
+      } catch (e) {
+        addLog(`preload failed`);
+        if (cancelled) return;
+        setIsLoading(false);
+        isLoadingRef.current = false;
+        if (activeID) playerRef.current.markFailed(activeID);
+        playerRef.current.playNext();
+        return;
+      }
 
-  if (cancelled) return;
+      if (cancelled) { addLog('cancelled after preload'); return; }
 
-  isLoadedRef.current = true;
-  isLoadingRef.current = false;
+      isLoadedRef.current = true;
+      isLoadingRef.current = false;
 
-  try {
-    const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
-    if (d.duration > 0) setDuration(d.duration);
-    else if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
-  } catch {
-    if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
-  }
+      try {
+        const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
+        if (d.duration > 0) setDuration(d.duration);
+        else if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
+      } catch {
+        if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
+      }
 
-  if (cancelled) return;
+      if (cancelled) return;
 
-  await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
+      await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
 
-  try {
-    await NativeAudio.play({ assetId: ASSET_ID });
-    if (!cancelled) {
-      setIsPlaying(true);
-      setIsLoading(false);
-      setTimeout(broadcastCurrentState, 100);
-    }
-  } catch {
-    if (!cancelled) setIsLoading(false);
-  }
-};
+      try {
+        await NativeAudio.play({ assetId: ASSET_ID });
+        addLog(`play called`);
+        if (!cancelled) {
+          setIsPlaying(true);
+          setIsLoading(false);
+          setTimeout(broadcastCurrentState, 100);
+        }
+      } catch {
+        addLog(`play failed`);
+        if (!cancelled) setIsLoading(false);
+      }
+    };
 
     load();
 
@@ -262,7 +262,6 @@ const load = async () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 
-  // ── repeat-one: replay on playCount bump ──────────────────────────────────
   useEffect(() => {
     if (playCount === 0 || !isLoadedRef.current) return;
     NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 }).catch(() => {});
@@ -270,17 +269,14 @@ const load = async () => {
     setPosition(0);
   }, [playCount]);
 
-  // ── volume sync ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isLoadedRef.current) return;
     NativeAudio.setVolume({ assetId: ASSET_ID, volume: volume }).catch(() => {});
   }, [volume]);
 
-  // ── controls ──────────────────────────────────────────────────────────────
   const handlePlay = useCallback(async () => {
     if (isLoadingRef.current) return;
     if (session && !session.canControl) return;
-
     if (isPlayingRef.current) {
       await NativeAudio.pause({ assetId: ASSET_ID }).catch(() => {});
       setIsPlaying(false);
@@ -321,7 +317,6 @@ const load = async () => {
     setVolume(prev => prev === 0 ? 1 : 0);
   }, []);
 
-  // ── render guard ──────────────────────────────────────────────────────────
   if (!isMounted) return null;
   if (!activeID && !lastGoodSongRef.current) return null;
   if (!song) return null;
@@ -335,6 +330,17 @@ const load = async () => {
 
   return (
     <>
+      {/* DEBUG OVERLAY — remove after debugging */}
+      {debugLog.length > 0 && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[999] bg-black/90 text-green-400 font-mono text-[9px] p-2 max-h-48 overflow-y-auto"
+          onClick={() => setDebugLog([])}
+        >
+          {debugLog.map((l, i) => <div key={i}>{l}</div>)}
+          <div className="text-neutral-600 mt-1">tap to clear</div>
+        </div>
+      )}
+
       {isExpanded && (
         <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />
       )}
