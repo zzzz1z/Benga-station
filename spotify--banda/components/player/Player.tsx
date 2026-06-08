@@ -338,16 +338,7 @@ const load = async () => {
 
   return (
     <>
-      {/* DEBUG OVERLAY — remove after debugging */}
-      {debugLog.length > 0 && (
-        <div
-          className="fixed top-0 left-0 right-0 z-[999] bg-black/90 text-green-400 font-mono text-[9px] p-2 max-h-48 overflow-y-auto"
-          onClick={() => setDebugLog([])}
-        >
-          {debugLog.map((l, i) => <div key={i}>{l}</div>)}
-          <div className="text-neutral-600 mt-1">tap to clear</div>
-        </div>
-      )}
+   
 
       {isExpanded && (
         <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />
