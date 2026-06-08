@@ -64,7 +64,7 @@ const Player = () => {
 
   const currentSongRef = useRef<Song | null>(null);
   useEffect(() => { currentSongRef.current = song ?? null; }, [song]);
-
+  const manualLoadRef = useRef(false);
   const songUrl = useLoadSongUrl((songForLoad ?? { id: '' }) as Song);
 
   const [isPlaying,  setIsPlaying]  = useState(false);
@@ -127,14 +127,15 @@ const Player = () => {
   }, []);
 
   useEffect(() => {
-    const completeSub = NativeAudio.addListener('complete', (data: any) => {
-      if (data.assetId !== ASSET_ID) return;
-      addLog(`complete fired endedFired:${endedFiredRef.current}`);
-      if (endedFiredRef.current) return;
-      endedFiredRef.current = true;
-      playerRef.current.playNext();
-      setTimeout(() => { endedFiredRef.current = false; }, 1000);
-    });
+const completeSub = NativeAudio.addListener('complete', (data: any) => {
+  if (data.assetId !== ASSET_ID) return;
+  addLog(`complete fired endedFired:${endedFiredRef.current} manual:${manualLoadRef.current}`);
+  if (manualLoadRef.current) return;   // ← ADD THIS
+  if (endedFiredRef.current) return;
+  endedFiredRef.current = true;
+  playerRef.current.playNext();
+  setTimeout(() => { endedFiredRef.current = false; }, 1000);
+});
 
     const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
@@ -163,13 +164,14 @@ const Player = () => {
         } else {
           cur.playPrevious();
         }
-      } else if (state === 'completed') {
-        addLog(`playbackState:completed endedFired:${endedFiredRef.current}`);
-        if (endedFiredRef.current) return;
-        endedFiredRef.current = true;
-        playerRef.current.playNext();
-        setTimeout(() => { endedFiredRef.current = false; }, 1000);
-      }
+} else if (state === 'completed') {
+  addLog(`playbackState:completed endedFired:${endedFiredRef.current}`);
+  if (manualLoadRef.current) return;   // ← ADD THIS
+  if (endedFiredRef.current) return;
+  endedFiredRef.current = true;
+  playerRef.current.playNext();
+  setTimeout(() => { endedFiredRef.current = false; }, 1000);
+}
     });
 
     return () => {
@@ -185,10 +187,10 @@ const Player = () => {
     if (!songUrl || !songForLoad) return;
     let cancelled = false;
 
-    const load = async () => {
-      addLog(`load start: ${songForLoad.title}`);
-      isLoadedRef.current = false;
-      isLoadingRef.current = true;
+const load = async () => {
+  addLog(`load start: ${songForLoad.title}`);
+  manualLoadRef.current = true;        // ← ADD: block complete events
+  isLoadedRef.current = false;
       setIsLoading(true);
       setIsPlaying(false);
       setPosition(0);
@@ -225,6 +227,9 @@ const Player = () => {
         return;
       }
 
+      manualLoadRef.current = false;       // ← ADD: re-enable after preload (safe point)
+
+
       if (cancelled) { addLog('cancelled after preload'); return; }
 
       isLoadedRef.current = true;
@@ -258,7 +263,10 @@ const Player = () => {
 
     load();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true;
+        manualLoadRef.current = false;       // ← ADD: reset on cleanup
+
+     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songUrl]);
 

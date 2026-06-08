@@ -111,9 +111,6 @@ const handleAddToPlaylist = async (playlistId: string) => {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                    <div className="absolute bottom-3 right-3 translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        <PlayButton />
-                    </div>
 
                     <div
                         className="absolute top-2 right-2 hidden md:flex flex-col gap-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
