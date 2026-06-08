@@ -308,7 +308,12 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
       ? `⌕ ${queueContext.searchQuery}`
       : 'A tocar agora'}
   </p>
-  <p className="text-white font-black uppercase tracking-tight truncate max-w-[180px] text-sm">{song.title}</p>
+ <p
+  className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
+  style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
+>
+  {song.title}
+</p>
 </div>
 
           <button
@@ -347,18 +352,15 @@ const handleQueueRowClick = useCallback((globalIndex: number) => {
         {/* Song info + like */}
 <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
-            <p
-              className={`text-white font-black truncate leading-tight ${
-                song.title.length > 30
-                  ? 'text-lg tracking-tight'
-                  : song.title.length > 18
-                  ? 'text-2xl uppercase tracking-tighter'
-                  : 'text-3xl uppercase tracking-tighter'
-              }`}
-              style={{ textShadow: '0 0 20px rgba(239,68,68,0.2)' }}
-            >
-              {song.title}
-            </p>
+         <p
+  className="text-white font-black uppercase tracking-tighter leading-tight whitespace-nowrap overflow-hidden"
+  style={{
+    textShadow: '0 0 20px rgba(239,68,68,0.2)',
+    fontSize: `clamp(0.75rem, ${Math.max(1, 4 - song.title.length * 0.06)}rem, 2.5rem)`,
+  }}
+>
+  {song.title}
+</p>
             <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>
           </div>
           <LikedButton songId={String(song.id)} />

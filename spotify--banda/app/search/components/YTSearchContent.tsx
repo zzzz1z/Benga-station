@@ -189,7 +189,7 @@ const doSearch = async () => {
     const seenIds = new Set<string>();
     const validResults: YTResult[] = [];
 
-    const fetchAndFilter = async (): Promise<void> => {
+    const fetchAndFilter = async (isFirst: boolean = false): Promise<void> => {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
         { signal: abortRef.current!.signal }
@@ -203,12 +203,18 @@ const doSearch = async () => {
 
       batch.forEach(r => seenIds.add(r.videoId));
 
-      // Show what we have so far immediately
-      setResults([...validResults, ...batch]);
+      // Show results immediately and flip loading off
+      setResults(prev => {
+        const existingIds = new Set(prev.map(r => r.videoId));
+        return [...prev, ...batch.filter(r => !existingIds.has(r.videoId))];
+      });
       setLoadingIds(new Set(batch.map(r => r.videoId)));
-      if (validResults.length === 0) startPhraseCycle();
+      
+      if (isFirst) {
+        setIsSearching(false); // flip off so results render
+        startPhraseCycle();    // banner starts
+      }
 
-      // Preextract batch sequentially
       for (const result of batch) {
         if (extractAbortRef.current?.signal.aborted) return;
         if (validResults.length >= TARGET) break;
@@ -220,7 +226,6 @@ const doSearch = async () => {
           availableIdsRef.current.add(result.videoId);
           setReadyIds(prev => new Set([...prev, result.videoId]));
         } else {
-          // Remove failed from visible results
           setUnavailableIds(prev => new Set([...prev, result.videoId]));
           setResults(prev => prev.filter(r => r.videoId !== result.videoId));
         }
@@ -234,40 +239,26 @@ const doSearch = async () => {
         await new Promise(r => setTimeout(r, 120));
       }
 
-      // If we still need more, fetch another batch
       if (validResults.length < TARGET && !extractAbortRef.current?.signal.aborted) {
-        await fetchAndFilter();
+        await fetchAndFilter(false);
       }
     };
 
-    await fetchAndFilter();
+    await fetchAndFilter(true);
 
     stopPhraseCycle();
     setAllReady(true);
-
-    // Final queue setup with only valid results
-    const validSongs = validResults.map(r => ({
-      id: `yt_${r.videoId}`,
-      user_id: 'youtube',
-      author: r.artist,
-      title: r.title,
-      song_path: r.videoId,
-      image_path: r.thumbnail,
-      source: 'youtube' as const,
-      youtube_video_id: r.videoId,
-    }));
-
-    nextPageTokenRef.current = null;
     currentQueryRef.current = query;
 
   } catch (err: any) {
     if (err.name !== 'AbortError') setError('SYSTEM_OFFLINE_RETRY_LATER');
     stopPhraseCycle();
+    setIsSearching(false);
   } finally {
+    // only for safety — isSearching already flipped in fetchAndFilter
     setIsSearching(false);
   }
 };
-
         doSearch();
 
         return () => {

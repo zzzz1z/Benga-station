@@ -25,12 +25,15 @@ export function useQueueExtender({ query = '', enabled = true }: QueueExtenderOp
   useEffect(() => {
     if (!enabled || !activeID || exhaustedRef.current || isFetchingRef.current) return;
 
+    // Don't extend queue during search — YTSearchContent handles that
+    const { queueContext } = usePlayer.getState();
+    if (queueContext.source === 'search') return;
+
     const currentIndex = ids.indexOf(activeID);
     if (currentIndex === -1) return;
 
     const remaining = ids.length - currentIndex - 1;
     if (remaining > 4) return;
-
     isFetchingRef.current = true;
     setStatus('fetching');
 
