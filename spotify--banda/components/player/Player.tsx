@@ -201,13 +201,18 @@ usePlayer.setState({
 
 
 const load = async () => {
-  isIntentionalStopRef.current = true;
+  const hadPreviousTrack = isLoadedRef.current || isPlayingRef.current;
+  
   isLoadedRef.current = false;
   isLoadingRef.current = true;
   setIsLoading(true);
   setIsPlaying(false);
   setPosition(0);
   endedFiredRef.current = false;
+
+  if (hadPreviousTrack) {
+    isIntentionalStopRef.current = true;
+  }
 
   try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
   try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
@@ -228,7 +233,7 @@ const load = async () => {
         artworkUrl,
       },
     } as any);
-    isIntentionalStopRef.current = false; // ← only clear AFTER preload
+    isIntentionalStopRef.current = false;
   } catch (e) {
     isIntentionalStopRef.current = false;
     if (cancelled) return;
