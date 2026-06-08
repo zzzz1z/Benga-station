@@ -83,9 +83,9 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
 
 const fetchMoreAndAppend = useCallback(async () => {
-    if (isFetchingMoreRef.current) return;
+ if (isFetchingMoreRef.current) return;
     if (!currentQueryRef.current) return;
-
+    if (isHandlingPlayRef.current) return;
     isFetchingMoreRef.current = true;
 
     try {
