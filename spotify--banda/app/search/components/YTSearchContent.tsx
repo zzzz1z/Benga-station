@@ -33,7 +33,7 @@ const LOADING_PHRASES = [
 ];
 
 const BATCH_SIZE = 5;
-const TARGET = 30;
+const TARGET =15;
 
 interface YTSearchContentProps {
     query: string;
@@ -107,7 +107,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
             if (data.error || !data.results?.length) return;
 
             const newResults: YTResult[] = data.results
-                .slice(0, 35)
+                .slice(0, 15)
                 .filter((r: YTResult) => !availableIdsRef.current.has(r.videoId));
 
             if (!newResults.length) return;
@@ -203,7 +203,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
                 const seenIds = new Set<string>();
                 const pool: YTResult[] = (data.results || [])
-                    .slice(0, 50)
+                    .slice(0, 15)
                     .filter((r: YTResult) => {
                         if (seenIds.has(r.videoId)) return false;
                         seenIds.add(r.videoId);
