@@ -273,11 +273,16 @@ const doSearch = async () => {
     }, []); 
 
 
+const isHandlingPlayRef = useRef(false);
+
 const handlePlay = async (result: YTResult) => {
     if (!user) { authModal.onOpen('sign_up'); return; }
+    if (isHandlingPlayRef.current) return;
     if (loadingId === result.videoId) return;
     if (unavailableIds.has(result.videoId)) return;
     if (failedIds.has(`yt_${result.videoId}`)) return;
+
+    isHandlingPlayRef.current = true;
 
     if (!readyIds.has(result.videoId)) {
         setLoadingId(result.videoId);
@@ -288,11 +293,11 @@ const handlePlay = async (result: YTResult) => {
             setReadyIds(prev => new Set([...prev, result.videoId]));
         } else {
             setUnavailableIds(prev => new Set([...prev, result.videoId]));
+            isHandlingPlayRef.current = false;
             return;
         }
     }
 
-    // Fire single preextract for immediate playback
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -315,6 +320,9 @@ const handlePlay = async (result: YTResult) => {
 
     player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
     setPlayingId(result.videoId);
+    
+    // Keep locked for 3s to prevent any queue interference during native preload
+    setTimeout(() => { isHandlingPlayRef.current = false; }, 3000);
 };
 
     if (!query || query.trim().length < 2) {
