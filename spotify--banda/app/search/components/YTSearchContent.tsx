@@ -285,56 +285,40 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         return () => { stopPhraseCycle(); };
     }, []);
 
-    const handlePlay = useCallback(async (result: YTResult) => {
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        if (isHandlingPlayRef.current) return;
-        if (loadingId === result.videoId) return;
-        if (unavailableIds.has(result.videoId)) return;
-        if (failedIdsRef.current.has(`yt_${result.videoId}`)) return;
+const handlePlay = useCallback(async (result: YTResult) => {
+    if (!user) { authModal.onOpen('sign_up'); return; }
+    if (isHandlingPlayRef.current) return;
+    if (loadingId === result.videoId) return;
+    if (unavailableIds.has(result.videoId)) return;
+    if (failedIdsRef.current.has(`yt_${result.videoId}`)) return;
 
-        isHandlingPlayRef.current = true;
+    isHandlingPlayRef.current = true;
 
-        if (!availableIdsRef.current.has(result.videoId)) {
-            setLoadingId(result.videoId);
-            const success = await preExtract(result.videoId);
-            setLoadingId(null);
-            if (success) {
-                availableIdsRef.current.add(result.videoId);
-                setReadyIds(prev => new Set([...prev, result.videoId]));
-            } else {
-                setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                isHandlingPlayRef.current = false;
-                return;
-            }
-        }
+    // If not ready yet, just mark unavailable — don't block waiting
+    if (!availableIdsRef.current.has(result.videoId)) {
+        isHandlingPlayRef.current = false;
+        return;
+    }
 
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/preextract`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoId: result.videoId }),
-        }).catch(() => {});
+    const targetId = `yt_${result.videoId}`;
+    const baseSongs = resultsRef.current
+        .filter(r => availableIdsRef.current.has(r.videoId) && !failedIdsRef.current.has(`yt_${r.videoId}`))
+        .map(r => ({
+            id: `yt_${r.videoId}`,
+            user_id: 'youtube',
+            author: r.artist,
+            title: r.title,
+            song_path: r.videoId,
+            image_path: r.thumbnail,
+            source: 'youtube' as const,
+            youtube_video_id: r.videoId,
+        }));
 
-        const targetId = `yt_${result.videoId}`;
+    player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
+    setPlayingId(result.videoId);
 
-        const baseSongs = resultsRef.current
-            .filter(r => availableIdsRef.current.has(r.videoId) && !failedIdsRef.current.has(`yt_${r.videoId}`))
-            .map(r => ({
-                id: `yt_${r.videoId}`,
-                user_id: 'youtube',
-                author: r.artist,
-                title: r.title,
-                song_path: r.videoId,
-                image_path: r.thumbnail,
-                source: 'youtube' as const,
-                youtube_video_id: r.videoId,
-            }));
-
-        player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
-        setPlayingId(result.videoId);
-
-        setTimeout(() => { isHandlingPlayRef.current = false; }, 300);
-    }, [user, authModal, player, query, loadingId, unavailableIds]);
-
+    setTimeout(() => { isHandlingPlayRef.current = false; }, 300);
+}, [user, authModal, player, query, loadingId, unavailableIds]);
     if (!query || query.trim().length < 2) {
         return (
             <p className="text-neutral-600 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em]">
