@@ -32,6 +32,9 @@ const LOADING_PHRASES = [
     'DECRYPTING_AUDIO...',
 ];
 
+const BATCH_SIZE = 5;
+const TARGET = 30;
+
 interface YTSearchContentProps {
     query: string;
 }
@@ -64,11 +67,9 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     const nextPageTokenRef = useRef<string | null>(null);
     const currentQueryRef = useRef<string>('');
 
-    // FIX: always-fresh results ref so handlePlay never closes over stale state
     const resultsRef = useRef<YTResult[]>([]);
     useEffect(() => { resultsRef.current = results; }, [results]);
 
-    // FIX: always-fresh failedIds ref
     const failedIdsRef = useRef<Set<string>>(new Set());
     useEffect(() => { failedIdsRef.current = failedIds; }, [failedIds]);
 
@@ -187,71 +188,76 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         isFetchingMoreRef.current = false;
         stopPhraseCycle();
 
-        const TARGET = 30;
-
         const doSearch = async () => {
             setIsSearching(true);
             setError(null);
 
             try {
+                // Fetch a pool of candidates from YT search
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
+                    { signal: abortRef.current!.signal }
+                );
+                const data = await res.json();
+                if (data.error) throw new Error('search error');
+
                 const seenIds = new Set<string>();
-                const validResults: YTResult[] = [];
-
-                const fetchAndFilter = async (isFirst: boolean = false): Promise<void> => {
-                    const res = await fetch(
-                        `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(query)}`,
-                        { signal: abortRef.current!.signal }
-                    );
-                    const data = await res.json();
-                    if (data.error) throw new Error('search error');
-
-                    const batch: YTResult[] = (data.results || [])
-                        .slice(0, 35)
-                        .filter((r: YTResult) => !seenIds.has(r.videoId));
-
-                    batch.forEach(r => seenIds.add(r.videoId));
-
-                    setResults(prev => {
-                        const existingIds = new Set(prev.map(r => r.videoId));
-                        return [...prev, ...batch.filter(r => !existingIds.has(r.videoId))];
+                const pool: YTResult[] = (data.results || [])
+                    .slice(0, 50)
+                    .filter((r: YTResult) => {
+                        if (seenIds.has(r.videoId)) return false;
+                        seenIds.add(r.videoId);
+                        return true;
                     });
-                    setLoadingIds(new Set(batch.map(r => r.videoId)));
 
-                    if (isFirst) {
-                        setIsSearching(false);
-                        startPhraseCycle();
+                // Show all candidates immediately so user sees titles/spinners right away
+                setResults(pool);
+                setLoadingIds(new Set(pool.map(r => r.videoId)));
+                setIsSearching(false);
+                startPhraseCycle();
+
+                // Process in batches of BATCH_SIZE, stop at TARGET valid ones
+                let validCount = 0;
+
+                for (let i = 0; i < pool.length && validCount < TARGET; i += BATCH_SIZE) {
+                    if (extractAbortRef.current?.signal.aborted) break;
+
+                    const batch = pool.slice(i, i + BATCH_SIZE);
+
+                    // Fire all BATCH_SIZE preextracts in parallel
+                    const batchResults = await Promise.all(
+                        batch.map(async r => {
+                            const ok = await preExtract(r.videoId, extractAbortRef.current?.signal);
+                            return { r, ok };
+                        })
+                    );
+
+                    if (extractAbortRef.current?.signal.aborted) break;
+
+                    const available = batchResults.filter(x => x.ok).map(x => x.r);
+                    const unavailable = batchResults.filter(x => !x.ok).map(x => x.r);
+
+                    // Mark available
+                    available.forEach(r => availableIdsRef.current.add(r.videoId));
+                    if (available.length) {
+                        setReadyIds(prev => new Set([...prev, ...available.map(r => r.videoId)]));
+                        validCount += available.length;
                     }
 
-                    for (const result of batch) {
-                        if (extractAbortRef.current?.signal.aborted) return;
-                        if (validResults.length >= TARGET) break;
-
-                        const success = await preExtract(result.videoId, extractAbortRef.current?.signal);
-
-                        if (success) {
-                            validResults.push(result);
-                            availableIdsRef.current.add(result.videoId);
-                            setReadyIds(prev => new Set([...prev, result.videoId]));
-                        } else {
-                            setUnavailableIds(prev => new Set([...prev, result.videoId]));
-                            setResults(prev => prev.filter(r => r.videoId !== result.videoId));
-                        }
-
-                        setLoadingIds(prev => {
-                            const next = new Set(prev);
-                            next.delete(result.videoId);
-                            return next;
-                        });
-
-                        await new Promise(r => setTimeout(r, 120));
+                    // Remove unavailable from results list
+                    if (unavailable.length) {
+                        const unavailableSet = new Set(unavailable.map(r => r.videoId));
+                        setUnavailableIds(prev => new Set([...prev, ...unavailableSet]));
+                        setResults(prev => prev.filter(r => !unavailableSet.has(r.videoId)));
                     }
 
-                    if (validResults.length < TARGET && !extractAbortRef.current?.signal.aborted) {
-                        await fetchAndFilter(false);
-                    }
-                };
-
-                await fetchAndFilter(true);
+                    // Clear spinners for this batch
+                    setLoadingIds(prev => {
+                        const next = new Set(prev);
+                        batch.forEach(r => next.delete(r.videoId));
+                        return next;
+                    });
+                }
 
                 stopPhraseCycle();
                 setAllReady(true);
@@ -279,7 +285,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         return () => { stopPhraseCycle(); };
     }, []);
 
-    // FIX: stable useCallback; reads fresh data via refs instead of closing over state
     const handlePlay = useCallback(async (result: YTResult) => {
         if (!user) { authModal.onOpen('sign_up'); return; }
         if (isHandlingPlayRef.current) return;
@@ -311,7 +316,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
         const targetId = `yt_${result.videoId}`;
 
-        // FIX: read from ref so we always get the latest results list
         const baseSongs = resultsRef.current
             .filter(r => availableIdsRef.current.has(r.videoId) && !failedIdsRef.current.has(`yt_${r.videoId}`))
             .map(r => ({
@@ -328,7 +332,6 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         player.setQueue(baseSongs as any, targetId, { source: 'search', searchQuery: query });
         setPlayingId(result.videoId);
 
-        // FIX: was 3000ms — dropped to 300ms since manualLoadRef now handles the real race
         setTimeout(() => { isHandlingPlayRef.current = false; }, 300);
     }, [user, authModal, player, query, loadingId, unavailableIds]);
 
