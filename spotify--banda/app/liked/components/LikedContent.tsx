@@ -38,7 +38,7 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
     const fetchSongs = useCallback(async () => {
         if (!user?.id) return;
         const { data, error } = await supabase
-            .from('liked_songs')
+            .from('Músicas_Favoritas')
             .select('Songs(*)')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });

@@ -30,7 +30,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
 
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId: id }),
+      body: JSON.stringify({ song_id: id }),
     });
 
     if (!res.ok) {
