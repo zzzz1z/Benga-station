@@ -32,12 +32,7 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
 
     const songId = String(data.id);
 
-    useEffect(() => {
-        if (!user?.id) return;
-        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
-            .then(res => res.json())
-            .then(json => { if (json.liked) setIsLiked(true); });
-    }, [user?.id, songId]);
+
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {

@@ -44,12 +44,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
 
   const songId = `yt_${result.videoId}`;
 
-  useEffect(() => {
-    if (!user?.id) return;
-    authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes?songId=${songId}`)
-      .then(res => res.json())
-      .then(json => { if (json.liked) setIsLiked(true); });
-  }, [user?.id, songId]);
+
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
