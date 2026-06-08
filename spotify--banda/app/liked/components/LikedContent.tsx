@@ -7,26 +7,19 @@ import { useUser } from "@/hooks/useUser";
 import { Song } from "@/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { useRefresh } from "@/hooks/useRefresh";
 import { createClient } from "@/utils/supabase/client";
 import { MdMusicOff } from "react-icons/md";
 import { HiHeart } from "react-icons/hi";
 
 const supabase = createClient();
 
-interface LikedContentProps {
-    songs: Song[];
-}
-
-
 const SLASH_CUT = "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)";
 
-const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
+const LikedContent: React.FC = () => {
     const router = useRouter();
     const { isLoading, user } = useUser();
-    const [songs, setSongs] = useState<Song[]>(initialSongs);
+    const [songs, setSongs] = useState<Song[]>([]);
     const [mounted, setMounted] = useState(false);
-    const { refreshKey } = useRefresh();
     const onPlay = useOnPlay(songs);
 
     useEffect(() => { setMounted(true); }, []);
@@ -46,9 +39,8 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
     }, [user?.id]);
 
     useEffect(() => {
-        if (refreshKey === 0) return;
-        fetchSongs();
-    }, [refreshKey]);
+        if (user?.id) fetchSongs();
+    }, [user?.id, fetchSongs]);
 
     if (!mounted || isLoading) {
         return (
@@ -76,15 +68,12 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
 
     return (
         <div className="flex flex-col w-full p-4 gap-y-3">
-
-            {/* Count header */}
             <div className="flex items-center gap-x-3 px-1 py-1">
                 <HiHeart size={12} className="text-red-500/40 flex-shrink-0" />
                 <div className="flex-1 h-px bg-red-900/20" />
                 <span className="text-[8px] font-mono text-red-600/20 uppercase tracking-[0.3em]">{songs.length} TRACKS</span>
             </div>
 
-            {/* Song list */}
             <div className="flex flex-col gap-y-1">
                 {songs.map((song, i) => (
                     <div
@@ -99,8 +88,7 @@ const LikedContent: React.FC<LikedContentProps> = ({ songs: initialSongs }) => {
                             />
                         </div>
                         <div className="flex-shrink-0">
-                           <LikedButton songId={song.id} initialLiked={true} />
-
+                            <LikedButton songId={song.id} initialLiked={true} />
                         </div>
                     </div>
                 ))}

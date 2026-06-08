@@ -1,29 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Header from "@/components/Header";
 import LikedContent from "./components/LikedContent";
 import Image from "next/image";
-import { createClient } from '@/utils/supabase/client';
-import { Song } from '@/types';
-
-const supabase = createClient();
 
 const Liked = () => {
-  const [songs, setSongs] = useState<Song[]>([]);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase
-        .from('Músicas_Favoritas')
-        .select('*, Songs(*)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data }) => setSongs((data ?? []).map((i: any) => ({ ...i.Songs }))));
-    });
-  }, []);
-
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
       <Header>
@@ -54,20 +35,11 @@ const Liked = () => {
               >
                 Músicas<br className="md:hidden" /> Favoritas
               </h1>
-              <div className="flex items-center gap-x-2 mt-1">
-                <div className="h-px w-6 bg-red-500/40" />
-                <span className="text-red-600/30 font-mono text-[8px] uppercase tracking-[0.3em]">
-                  {songs.length} TRACKS_LOADED
-                </span>
-                <div className="h-px w-6 bg-red-500/40" />
-              </div>
             </div>
-
-            
           </div>
         </div>
       </Header>
-      <LikedContent songs={songs} />
+      <LikedContent />
     </div>
   );
 };

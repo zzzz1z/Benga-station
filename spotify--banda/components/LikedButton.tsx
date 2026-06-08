@@ -2,6 +2,7 @@
 
 import useAuthModal from "@/hooks/useAuthModal";
 import { useUser } from "@/hooks/useUser";
+import { authedFetch } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -26,12 +27,10 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false 
     if (isYoutube) return;
 
     const method = isLiked ? 'DELETE' : 'POST';
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
-
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ song_id: id }),
-    });
+const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+  method,
+  body: JSON.stringify({ song_id: id }),
+});
 
     if (!res.ok) {
       const json = await res.json();
