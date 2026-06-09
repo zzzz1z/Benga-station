@@ -50,6 +50,11 @@ jobs:
           cd spotify--banda
           npx cap sync ios
 
+      - name: Find NativeAudio files
+        run: |
+          find spotify--banda/ios -name "RemoteAudioAsset.swift"
+          find spotify--banda/ios -name "Plugin.swift"    
+
       - name: Patch NativeAudio seek tolerance and lock screen controls
         run: |
           FILE=$(find spotify--banda/ios -name "RemoteAudioAsset.swift" -path "*/NativeAudioPlugin/*" | head -1)
