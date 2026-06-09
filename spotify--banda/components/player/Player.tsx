@@ -75,6 +75,7 @@ const Player = () => {
   const endedFiredRef = useRef(false);
   const volumeRef     = useRef(1);
   const isPlayingRef  = useRef(false);
+  const isSeeking = useRef(false);
 
   useEffect(() => { volumeRef.current    = volume;    }, [volume]);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -132,11 +133,11 @@ const completeSub = NativeAudio.addListener('complete', (data: any) => {
   setTimeout(() => { endedFiredRef.current = false; }, 1000);
 });
 
-    const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
-      if (data.assetId !== ASSET_ID) return;
-      if (data.currentTime !== undefined) setPosition(data.currentTime);
-      if (data.duration && data.duration > 0) setDuration(data.duration);
-    });
+const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
+  if (data.assetId !== ASSET_ID) return;
+  if (!isSeeking.current && data.currentTime !== undefined) setPosition(data.currentTime);
+  if (data.duration && data.duration > 0) setDuration(data.duration);
+});
 
     const stateSub = NativeAudio.addListener('playbackState', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
@@ -224,13 +225,25 @@ const load = async () => {
       isLoadedRef.current = true;
       isLoadingRef.current = false;
 
-      try {
-        const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
-        if (d.duration > 0) setDuration(d.duration);
-        else if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
-      } catch {
-        if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
+// Poll for duration — streaming URLs take time to buffer
+const pollDuration = async (attempts = 8) => {
+  for (let i = 0; i < attempts; i++) {
+    if (cancelled) return;
+    try {
+      const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
+      if (d.duration > 0) {
+        setDuration(d.duration);
+        return;
       }
+    } catch {}
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  // fallback to song metadata
+  if (songForLoad.duration && songForLoad.duration > 0) {
+    setDuration(songForLoad.duration);
+  }
+};
+pollDuration();
 
       if (cancelled) return;
 
@@ -243,12 +256,7 @@ try {
     setIsLoading(false);
     setTimeout(broadcastCurrentState, 100);
     // Force iOS to refresh Now Playing duration
-    setTimeout(async () => {
-      try {
-        await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0.01 });
-        await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 });
-      } catch {}
-    }, 800);
+
   }
 } catch {
   if (!cancelled) setIsLoading(false);
@@ -308,12 +316,14 @@ try {
     setTimeout(broadcastCurrentState, 200);
   }, [session, broadcastCurrentState, position]);
 
-  const handleSeek = useCallback(async (value: number) => {
-    if (session && !session.canControl) return;
-    await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: value }).catch(() => {});
-    setPosition(value);
-    broadcastCurrentState();
-  }, [session, broadcastCurrentState]);
+const handleSeek = useCallback(async (value: number) => {
+  if (session && !session.canControl) return;
+  isSeeking.current = true;
+  setPosition(value);
+  await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: value }).catch(() => {});
+  setTimeout(() => { isSeeking.current = false; }, 500);
+  broadcastCurrentState();
+}, [session, broadcastCurrentState]);
 
   const toggleMute = useCallback(() => {
     setVolume(prev => prev === 0 ? 1 : 0);
