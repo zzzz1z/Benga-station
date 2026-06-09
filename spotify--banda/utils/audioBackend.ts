@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { NativeAudio } from '@capgo/native-audio';
+import { NativeAudio } from '@capgo/capacitor-native-audio';
 
 export const IS_NATIVE = Capacitor.isNativePlatform();
 

@@ -16,7 +16,7 @@ let package = Package(
         .package(name: "CapacitorBackgroundRunner", path: "..\..\..\node_modules\@capacitor\background-runner"),
         .package(name: "CapacitorFilesystem", path: "..\..\..\node_modules\@capacitor\filesystem"),
         .package(name: "CapgoCapacitorMediaSession", path: "..\..\..\node_modules\@capgo\capacitor-media-session"),
-        .package(name: "CapgoNativeAudio", path: "..\..\..\node_modules\@capgo\native-audio"),
+        .package(name: "CapgoCapacitorNativeAudio", path: "..\..\..\node_modules\@capgo\capacitor-native-audio"),
         .package(name: "TransistorsoftCapacitorBackgroundFetch", path: "..\..\..\node_modules\@transistorsoft\capacitor-background-fetch")
     ],
     targets: [
@@ -29,7 +29,7 @@ let package = Package(
                 .product(name: "CapacitorBackgroundRunner", package: "CapacitorBackgroundRunner"),
                 .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
                 .product(name: "CapgoCapacitorMediaSession", package: "CapgoCapacitorMediaSession"),
-                .product(name: "CapgoNativeAudio", package: "CapgoNativeAudio"),
+                .product(name: "CapgoCapacitorNativeAudio", package: "CapgoCapacitorNativeAudio"),
                 .product(name: "TransistorsoftCapacitorBackgroundFetch", package: "TransistorsoftCapacitorBackgroundFetch")
             ]
         )
