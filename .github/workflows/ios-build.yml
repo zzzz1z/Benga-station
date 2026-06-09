@@ -50,6 +50,20 @@ jobs:
           cd spotify--banda
           npx cap sync ios
 
+      - name: Patch NativeAudio seek tolerance and lock screen controls
+        run: |
+          FILE=$(find spotify--banda/ios -name "RemoteAudioAsset.swift" -path "*/NativeAudioPlugin/*" | head -1)
+          sed -i '' 's/toleranceBefore: .zero, toleranceAfter: .zero/toleranceBefore: .positiveInfinity, toleranceAfter: .positiveInfinity/g' "$FILE"
+          
+          PLUGIN=$(find spotify--banda/ios -name "Plugin.swift" -path "*/NativeAudioPlugin/*" | head -1)
+          sed -i '' 's/commandCenter\.skipForwardCommand\.preferredIntervals = \[NSNumber(value: 15)\]/commandCenter.nextTrackCommand.isEnabled = true/g' "$PLUGIN"
+          sed -i '' 's/commandCenter\.skipForwardCommand\.isEnabled = true/commandCenter.skipForwardCommand.isEnabled = false/g' "$PLUGIN"
+          sed -i '' '/commandCenter\.skipForwardCommand\.addTarget/,/^        }/d' "$PLUGIN"
+          sed -i '' 's/commandCenter\.skipBackwardCommand\.preferredIntervals = \[NSNumber(value: 15)\]/commandCenter.previousTrackCommand.isEnabled = true/g' "$PLUGIN"
+          sed -i '' 's/commandCenter\.skipBackwardCommand\.isEnabled = true/commandCenter.skipBackwardCommand.isEnabled = false/g' "$PLUGIN"
+          sed -i '' '/commandCenter\.skipBackwardCommand\.addTarget/,/^        }/d' "$PLUGIN"
+
+
       - name: Set App Icon
         run: |
           sips -z 1024 1024 \
