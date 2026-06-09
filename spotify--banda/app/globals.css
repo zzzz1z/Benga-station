@@ -70,3 +70,7 @@ input, textarea, select {
     100% { left: 120%; }
   }
 }
+
+button, [role="button"] {
+  touch-action: manipulation;
+}

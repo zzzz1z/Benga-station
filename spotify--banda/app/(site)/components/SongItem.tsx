@@ -88,7 +88,6 @@ const handleAddToPlaylist = async (playlistId: string) => {
     return (
         <>
             <div
-                onClick={() => onClick(data.id)}
                 className="relative group flex flex-col cursor-pointer transition p-0"
             >
                 <div className="relative aspect-square w-full overflow-hidden rounded-sm">

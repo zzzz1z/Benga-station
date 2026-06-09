@@ -80,17 +80,18 @@ const handleClick = (song: Song) => {
       <div className="relative group">
         <div className="absolute -inset-4 bg-red-600/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition duration-1000 pointer-events-none" />
         <div className="relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-8 gap-6">
-          {displayed.map((item) => (
-            <div
-              key={item.id}
-              className="relative transition-all duration-300 hover:scale-[1.03] active:scale-95"
-            >
-              <SongItem
-                onClick={() => handleClick(item)}
-                data={item}
-              />
-            </div>
-          ))}
+{displayed.map((item) => (
+  <button
+    key={item.id}
+    className="relative transition-all duration-300 hover:scale-[1.03] active:scale-95 text-left w-full"
+    onClick={() => handleClick(item)}
+  >
+    <SongItem
+      onClick={() => {}}
+      data={item}
+    />
+  </button>
+))}
         </div>
       </div>
 

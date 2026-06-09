@@ -23,10 +23,10 @@ router.push(`/playlists?id=${data?.id}`);        if (onClick) onClick(data.id);
     };
 
     return (
-        <div
-            onClick={handleClick}
-            className="flex items-center gap-x-3 cursor-pointer hover:bg-red-600/5 w-full p-2 border border-transparent hover:border-red-900/30 transition-all group"
-        >
+<button
+    onClick={handleClick}
+    className="flex items-center gap-x-3 hover:bg-red-600/5 w-full p-2 border border-transparent hover:border-red-900/30 transition-all group text-left"
+>
             <div className="relative rounded-none min-h-[52px] min-w-[52px] overflow-hidden border border-white/5">
                 <Image
                     priority fill
@@ -45,7 +45,7 @@ router.push(`/playlists?id=${data?.id}`);        if (onClick) onClick(data.id);
                     DIR_TYPE::PLAYLIST
                 </p>
             </div>
-        </div>
+        </button>
     );
 };
 

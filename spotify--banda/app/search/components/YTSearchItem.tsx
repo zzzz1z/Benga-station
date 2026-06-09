@@ -62,7 +62,7 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
       method,
-      body: JSON.stringify({ songId }),
+      body: JSON.stringify({ song_id: songId }),
     });
     if (res.ok) {
       setIsLiked(!isLiked);
@@ -134,11 +134,12 @@ console.log('upsert result:', { song_id, status: upsertRes.status });
 
   return (
     <>
-      <div
-        className={`flex items-center gap-x-3 w-full p-2 rounded-md transition group
-          ${isUnavailable ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800 cursor-pointer'}`}
-        onClick={() => !isUnavailable && onPlay(result)}
-      >
+<button
+  disabled={isUnavailable}
+  className={`flex items-center gap-x-3 w-full p-2 rounded-md transition group text-left
+    ${isUnavailable ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800'}`}
+  onClick={() => onPlay(result)}
+>
         <div className="relative flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-neutral-700">
           {result.thumbnail && (
             <Image src={result.thumbnail} alt={result.title} fill className="object-cover" unoptimized />
@@ -221,7 +222,7 @@ console.log('upsert result:', { song_id, status: upsertRes.status });
             )}
           </div>
         </div>
-      </div>
+      </button>
 
       <Modal isOpen={showModal} onChange={open => setShowModal(open)} title="Adicionar à playlist" description="Escolhe uma playlist para adicionar esta música">
         <div className="flex flex-col gap-y-2">

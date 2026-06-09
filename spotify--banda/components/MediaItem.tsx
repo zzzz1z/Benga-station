@@ -67,7 +67,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
         const method = isLiked ? 'DELETE' : 'POST';
         const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
             method,
-            body: JSON.stringify({ songId }),
+            body: JSON.stringify({ song_id: songId }),
         });
         if (res.ok) {
             setIsLiked(!isLiked);
@@ -105,10 +105,10 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
 
     return (
         <>
-            <div
-                onClick={handleClick}
-                className="flex items-center gap-4 cursor-pointer hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative"
-            >
+<button
+    onClick={handleClick}
+    className="flex items-center gap-4 hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative text-left"
+>
                 <div className="relative rounded-none h-14 w-16 flex-shrink-0 overflow-hidden border border-white/5">
                     <Image
                         priority fill
@@ -166,7 +166,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
                         <BsThreeDotsVertical size={16} />
                     </button>
                 </div>
-            </div>
+            </button>
 
             {showMenu && menuPos && (
                 <div
