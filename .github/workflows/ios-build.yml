@@ -36,6 +36,13 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
 
+
+      - name: Resolve SPM dependencies
+        run: |
+          cd spotify--banda/ios/App
+          xcodebuild -resolvePackageDependencies -scheme App
+
+
       - name: Find NativeAudio Swift files
         run: |
           find ~/Library/Developer/Xcode/DerivedData -name "RemoteAudioAsset.swift" 2>/dev/null
