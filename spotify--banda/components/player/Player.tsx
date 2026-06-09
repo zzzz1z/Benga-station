@@ -236,18 +236,23 @@ const load = async () => {
 
       await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
 
+try {
+  await NativeAudio.play({ assetId: ASSET_ID });
+  if (!cancelled) {
+    setIsPlaying(true);
+    setIsLoading(false);
+    setTimeout(broadcastCurrentState, 100);
+    // Force iOS to refresh Now Playing duration
+    setTimeout(async () => {
       try {
-        await NativeAudio.play({ assetId: ASSET_ID });
-     
-        if (!cancelled) {
-          setIsPlaying(true);
-          setIsLoading(false);
-          setTimeout(broadcastCurrentState, 100);
-        }
-      } catch {
-      
-        if (!cancelled) setIsLoading(false);
-      }
+        await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0.01 });
+        await NativeAudio.setCurrentTime({ assetId: ASSET_ID, time: 0 });
+      } catch {}
+    }, 800);
+  }
+} catch {
+  if (!cancelled) setIsLoading(false);
+}
     };
 
     load();
