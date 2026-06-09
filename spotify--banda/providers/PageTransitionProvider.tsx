@@ -47,44 +47,7 @@ const GlitchOverlay = ({ active }: { active: boolean }) => {
       <div className="absolute top-0 left-0 right-0"
         style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(239,68,68,1), transparent)', animation: 'glitch-beam 0.22s ease-out forwards', boxShadow: '0 0 10px rgba(239,68,68,1)' }} />
 
-      <style>{`
-        @keyframes glitch-container {
-          0%   { opacity: 1; }
-          70%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        @keyframes glitch-flash {
-          0%   { opacity: 0; }
-          8%   { opacity: 1; }
-          40%  { opacity: 0.2; }
-          60%  { opacity: 0.6; }
-          100% { opacity: 0; }
-        }
-        @keyframes glitch-scanlines {
-          0%   { opacity: 0; transform: translateY(0); }
-          15%  { opacity: 1; }
-          100% { opacity: 0; transform: translateY(-6px); }
-        }
-        @keyframes glitch-line1 {
-          0%   { opacity: 0; transform: translateX(0); }
-          10%  { opacity: 1; transform: translateX(-14px); }
-          30%  { opacity: 0.7; transform: translateX(20px); }
-          60%  { opacity: 0.5; transform: translateX(-6px); }
-          100% { opacity: 0; transform: translateX(0); }
-        }
-        @keyframes glitch-line2 {
-          0%   { opacity: 0; transform: translateX(0); }
-          15%  { opacity: 0.8; transform: translateX(28px); }
-          50%  { opacity: 0.4; transform: translateX(-10px); }
-          100% { opacity: 0; transform: translateX(0); }
-        }
-        @keyframes glitch-beam {
-          0%   { opacity: 0; transform: scaleX(0); transform-origin: left; }
-          15%  { opacity: 1; transform: scaleX(1); }
-          70%  { opacity: 0.6; }
-          100% { opacity: 0; }
-        }
-      `}</style>
+
     </div>
   );
 };
@@ -134,26 +97,7 @@ const LoadingOverlay = ({ active }: { active: boolean }) => (
         }}
       />
     )}
-    <style>{`
-      @keyframes loading-scanlines {
-        0%   { transform: translateY(0); }
-        100% { transform: translateY(4px); }
-      }
-      @keyframes loading-beam {
-        0%   { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-      }
-      @keyframes loading-bottom {
-        0%, 100% { opacity: 0.2; }
-        50%       { opacity: 0.6; }
-      }
-      @keyframes loading-tick {
-        0%, 85%, 100% { opacity: 0; transform: translateX(0); }
-        87%            { opacity: 1; transform: translateX(-12px); }
-        90%            { opacity: 0.6; transform: translateX(8px); }
-        93%            { opacity: 0; transform: translateX(0); }
-      }
-    `}</style>
+
   </div>
 );
 
@@ -165,19 +109,12 @@ export const PageTransitionProvider = ({ children }: { children: React.ReactNode
   const pendingNav = useRef<{ type: 'push' | 'back' | 'forward'; href?: string } | null>(null);
   const loadingDepth = useRef(0);
 
-  const triggerGlitch = useCallback((nav: typeof pendingNav.current) => {
-    if (glitchActive) return;
-    pendingNav.current = nav;
-
-    // Navigate immediately — glitch plays on top, doesn't block routing
-    if (nav?.type === 'push' && nav.href) router.push(nav.href);
-    else if (nav?.type === 'back') router.back();
-    else if (nav?.type === 'forward') router.forward();
-    pendingNav.current = null;
-
-    setGlitchActive(true);
-  }, [glitchActive, router]);
-
+const triggerGlitch = useCallback((nav: typeof pendingNav.current) => {
+  if (nav?.type === 'push' && nav.href) router.push(nav.href);
+  else if (nav?.type === 'back') router.back();
+  else if (nav?.type === 'forward') router.forward();
+  setGlitchActive(true);
+}, [router]);
   useEffect(() => {
     if (!glitchActive) return;
     const clearTimer = setTimeout(() => setGlitchActive(false), 240);

@@ -25,11 +25,7 @@ const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
   const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
 
-  // debug overlay
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-  const addLog = useCallback((msg: string) => {
-    setDebugLog(prev => [...prev.slice(-15), `${Date.now()}: ${msg}`]);
-  }, []);
+
 
   useEffect(() => {
     const saved = loadFromSession();
@@ -129,7 +125,6 @@ const Player = () => {
   useEffect(() => {
 const completeSub = NativeAudio.addListener('complete', (data: any) => {
   if (data.assetId !== ASSET_ID) return;
-  addLog(`complete fired endedFired:${endedFiredRef.current} manual:${manualLoadRef.current}`);
   if (manualLoadRef.current) return;   // ← ADD THIS
   if (endedFiredRef.current) return;
   endedFiredRef.current = true;
@@ -146,7 +141,6 @@ const completeSub = NativeAudio.addListener('complete', (data: any) => {
     const stateSub = NativeAudio.addListener('playbackState', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
       const state: string = data.state ?? '';
-      addLog(`playbackState:${state}`);
 
       if (state === 'playing') {
         setIsPlaying(true);
@@ -165,7 +159,6 @@ const completeSub = NativeAudio.addListener('complete', (data: any) => {
           cur.playPrevious();
         }
 } else if (state === 'completed') {
-  addLog(`playbackState:completed endedFired:${endedFiredRef.current}`);
   if (manualLoadRef.current) return;   // ← ADD THIS
   if (endedFiredRef.current) return;
   endedFiredRef.current = true;
@@ -181,14 +174,13 @@ const completeSub = NativeAudio.addListener('complete', (data: any) => {
       NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
       NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
     };
-  }, [addLog]);
+  }, []);
 
   useEffect(() => {
     if (!songUrl || !songForLoad) return;
     let cancelled = false;
 
 const load = async () => {
-  addLog(`load start: ${songForLoad.title}`);
   manualLoadRef.current = true;        // ← ADD: block complete events
   isLoadedRef.current = false;
       setIsLoading(true);
@@ -198,9 +190,7 @@ const load = async () => {
 
       try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
       try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
-      addLog(`stopped+unloaded`);
 
-      if (cancelled) { addLog('cancelled after unload'); return; }
 
       const artworkUrl = getArtworkUrl(songForLoad);
 
@@ -216,9 +206,9 @@ const load = async () => {
             artworkUrl,
           },
         } as any);
-        addLog(`preload ok`);
+   
       } catch (e) {
-        addLog(`preload failed`);
+    
         if (cancelled) return;
         setIsLoading(false);
         isLoadingRef.current = false;
@@ -230,7 +220,6 @@ const load = async () => {
       manualLoadRef.current = false;       // ← ADD: re-enable after preload (safe point)
 
 
-      if (cancelled) { addLog('cancelled after preload'); return; }
 
       isLoadedRef.current = true;
       isLoadingRef.current = false;
@@ -249,14 +238,14 @@ const load = async () => {
 
       try {
         await NativeAudio.play({ assetId: ASSET_ID });
-        addLog(`play called`);
+     
         if (!cancelled) {
           setIsPlaying(true);
           setIsLoading(false);
           setTimeout(broadcastCurrentState, 100);
         }
       } catch {
-        addLog(`play failed`);
+      
         if (!cancelled) setIsLoading(false);
       }
     };
