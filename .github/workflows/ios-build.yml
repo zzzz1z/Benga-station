@@ -49,12 +49,15 @@ jobs:
         run: |
           cd spotify--banda
           npx cap sync ios
+      - name: Install CocoaPods
+        run: |
+          cd spotify--banda/ios/App
+          pod install
 
       - name: Find NativeAudio files
         run: |
           find spotify--banda/ios -name "RemoteAudioAsset.swift"
-          find spotify--banda/ios -name "Plugin.swift"    
-
+          find spotify--banda/ios -name "Plugin.swift" | grep -i audio
       - name: Patch NativeAudio seek tolerance and lock screen controls
         run: |
           FILE=$(find spotify--banda/ios -name "RemoteAudioAsset.swift" -path "*/NativeAudioPlugin/*" | head -1)
