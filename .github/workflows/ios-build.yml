@@ -35,6 +35,14 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
+
+      - name: Find NativeAudio Swift files
+        run: |
+          find ~/Library/Developer/Xcode/DerivedData -name "RemoteAudioAsset.swift" 2>/dev/null
+          find spotify--banda/ios -name "*.resolved" 2>/dev/null
+          find spotify--banda/ios -name "Package.swift" 2>/dev/null
+
+
       - name: Deploy to VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -54,11 +62,7 @@ jobs:
           cd spotify--banda/ios/App
           pod install
 
-      - name: Find NativeAudio Swift files
-        run: |
-          find ~/Library/Developer/Xcode/DerivedData -name "RemoteAudioAsset.swift" 2>/dev/null
-          find spotify--banda/ios -name "*.resolved" 2>/dev/null
-          find spotify--banda/ios -name "Package.swift" 2>/dev/null
+
       - name: Patch NativeAudio seek tolerance and lock screen controls
         run: |
           FILE=$(find spotify--banda/ios -name "RemoteAudioAsset.swift" -path "*/NativeAudioPlugin/*" | head -1)
