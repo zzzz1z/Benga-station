@@ -7,12 +7,14 @@ import Image from "next/image";
 import ImportPlaylistButton from "@/components/ImportPlaylistButton";
 import PlaylistContent from "./components/PlaylistContent";
 import { authedFetch } from '@/utils/api';
+import { useUser } from '@/hooks/useUser';
 import { Playlist } from '@/types';
 import PlaylistDetails from './components/PlaylistDetails';
 
 const CACHE_KEY = 'benga_playlists_data';
 
 const PlaylistsPage = () => {
+  const { user, isLoading } = useUser();
   const cached = (() => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); } catch { return []; }
   })();
@@ -25,13 +27,14 @@ const PlaylistsPage = () => {
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
     if (!res.ok) return;
     const data = await res.json();
-    // user-playlists returns full playlist_songs — strip to just Playlist shape for this page
     const result: Playlist[] = (data ?? []).map(({ playlist_songs, ...p }: any) => p);
     setPlaylists(result);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (!isLoading && user) fetchData();
+  }, [isLoading, user, fetchData]);
 
   useEffect(() => {
     const handler = () => fetchData();
