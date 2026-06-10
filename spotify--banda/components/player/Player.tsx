@@ -122,7 +122,6 @@ const Player = () => {
       background: true,
     } as any).catch(() => {});
   }, []);
-
   useEffect(() => {
 const completeSub = NativeAudio.addListener('complete', (data: any) => {
   if (data.assetId !== ASSET_ID) return;
