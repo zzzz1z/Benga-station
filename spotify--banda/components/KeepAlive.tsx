@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react';
 import { App } from '@capacitor/app';
-import { createClient } from '@/utils/supabase/client';
+import { markDataStale } from '@/components/FloatingRefreshButton';
 
-const supabase = createClient();
 const STATE_KEY = 'benga_app_state';
 const MAX_AGE_MS = 20 * 60 * 1000;
 
@@ -30,8 +29,7 @@ function restoreAppState() {
 async function onResume() {
   restoreAppState();
   fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/keepalive`).catch(() => {});
-  // Refresh Supabase session so authedFetch works again
-  try { await supabase.auth.refreshSession(); } catch {}
+  markDataStale();
 }
 
 const KeepAlive = () => {

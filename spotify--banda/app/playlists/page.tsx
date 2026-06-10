@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from "@/components/Header";
 import Image from "next/image";
@@ -8,7 +8,7 @@ import ImportPlaylistButton from "@/components/ImportPlaylistButton";
 import PlaylistContent from "./components/PlaylistContent";
 import { createClient } from '@/utils/supabase/client';
 import { Playlist } from '@/types';
-import PlaylistDetails from './components/PlaylistDetails'
+import PlaylistDetails from './components/PlaylistDetails';
 
 const supabase = createClient();
 
@@ -17,18 +17,27 @@ const PlaylistsPage = () => {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
 
-  useEffect(() => {
-    supabase
+  const fetchData = useCallback(async () => {
+    const { data } = await supabase
       .from('Playlists')
       .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setPlaylists(data ?? []));
+      .order('created_at', { ascending: false });
+    setPlaylists(data ?? []);
   }, []);
 
-  // If ?id= is present, show that playlist directly
-if (selectedId) {
-  return <PlaylistDetails id={selectedId} />;
-}
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const handler = () => fetchData();
+    window.addEventListener('benga:data-stale', handler);
+    return () => window.removeEventListener('benga:data-stale', handler);
+  }, [fetchData]);
+
+  if (selectedId) {
+    return <PlaylistDetails id={selectedId} />;
+  }
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">

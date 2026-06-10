@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState, createContext, useContext, useMemo, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
@@ -35,7 +37,6 @@ export const MyUserContextProvider = (props: Props) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'TOKEN_REFRESHED') return;
         setUser(session?.user ?? null);
         setAccessToken(session?.access_token ?? null);
         setIsLoadingUser(false);
