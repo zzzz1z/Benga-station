@@ -6,11 +6,10 @@ import Header from "@/components/Header";
 import Image from "next/image";
 import ImportPlaylistButton from "@/components/ImportPlaylistButton";
 import PlaylistContent from "./components/PlaylistContent";
-import { createClient } from '@/utils/supabase/client';
+import { authedFetch } from '@/utils/api';
 import { Playlist } from '@/types';
 import PlaylistDetails from './components/PlaylistDetails';
 
-const supabase = createClient();
 const CACHE_KEY = 'benga_playlists_data';
 
 const PlaylistsPage = () => {
@@ -23,13 +22,11 @@ const PlaylistsPage = () => {
   const selectedId = searchParams.get('id');
 
   const fetchData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
-    const { data } = await supabase
-      .from('Playlists')
-      .select('*')
-      .order('created_at', { ascending: false });
-    const result = data ?? [];
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
+    if (!res.ok) return;
+    const data = await res.json();
+    // user-playlists returns full playlist_songs — strip to just Playlist shape for this page
+    const result: Playlist[] = (data ?? []).map(({ playlist_songs, ...p }: any) => p);
     setPlaylists(result);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
   }, []);

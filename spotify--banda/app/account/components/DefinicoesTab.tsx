@@ -10,6 +10,7 @@ import { CiLock } from 'react-icons/ci';
 import { FaUserAlt } from 'react-icons/fa';
 import { HiLightningBolt } from 'react-icons/hi';
 import ButtonUploadOrChange from './ButtonUploadOrChange';
+import { authedFetch } from '@/utils/api';
 
 const supabase = createClient();
 const SLASH = 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)';
@@ -34,8 +35,13 @@ const FieldInput = ({ label, ...props }: { label: string } & React.InputHTMLAttr
     </div>
 );
 
-const DefinicoesTab = () => {
-    const { user, userDetails, refreshUserDetails } = useUser();
+interface DefinicoesTabProps {
+  userDetails: any;
+  onUserUpdate: () => void;
+}
+
+const DefinicoesTab = ({ userDetails, onUserUpdate }: DefinicoesTabProps) => {
+    const { user, refreshUserDetails } = useUser();
     const router = useRouter();
     const adminModal = useAdminModal();
 
@@ -45,18 +51,16 @@ const DefinicoesTab = () => {
     const [loadingInfo, setLoadingInfo] = useState(false);
     const [loadingPassword, setLoadingPassword] = useState(false);
 
-    const updateNames = async () => {
-        if (!user) return;
-        setLoadingInfo(true);
-        const { error } = await supabase
-            .from('users')
-            .update({ first_name: firstName, last_name: lastName })
-            .eq('id', user.id);
-        if (error) toast.error('Erro ao atualizar.');
-        else { toast.success('Guardado!'); await refreshUserDetails(); }
-        setLoadingInfo(false);
-    };
-
+const updateNames = async () => {
+    setLoadingInfo(true);
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`, {
+      method: 'PATCH',
+      body: JSON.stringify({ first_name: firstName, last_name: lastName }),
+    });
+    if (!res.ok) toast.error('Erro ao atualizar.');
+    else { toast.success('Guardado!'); onUserUpdate(); }
+    setLoadingInfo(false);
+  };
     const updatePassword = async () => {
         if (!newPassword) return;
         setLoadingPassword(true);

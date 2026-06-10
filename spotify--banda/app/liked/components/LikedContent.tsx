@@ -7,11 +7,11 @@ import { useUser } from "@/hooks/useUser";
 import { Song } from "@/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
 import { MdMusicOff } from "react-icons/md";
 import { HiHeart } from "react-icons/hi";
+import { authedFetch } from '@/utils/api';
 
-const supabase = createClient();
+
 const CACHE_KEY = 'benga_liked_songs';
 
 const SLASH_CUT = "polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)";
@@ -32,25 +32,18 @@ const LikedContent: React.FC = () => {
     if (!isLoading && !user) router.replace('/');
   }, [isLoading, user, router]);
 
-  const fetchSongs = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
-    const { data, error } = await supabase
-      .from('Músicas_Favoritas')
-      .select('Songs(*)')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
-    if (!error && data) {
-      const result = data.map((item: any) => item.Songs).filter(Boolean);
-      setSongs(result);
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
-    }
-  }, []);
+const fetchSongs = useCallback(async () => {
+  const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`);
+  if (!res.ok) return;
+  const data = await res.json();
+  const result = (data ?? []).map((item: any) => ({ ...item.Songs })).filter(Boolean);
+  setSongs(result);
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
+}, []);
 
-  useEffect(() => {
-    if (user?.id) fetchSongs();
-  }, [user?.id, fetchSongs]);
-
+useEffect(() => {
+  if (!isLoading && user) fetchSongs();
+}, [isLoading, user, fetchSongs]);
   useEffect(() => {
     const handler = () => fetchSongs();
     window.addEventListener('benga:data-stale', handler);

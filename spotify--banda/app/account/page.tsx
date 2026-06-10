@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import Header from "@/components/Header";
 import SettingsContent from "./components/SettingsContent";
-import { createClient } from '@/utils/supabase/client';
+import { authedFetch } from '@/utils/api';
+import { Song, Playlist } from '@/types';
 
-const supabase = createClient();
 const CACHE_KEY = 'benga_account_data';
 
 const Account = () => {
@@ -13,23 +13,23 @@ const Account = () => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
   })();
 
-  const [likedSongs, setLikedSongs] = useState<any[]>(cached.likedSongs ?? []);
-  const [playlists, setPlaylists] = useState<any[]>(cached.playlists ?? []);
+  const [likedSongs, setLikedSongs] = useState<Song[]>(cached.likedSongs ?? []);
+  const [playlists, setPlaylists] = useState<Playlist[]>(cached.playlists ?? []);
+  const [userDetails, setUserDetails] = useState<any>(cached.userDetails ?? null);
 
   const fetchData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) return;
-    const [liked, pls] = await Promise.all([
-      supabase.from('Músicas_Favoritas').select('*, Songs(*)').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('Playlists').select('*').order('created_at', { ascending: false }).eq('user_id', user.id),
+    const [accountRes, userRes] = await Promise.all([
+      authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/account`),
+      authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`),
     ]);
-    const newLiked = (liked.data ?? []).map((i: any) => ({ ...i.Songs }));
-    const newPlaylists = pls.data ?? [];
-    setLikedSongs(newLiked);
-    setPlaylists(newPlaylists);
+    if (!accountRes.ok || !userRes.ok) return;
+    const { likedSongs: ls, playlists: pls } = await accountRes.json();
+    const ud = await userRes.json();
+    setLikedSongs(ls ?? []);
+    setPlaylists(pls ?? []);
+    setUserDetails(ud);
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ likedSongs: newLiked, playlists: newPlaylists }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ likedSongs: ls, playlists: pls, userDetails: ud }));
     } catch {}
   }, []);
 
@@ -44,7 +44,7 @@ const Account = () => {
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
       <Header />
-      <SettingsContent likedSongs={likedSongs} playlists={playlists} />
+      <SettingsContent likedSongs={likedSongs} playlists={playlists} userDetails={userDetails} />
     </div>
   );
 };

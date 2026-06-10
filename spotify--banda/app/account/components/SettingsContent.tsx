@@ -11,17 +11,18 @@ import { Song, Playlist } from '@/types';
 import { HiLightningBolt } from 'react-icons/hi';
 import { TbPlaylist } from 'react-icons/tb';
 import { AiFillHeart } from 'react-icons/ai';
+import { markDataStale } from '@/components/FloatingRefreshButton';
 
 const SLASH = 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)';
 
 interface SettingsContentProps {
-    likedSongs: Song[];
-    playlists: Playlist[];
+  likedSongs: Song[];
+  playlists: Playlist[];
+  userDetails: any;
 }
-
-const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
+const SettingsContent = ({ likedSongs, playlists, userDetails }: SettingsContentProps) => {
     const router = useRouter();
-    const { isLoading, user, userDetails } = useUser();
+    const { isLoading, user } = useUser();
     const [activeTab, setActiveTab] = useState<'casa' | 'definicoes'>('casa');
     const [mounted, setMounted] = useState(false);
 
@@ -42,12 +43,12 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
         );
     }
 
-    const displayName = userDetails?.full_name
-        ?? (userDetails?.first_name
-            ? `${userDetails.first_name} ${userDetails.last_name ?? ''}`.trim()
-            : null)
-        ?? user?.email?.split('@')[0]
-        ?? '';
+ const displayName = userDetails?.full_name
+    ?? (userDetails?.first_name
+      ? `${userDetails.first_name} ${userDetails.last_name ?? ''}`.trim()
+      : null)
+    ?? user?.email?.split('@')[0]
+    ?? '';
 
     return (
         <div className="flex flex-col w-full h-full">
@@ -135,7 +136,7 @@ const SettingsContent = ({ likedSongs, playlists }: SettingsContentProps) => {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === 'casa'
                     ? <CasaTab likedSongs={likedSongs} playlists={playlists} />
-                    : <DefinicoesTab />
+                    : <DefinicoesTab userDetails={userDetails} onUserUpdate={() => markDataStale()}  />
                 }
             </div>
         </div>
