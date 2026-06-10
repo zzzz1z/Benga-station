@@ -17,6 +17,7 @@ import { useRefresh } from '@/hooks/useRefresh';
 import PlaySongsFromPlaylist from './playSongsFromPlaylist';
 import Header from '@/components/Header';
 import { authedFetch } from '@/utils/api';
+import { useUser } from '@/hooks/useUser';
 
 const supabase = createClient();
 
@@ -46,6 +47,8 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const onPlay = useOnPlay();
   const { refreshKey } = useRefresh();
+  const { user, isLoading: userLoading } = useUser();
+
 
   const fetchPlaylist = useCallback(async () => {
     if (!id) {
@@ -68,11 +71,12 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
     }
   }, [id]);
 
-  useEffect(() => {
-    const handler = () => fetchPlaylist();
-    window.addEventListener('benga:data-stale', handler);
-    return () => window.removeEventListener('benga:data-stale', handler);
-  }, [fetchPlaylist]);
+useEffect(() => {
+  if (userLoading || !user) return;
+  setLoading(true);
+  setSongsLoading(true);
+  fetchPlaylist();
+}, [id, refreshKey, fetchPlaylist, user, userLoading]);
 
   useEffect(() => {
     setLoading(true);

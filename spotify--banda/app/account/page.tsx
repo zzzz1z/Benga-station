@@ -4,11 +4,13 @@ import { useEffect, useState, useCallback } from 'react';
 import Header from "@/components/Header";
 import SettingsContent from "./components/SettingsContent";
 import { authedFetch } from '@/utils/api';
+import { useUser } from '@/hooks/useUser';
 import { Song, Playlist } from '@/types';
 
 const CACHE_KEY = 'benga_account_data';
 
 const Account = () => {
+  const { user, isLoading } = useUser();
   const cached = (() => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
   })();
@@ -33,7 +35,9 @@ const Account = () => {
     } catch {}
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (!isLoading && user) fetchData();
+  }, [isLoading, user, fetchData]);
 
   useEffect(() => {
     const handler = () => fetchData();
