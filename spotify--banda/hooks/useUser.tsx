@@ -46,22 +46,22 @@ export const MyUserContextProvider = (props: Props) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (user && !isLoadingData && !userDetails) {
-      setIsLoadingData(true);
-      supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          setUserDetails(data as UserDetails);
-          setIsLoadingData(false);
-        });
-    } else if (!user && !isLoadingUser) {
-      setUserDetails(null);
-    }
-  }, [user, isLoadingUser]);
+useEffect(() => {
+  if (!user) {
+    setUserDetails(null);
+    return;
+  }
+  setIsLoadingData(true);
+  supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+    .then(({ data }) => {
+      setUserDetails(data as UserDetails);
+      setIsLoadingData(false);
+    });
+}, [user?.id]);
 
   const refreshUserDetails = useCallback(async () => {
     if (!user) return;
