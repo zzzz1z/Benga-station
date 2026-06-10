@@ -237,6 +237,8 @@ try {
     setTimeout(broadcastCurrentState, 100);
 
   }
+
+  
 } catch {
   if (!cancelled) setIsLoading(false);
 }
