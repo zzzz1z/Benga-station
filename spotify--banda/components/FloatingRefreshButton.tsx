@@ -39,18 +39,18 @@ const FloatingRefreshButton = () => {
     setChangeCount(0);
   }, [pathname]);
 
-  const handleRefresh = useCallback(async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    await refreshPlaylists();
-    triggerRefresh();
-    await new Promise(r => setTimeout(r, 800));
-    setIsStale(false);
-    setChangeCount(0);
-    setIsRefreshing(false);
-    setRefreshed(true);
-    setTimeout(() => setRefreshed(false), 1500);
-  }, [isRefreshing, refreshPlaylists, triggerRefresh]);
+const handleRefresh = useCallback(async () => {
+  if (isRefreshing) return;
+  setIsRefreshing(true);
+  await refreshPlaylists();
+  markDataStale();
+  await new Promise(r => setTimeout(r, 800));
+  setIsStale(false);
+  setChangeCount(0);
+  setIsRefreshing(false);
+  setRefreshed(true);
+  setTimeout(() => setRefreshed(false), 1500);
+}, [isRefreshing, refreshPlaylists]);
 
   return (
     <button

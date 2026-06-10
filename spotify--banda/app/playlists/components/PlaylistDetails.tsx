@@ -72,17 +72,15 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
   }, [id]);
 
 useEffect(() => {
-  if (userLoading || !user) return;
   setLoading(true);
   setSongsLoading(true);
   fetchPlaylist();
-}, [id, refreshKey, fetchPlaylist, user, userLoading]);
+}, [id, fetchPlaylist]); // removed refreshKey
 
-  useEffect(() => {
-    setLoading(true);
-    setSongsLoading(true);
-    fetchPlaylist();
-  }, [id, refreshKey, fetchPlaylist]);
+useEffect(() => {
+  if (refreshKey === 0) return;
+  fetchPlaylist(); // refetch silently, no loading spinner
+}, [refreshKey]);
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
