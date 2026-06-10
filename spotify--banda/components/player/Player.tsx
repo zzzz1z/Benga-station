@@ -195,7 +195,6 @@ const load = async () => {
 
 NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
 NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
-await new Promise(r => setTimeout(r, 80));
 
       const artworkUrl = getArtworkUrl(songForLoad);
 
@@ -268,7 +267,6 @@ try {
   }, [volume]);
 
   const handlePlay = useCallback(async () => {
-    if (isLoadingRef.current) return;
     if (session && !session.canControl) return;
     if (isPlayingRef.current) {
       await NativeAudio.pause({ assetId: ASSET_ID }).catch(() => {});

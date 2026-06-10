@@ -127,10 +127,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-b-2 border-r-2 border-red-500 z-10" />
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
                 className="object-cover" sizes="56px" unoptimized />
-              {/* playing pulse ring */}
-              {isPlaying && (
-                <div className="absolute inset-0 border border-red-500/40 animate-ping rounded-none" style={{ animationDuration: '2s' }} />
-              )}
+             
             </button>
 
             {/* song info — tappable to expand */}
