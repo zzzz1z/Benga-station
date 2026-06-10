@@ -41,9 +41,6 @@ const WelcomePage = () => {
     const GAMER_CUT = "polygon(12% 0%, 100% 0%, 100% 88%, 88% 100%, 0% 100%, 0% 12%)";
 
 
-
-
-    
     return (
         <div
             className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 px-6"
