@@ -303,7 +303,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
                 : 'A tocar agora'}
             </p>
             <p
-              className="text-white overflow-x-scroll font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
+              className="text-white overflow-x-auto font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
               style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
             >
               {song.title}
