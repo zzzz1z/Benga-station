@@ -335,11 +335,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
                 className={`object-cover transition-all duration-700 ${isPlaying ? 'scale-100' : 'scale-95 brightness-75'}`}
                 sizes="280px" unoptimized />
             </div>
-            {/* playing glow */}
-            {isPlaying && (
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ boxShadow: 'inset 0 0 30px rgba(239,68,68,0.15), 0 0 40px rgba(239,68,68,0.1)' }} />
-            )}
+          
           </div>
         </div>
 

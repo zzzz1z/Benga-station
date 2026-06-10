@@ -268,6 +268,9 @@ try {
 
   const handlePlay = useCallback(async () => {
     if (session && !session.canControl) return;
+     setIsPlaying(false);
+  setIsLoading(true);
+  setPosition(0);
     if (isPlayingRef.current) {
       await NativeAudio.pause({ assetId: ASSET_ID }).catch(() => {});
       setIsPlaying(false);
@@ -280,12 +283,18 @@ try {
 
   const handleNext = useCallback(() => {
     if (session && !session.canControl) return;
+     setIsPlaying(false);
+  setIsLoading(true);
+  setPosition(0);
     playerRef.current.playNext();
     setTimeout(broadcastCurrentState, 200);
   }, [session, broadcastCurrentState]);
 
   const handlePrevious = useCallback(async () => {
     if (session && !session.canControl) return;
+     setIsPlaying(false);
+  setIsLoading(true);
+  setPosition(0);
     let curTime = position;
     try { const r = await NativeAudio.getCurrentTime({ assetId: ASSET_ID }); curTime = r.currentTime; } catch {}
     if (curTime > 3) {
