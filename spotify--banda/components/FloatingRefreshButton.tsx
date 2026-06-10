@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { HiSignal } from 'react-icons/hi2';
 import usePlayer from '@/hooks/usePlayer';
 import { usePlaylists } from '@/hooks/usePlaylists';
@@ -14,7 +14,6 @@ export function markDataStale() {
 }
 
 const FloatingRefreshButton = () => {
-  const router = useRouter();
   const pathname = usePathname();
   const { activeID } = usePlayer();
   const { refreshPlaylists } = usePlaylists();
@@ -45,32 +44,28 @@ const FloatingRefreshButton = () => {
     setIsRefreshing(true);
     await refreshPlaylists();
     triggerRefresh();
-    router.refresh();
     await new Promise(r => setTimeout(r, 800));
     setIsStale(false);
     setChangeCount(0);
     setIsRefreshing(false);
     setRefreshed(true);
     setTimeout(() => setRefreshed(false), 1500);
-  }, [isRefreshing, router, refreshPlaylists, triggerRefresh]);
+  }, [isRefreshing, refreshPlaylists, triggerRefresh]);
 
   return (
     <button
       onClick={handleRefresh}
       title={isStale ? `${changeCount} alteração(ões) — atualizar` : 'Atualizar dados'}
       className={`
-        fixed right-4 z-50  duration-300
+        fixed right-4 z-50 duration-300
         ${bottomClass}
-        ${isStale
-          ? 'opacity-100 scale-100'
-          : 'opacity-40 scale-90  '
-        }
+        ${isStale ? 'opacity-100 scale-100' : 'opacity-40 scale-90'}
       `}
     >
       <div
         className={`
           relative flex items-center justify-center w-10 h-10
-          border bg-neutral-950  duration-300
+          border bg-neutral-950 duration-300
           ${isStale ? 'border-red-500/80' : refreshed ? 'border-green-500/80' : 'border-red-900/60'}
         `}
         style={{
@@ -92,15 +87,12 @@ const FloatingRefreshButton = () => {
               : 'text-neutral-500'}
           `}
         />
-
         {isStale && !isRefreshing && (
           <span className="absolute inset-0 border border-red-500/40 animate-ping" />
         )}
-
         {refreshed && (
           <span className="absolute inset-0 border border-green-500/40 animate-ping" />
         )}
-
         {isStale && changeCount > 0 && (
           <span
             className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-600 text-white text-[9px] font-black flex items-center justify-center"
@@ -110,7 +102,6 @@ const FloatingRefreshButton = () => {
           </span>
         )}
       </div>
-
       {(isStale || refreshed) && (
         <div className="absolute right-12 top-1/2 -translate-y-1/2 whitespace-nowrap">
           <span

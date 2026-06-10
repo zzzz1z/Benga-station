@@ -6,7 +6,6 @@ import MediaItem from '@/components/MediaItem';
 import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
 import { Song } from '@/types';
-import { useRouter } from 'next/navigation';
 import { markDataStale } from '@/components/FloatingRefreshButton';
 import { MdMusicOff } from 'react-icons/md';
 
@@ -26,7 +25,6 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
-  const router = useRouter();
 
   useEffect(() => {
     const fetchSongs = async () => {
@@ -70,7 +68,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
       setSelectedSongIds([]);
       toast.success('Músicas adicionadas!');
       markDataStale();
-      router.refresh();
+      
       onClose?.();
     } catch {
       toast.error('Erro ao adicionar músicas.');

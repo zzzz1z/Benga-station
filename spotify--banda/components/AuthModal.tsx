@@ -105,7 +105,7 @@ const AuthModal = () => {
                 }
 
                 markDataStale();
-                router.refresh();
+             
                 authModal.onClose();
             }
         );

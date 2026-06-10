@@ -14,7 +14,7 @@ const UploadModal = () => {
                   markDataStale();
       
       // Refresh the page after modal closes
-      router.refresh();  // This will refresh the current page
+    // This will refresh the current page
       // Alternatively, you can use window.location.reload() if needed
       // window.location.reload();
     }

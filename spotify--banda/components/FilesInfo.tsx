@@ -148,14 +148,14 @@ const FilesInfo: React.FC = () => {
       setLocalFiles([]);
       markDataStale();
       
-      router.refresh();
+      ();
     } else if (succeeded > 0) {
       toast.success(`${succeeded} enviada${succeeded > 1 ? 's' : ''} com sucesso.`);
       toast.error(`Falhou: ${failed.join(', ')}`);
       setLocalFiles((prev) => prev.filter((f) => failed.includes(f.title)));
       markDataStale();
 
-      router.refresh();
+      ();
     } else {
       toast.error("Todos os uploads falharam.");
     }

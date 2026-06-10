@@ -20,9 +20,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <ToasterProvider />
-        <KeepAlive />
         <AccessGuard />
-        <UserProvider>
+        <UserProvider>        
+        <KeepAlive />
           <PageTransitionProvider>
             <SessionProvider>
               <RefreshProvider>

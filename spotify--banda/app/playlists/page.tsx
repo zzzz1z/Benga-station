@@ -11,23 +11,30 @@ import { Playlist } from '@/types';
 import PlaylistDetails from './components/PlaylistDetails';
 
 const supabase = createClient();
+const CACHE_KEY = 'benga_playlists_data';
 
 const PlaylistsPage = () => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const cached = (() => {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); } catch { return []; }
+  })();
+
+  const [playlists, setPlaylists] = useState<Playlist[]>(cached);
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
 
   const fetchData = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
     const { data } = await supabase
       .from('Playlists')
       .select('*')
       .order('created_at', { ascending: false });
-    setPlaylists(data ?? []);
+    const result = data ?? [];
+    setPlaylists(result);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(result)); } catch {}
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const handler = () => fetchData();
@@ -35,9 +42,7 @@ const PlaylistsPage = () => {
     return () => window.removeEventListener('benga:data-stale', handler);
   }, [fetchData]);
 
-  if (selectedId) {
-    return <PlaylistDetails id={selectedId} />;
-  }
+  if (selectedId) return <PlaylistDetails id={selectedId} />;
 
   return (
     <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">

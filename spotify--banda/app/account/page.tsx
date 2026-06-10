@@ -6,25 +6,34 @@ import SettingsContent from "./components/SettingsContent";
 import { createClient } from '@/utils/supabase/client';
 
 const supabase = createClient();
+const CACHE_KEY = 'benga_account_data';
 
 const Account = () => {
-  const [likedSongs, setLikedSongs] = useState<any[]>([]);
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const cached = (() => {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}'); } catch { return {}; }
+  })();
+
+  const [likedSongs, setLikedSongs] = useState<any[]>(cached.likedSongs ?? []);
+  const [playlists, setPlaylists] = useState<any[]>(cached.playlists ?? []);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
     const [liked, pls] = await Promise.all([
       supabase.from('Músicas_Favoritas').select('*, Songs(*)').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('Playlists').select('*').order('created_at', { ascending: false }).eq('user_id', user.id),
     ]);
-    setLikedSongs((liked.data ?? []).map((i: any) => ({ ...i.Songs })));
-    setPlaylists(pls.data ?? []);
+    const newLiked = (liked.data ?? []).map((i: any) => ({ ...i.Songs }));
+    const newPlaylists = pls.data ?? [];
+    setLikedSongs(newLiked);
+    setPlaylists(newPlaylists);
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ likedSongs: newLiked, playlists: newPlaylists }));
+    } catch {}
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const handler = () => fetchData();

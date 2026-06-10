@@ -3,10 +3,10 @@
 import useAuthModal from "@/hooks/useAuthModal";
 import { useUser } from "@/hooks/useUser";
 import { authedFetch } from "@/utils/api";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
+import { markDataStale } from "./FloatingRefreshButton";
 
 interface LikedButtonProps {
   songId: string;
@@ -14,7 +14,6 @@ interface LikedButtonProps {
 }
 
 const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false }) => {
-  const router = useRouter();
   const authModal = useAuthModal();
   const { user } = useUser();
   const [isLiked, setIsLiked] = useState(initialLiked);
@@ -27,10 +26,10 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false 
     if (isYoutube) return;
 
     const method = isLiked ? 'DELETE' : 'POST';
-const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
-  method,
-  body: JSON.stringify({ song_id: id }),
-});
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+      method,
+      body: JSON.stringify({ song_id: id }),
+    });
 
     if (!res.ok) {
       const json = await res.json();
@@ -38,7 +37,7 @@ const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
     } else {
       setIsLiked(!isLiked);
       toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
-      router.refresh();
+      markDataStale();
     }
   };
 

@@ -9,7 +9,6 @@ import { useUser } from "@/hooks/useUser";
 import useAuthModal from "@/hooks/useAuthModal";
 import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
 import PlayButton from "@/components/PlayButton";
 import { authedFetch } from "@/utils/api";
 
@@ -22,7 +21,6 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
     const imagePath = useLoadImage(data);
     const { user } = useUser();
     const authModal = useAuthModal();
-    const router = useRouter();
 
     const [isLiked, setIsLiked] = useState(false);
     const [showModal, setShowModal] = useState(false);

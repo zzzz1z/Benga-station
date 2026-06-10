@@ -3,7 +3,6 @@
 import { markDataStale } from '@/components/FloatingRefreshButton';
 import { useUser } from '@/hooks/useUser';
 import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -14,7 +13,6 @@ const Settingsview = () => {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const user = useUser();
-  const router = useRouter();
 
   const updateNames = async () => {
     setLoading(true);
@@ -40,7 +38,7 @@ const Settingsview = () => {
       toast.success('Nomes atualizados com sucesso!');
       markDataStale();
       
-      router.refresh();
+     
     }
 
     setLoading(false);

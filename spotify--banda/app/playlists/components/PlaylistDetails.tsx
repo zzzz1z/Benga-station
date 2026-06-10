@@ -84,6 +84,12 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
     }
   }, [id]);
 
+  useEffect(() => {
+  const handler = () => fetchPlaylist();
+  window.addEventListener('benga:data-stale', handler);
+  return () => window.removeEventListener('benga:data-stale', handler);
+}, [fetchPlaylist]);
+
   // Safe Lifecycle Hook: Fires exactly once on mount, route changes, or explicit context triggers
   useEffect(() => {
     setLoading(true);
