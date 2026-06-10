@@ -302,8 +302,12 @@ const opacity = animState === 'leaving' ? 0 : 1;
                 ? `⌕ ${queueContext.searchQuery}`
                 : 'A tocar agora'}
             </p>
-           <MarqueeText text={song.title} className="text-white font-black uppercase tracking-tighter text-2xl" />
-
+            <p
+              className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
+              style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
+            >
+              {song.title}
+            </p>
           </div>
 
           <button
@@ -317,7 +321,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
       </div>
 
       {/* Scrollable content */}
-<div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 relative z-10">
+<div className="flex flex-col flex-1 px-5 overflow-y-scroll  pb-8 gap-y-6 relative z-10">
         {/* Album art — large */}
         <div className="flex justify-center flex-shrink-0 mt-2">
           <div className="relative" style={{ width: 'min(72vw, 280px)', height: 'min(72vw, 280px)' }}>
