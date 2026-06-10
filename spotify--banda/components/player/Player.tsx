@@ -195,6 +195,7 @@ const load = async () => {
 
 NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
 NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
+await new Promise(r => setTimeout(r, 80));
 
       const artworkUrl = getArtworkUrl(songForLoad);
 
