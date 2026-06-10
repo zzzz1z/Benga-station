@@ -2,7 +2,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
-export default function MarqueeText({ text, className }: { text: string; className?: string }) {
+export default function MarqueeText({ text, className, style }: { text: string; className?: string; style?: React.CSSProperties }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -15,7 +15,7 @@ export default function MarqueeText({ text, className }: { text: string; classNa
   }, [text]);
 
   return (
-    <div ref={containerRef} className={`overflow-hidden whitespace-nowrap ${className}`}>
+<div ref={containerRef} style={style} className={`overflow-hidden whitespace-nowrap ${className}`}>
       <span
         ref={textRef}
         style={shouldScroll ? {

@@ -176,7 +176,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           <div className="flex items-center gap-x-3 flex-1 min-w-0 overflow-hidden">
             <button onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-                className="object-cover grayscale-[0.3] group-hover:grayscale-0 transition" sizes="52px" unoptimized />
+                className="object-cover grayscale-[0.3]" sizes="52px" unoptimized />
             </button>
             <button onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer overflow-hidden text-left">
               <p className="text-white text-sm font-black uppercase tracking-tighter truncate">{song.title}</p>

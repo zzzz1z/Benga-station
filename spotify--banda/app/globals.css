@@ -124,7 +124,7 @@ button, [role="button"] {
   50%       { opacity: 0.6; }
 }
 @keyframes loading-tick {
-  0%, 85%, 100% { opacity: 0; transform: translateX(0); }
+  0%, 85%, 100% { opacity: 0; transform: translateX(0); -webkit-transform: translateX(0); -moz-transform: translateX(0); -ms-transform: translateX(0); -o-transform: translateX(0); }
   87%            { opacity: 1; transform: translateX(-12px); }
   90%            { opacity: 0.6; transform: translateX(8px); }
   93%            { opacity: 0; transform: translateX(0); }

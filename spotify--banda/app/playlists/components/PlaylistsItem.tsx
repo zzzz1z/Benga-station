@@ -33,7 +33,7 @@ router.push(`/playlists?id=${data?.id}`);        if (onClick) onClick(data.id);
                     sizes="52px"
                     src={imageUrl ?? '/images/likedit.png'}
                     alt={`${data.title}`}
-                    className="object-cover grayscale-[0.5] group-hover:grayscale-0 transition duration-500"
+                    className="object-cover grayscale-[0.5]"
                 />
                 <div className="absolute inset-0 bg-red-600/10 opacity-0 group-hover:opacity-100 transition" />
             </div>

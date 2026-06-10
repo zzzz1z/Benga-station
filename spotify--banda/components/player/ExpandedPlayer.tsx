@@ -302,12 +302,11 @@ const opacity = animState === 'leaving' ? 0 : 1;
                 ? `⌕ ${queueContext.searchQuery}`
                 : 'A tocar agora'}
             </p>
-            <p
-              className="text-white overflow-x-auto font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
-              style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
-            >
-              {song.title}
-            </p>
+<MarqueeText 
+  text={song.title} 
+  className="text-white font-black uppercase tracking-tight max-w-[180px]"
+  style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
+/>
           </div>
 
           <button

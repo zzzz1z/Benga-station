@@ -135,6 +135,20 @@ const triggerGlitch = useCallback((nav: typeof pendingNav.current) => {
     if (loadingDepth.current === 0) setIsLoading(false);
   }, []);
 
+useEffect(() => {
+    ['/search', '/playlists', '/liked', '/account'].forEach(href => router.prefetch(href));
+  }, [router]);
+
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      if (e.message?.includes('Loading chunk') || e.message?.includes('Failed to fetch dynamically imported module')) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   return (
     <PageTransitionContext.Provider value={{ navigate, goBack, goForward, startLoading, stopLoading }}>
       <GlitchOverlay active={glitchActive} />
