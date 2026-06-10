@@ -227,27 +227,7 @@ const load = async () => {
       isLoadedRef.current = true;
       isLoadingRef.current = false;
 
-// Poll for duration — streaming URLs take time to buffer
-const pollDuration = async (attempts = 8) => {
-  for (let i = 0; i < attempts; i++) {
-    if (cancelled) return;
-    try {
-      const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
-      if (d.duration > 0) {
-        setDuration(d.duration);
-        return;
-      }
-    } catch {}
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  // fallback to song metadata
-  if (songForLoad.duration && songForLoad.duration > 0) {
-    setDuration(songForLoad.duration);
-  }
-};
-pollDuration();
-
-      if (cancelled) return;
+if (cancelled) return;
 
       await NativeAudio.setVolume({ assetId: ASSET_ID, volume: volumeRef.current });
 
@@ -257,8 +237,19 @@ try {
     setIsPlaying(true);
     setIsLoading(false);
     setTimeout(broadcastCurrentState, 100);
-    // Force iOS to refresh Now Playing duration
 
+    const pollDuration = async (attempts = 10) => {
+      for (let i = 0; i < attempts; i++) {
+        if (cancelled) return;
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
+          if (d.duration > 0) { setDuration(d.duration); return; }
+        } catch {}
+      }
+      if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
+    };
+    pollDuration();
   }
 } catch {
   if (!cancelled) setIsLoading(false);
