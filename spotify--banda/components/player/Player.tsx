@@ -184,16 +184,18 @@ const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
     let cancelled = false;
 
 const load = async () => {
-  manualLoadRef.current = true;        // ← ADD: block complete events
+  manualLoadRef.current = true;
+    isLoadingRef.current = true;  
+    
   isLoadedRef.current = false;
       setIsLoading(true);
       setIsPlaying(false);
       setPosition(0);
       endedFiredRef.current = false;
 
-      try { await NativeAudio.stop({ assetId: ASSET_ID }); } catch {}
-      try { await NativeAudio.unload({ assetId: ASSET_ID }); } catch {}
-
+NativeAudio.stop({ assetId: ASSET_ID }).catch(() => {});
+NativeAudio.unload({ assetId: ASSET_ID }).catch(() => {});
+await new Promise(r => setTimeout(r, 80));
 
       const artworkUrl = getArtworkUrl(songForLoad);
 
