@@ -222,8 +222,6 @@ const load = async () => {
 
       manualLoadRef.current = false;       // ← ADD: re-enable after preload (safe point)
 
-
-
       isLoadedRef.current = true;
       isLoadingRef.current = false;
 
@@ -238,18 +236,6 @@ try {
     setIsLoading(false);
     setTimeout(broadcastCurrentState, 100);
 
-    const pollDuration = async (attempts = 10) => {
-      for (let i = 0; i < attempts; i++) {
-        if (cancelled) return;
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-          const d = await NativeAudio.getDuration({ assetId: ASSET_ID });
-          if (d.duration > 0) { setDuration(d.duration); return; }
-        } catch {}
-      }
-      if (songForLoad.duration && songForLoad.duration > 0) setDuration(songForLoad.duration);
-    };
-    pollDuration();
   }
 } catch {
   if (!cancelled) setIsLoading(false);
