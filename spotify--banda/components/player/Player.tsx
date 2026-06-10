@@ -10,7 +10,6 @@ import { useQueueExtender } from '@/hooks/useQueueExtender';
 import { preextractWindow } from "@/utils/player";
 import { backend as NativeAudio } from '@/utils/audioBackend';
 import PlayerContent from "./PlayerContent";
-import DebugOverlay from "../DEBUGOVERLAY";
 
 const ASSET_ID = 'benga_track';
 
@@ -324,11 +323,7 @@ const handleSeek = useCallback(async (value: number) => {
 
   return (
     <>
-    <div style={{ position: 'relative' }}>
-  {/* ... your player UI ... */}
-  <DebugOverlay />
-  </div>
-   
+
 
       {isExpanded && (
         <ExpandedPlayer {...sharedProps} onClose={() => setIsExpanded(false)} />

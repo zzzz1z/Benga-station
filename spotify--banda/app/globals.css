@@ -129,3 +129,10 @@ button, [role="button"] {
   90%            { opacity: 0.6; transform: translateX(8px); }
   93%            { opacity: 0; transform: translateX(0); }
 }
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  10%  { transform: translateX(0); }
+  90%  { transform: translateX(calc(-100% + 100vw - 4rem)); }
+  100% { transform: translateX(calc(-100% + 100vw - 4rem)); }
+}

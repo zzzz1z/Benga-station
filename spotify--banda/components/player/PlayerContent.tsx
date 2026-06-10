@@ -13,6 +13,7 @@ import LikedButton from '../LikedButton';
 import MusicSlider from '../MusicSlider';
 import SessionPanel from '../SessionPanel';
 import Slider from '../Slider';
+import MarqueeText from '../MarqueeText';
 
 interface PlayerContentProps {
   song: Song;
@@ -134,8 +135,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
             {/* song info — tappable to expand */}
             <button onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer text-left">
-              <p className="text-white text-sm font-black uppercase tracking-tighter truncate leading-tight">{song.title}</p>
-              <p className="text-red-500/60 font-mono text-[10px] uppercase tracking-widest truncate">{song.author}</p>
+              <MarqueeText text={song.title} className="text-white text-sm font-black uppercase tracking-tighter leading-tight" />
+              <MarqueeText text={song.author} className="text-white text-sm font-black uppercase tracking-tighter leading-tight" />
             </button>
 
             {/* controls */}

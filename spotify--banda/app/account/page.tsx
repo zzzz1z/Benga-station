@@ -25,7 +25,7 @@ const Account = () => {
   }, []);
 
   return (
-    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden overflow-y-auto">
+    <div className="bg-neutral-900 rounded-lg h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
       <Header />
       <SettingsContent likedSongs={likedSongs} playlists={playlists} />
     </div>

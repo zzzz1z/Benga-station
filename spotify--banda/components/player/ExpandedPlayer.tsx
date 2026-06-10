@@ -16,6 +16,7 @@ import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
 import LikedButton from "../LikedButton";
 import MusicSlider from "../MusicSlider";
 import LyricsFlipCard from "./LyricsFlipCard";
+import MarqueeText from "../MarqueeText";
 
 interface ExpandedPlayerProps {
   song: Song;
@@ -237,13 +238,13 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     song: songs[id], globalIndex: i, isCurrent: id === activeID, isPast: i < currentIndex,
   })).filter(r => !!r.song);
 
-  const slideY      = animState === 'entering' ? '100%' : animState === 'leaving' ? '100%' : dragY > 0 ? `${dragY}px` : '0%';
-  const opacity     = animState === 'entering' ? 0 : animState === 'leaving' ? 0 : 1;
+const slideY  = animState === 'leaving' ? '100%' : dragY > 0 ? `${dragY}px` : '0%';
+const opacity = animState === 'leaving' ? 0 : 1;
   const isAnimating = animState !== 'visible' || dragY > 0;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+     className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: 'linear-gradient(180deg, #0a0a0a 0%, #111 60%, #0d0d0d 100%)',
         transform: `translateY(${slideY})`, opacity,
@@ -252,6 +253,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           : dragY > 0 ? 'none'
           : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease',
         willChange: 'transform, opacity',
+        pointerEvents: animState === 'leaving' ? 'none' : 'auto',
       }}
     >
       {/* blurred album art bg */}
@@ -293,20 +295,15 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <IoChevronDown size={28} />
           </button>
 
-          <div className="flex flex-col items-center gap-y-0.5">
-            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
+<div className="flex flex-col items-center gap-y-0.5 min-w-0 flex-1 px-2">            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
               {queueContext.source === 'playlist' && queueContext.playlistName
                 ? `▶ ${queueContext.playlistName}`
                 : queueContext.source === 'search' && queueContext.searchQuery
                 ? `⌕ ${queueContext.searchQuery}`
                 : 'A tocar agora'}
             </p>
-            <p
-              className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
-              style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
-            >
-              {song.title}
-            </p>
+           <MarqueeText text={song.title} className="text-white font-black uppercase tracking-tighter text-2xl" />
+
           </div>
 
           <button
@@ -320,8 +317,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       </div>
 
       {/* Scrollable content */}
-      <div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 overflow-y-auto relative z-10">
-
+<div className="flex flex-col flex-1 px-5 pb-8 gap-y-6 relative z-10">
         {/* Album art — large */}
         <div className="flex justify-center flex-shrink-0 mt-2">
           <div className="relative" style={{ width: 'min(72vw, 280px)', height: 'min(72vw, 280px)' }}>
@@ -346,15 +342,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
         {/* Song info + like */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col min-w-0 flex-1 pr-4">
-            <p
-              className="text-white font-black uppercase tracking-tighter leading-tight whitespace-nowrap overflow-hidden"
-              style={{
-                textShadow: '0 0 20px rgba(239,68,68,0.2)',
-                fontSize: `clamp(0.75rem, ${Math.max(1, 4 - song.title.length * 0.06)}rem, 2.5rem)`,
-              }}
-            >
-              {song.title}
-            </p>
+            <MarqueeText text={song.title} className="text-white text-sm font-black uppercase tracking-tighter leading-tight" />
             <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>
           </div>
           <LikedButton songId={String(song.id)} />

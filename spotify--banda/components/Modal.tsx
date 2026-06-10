@@ -28,11 +28,13 @@ const Modal: React.FC<ModalProps> = ({
           backdrop-blur-sm
           fixed
           inset-0
-          z-50
+          z-[200]
         '/>
-        <Dialog.Content className='
+        <Dialog.Content
+          onOpenAutoFocus={e => e.preventDefault()}
+          className='
           fixed
-          z-50
+          z-[201]
           drop-shadow-md
           border
           border-neutral-700

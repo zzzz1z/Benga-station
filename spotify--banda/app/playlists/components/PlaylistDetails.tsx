@@ -159,8 +159,9 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
   return (
 
     <>
-    <Header />
-    <div className="bg-neutral-900 rounded-lg h-full w-full pt-3 overflow-hidden overflow-y-auto relative z-0">
+   
+    <div className="bg-neutral-900 rounded-lg h-full w-full pt-[30px] overflow-hidden overflow-y-auto relative z-0">
+       <Header />
       <div className="relative overflow-hidden" style={{ isolation: 'isolate' }}>
         <div className="absolute inset-0 pointer-events-none z-0"
           style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(239,68,68,0.015) 3px, rgba(239,68,68,0.015) 4px)' }} />
