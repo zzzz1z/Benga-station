@@ -135,7 +135,7 @@ const DefinicoesTab = () => {
             {/* Admin */}
             <div
                 onClick={handleAdminClick}
-                className="border border-red-900/20 bg-white/[0.02] flex items-center justify-between p-4 cursor-pointer bg-red-500/5 transition relative overflow-hidden"
+                className="border border-red-900/20 flex items-center justify-between p-4 cursor-pointer bg-red-500/5 transition relative overflow-hidden"
                 style={{ clipPath: SLASH }}
             >
                 <div className="absolute top-0 left-0 right-0 h-px"
