@@ -7,7 +7,6 @@ import Button from "./Botão";
 import uniqid from "uniqid";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
-import { useRouter } from "next/navigation";
 import { markDataStale } from "./FloatingRefreshButton";
 
 const supabase = createClient();
@@ -44,7 +43,6 @@ const FilesInfo: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const { user } = useUser();
-  const router = useRouter();
 
   const { register, handleSubmit, reset } = useForm<FieldValues>({
     defaultValues: { author: "", title: "", song: null, image: null },
@@ -148,14 +146,14 @@ const FilesInfo: React.FC = () => {
       setLocalFiles([]);
       markDataStale();
       
-      ();
+     
     } else if (succeeded > 0) {
       toast.success(`${succeeded} enviada${succeeded > 1 ? 's' : ''} com sucesso.`);
       toast.error(`Falhou: ${failed.join(', ')}`);
       setLocalFiles((prev) => prev.filter((f) => failed.includes(f.title)));
       markDataStale();
 
-      ();
+     
     } else {
       toast.error("Todos os uploads falharam.");
     }
