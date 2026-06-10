@@ -171,29 +171,31 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
             {showMenu && menuPos && (
                 <div
                     ref={menuRef}
-                    className="fixed z-[999] w-48 bg-neutral-950 border border-red-900/40 shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden"
+                    className="absolute right-0 bottom-full mb-1 w-44 bg-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden border border-neutral-700"
                     style={{ top: menuPos.top, right: menuPos.right, transform: 'translateY(-100%)' }}
                     onClick={e => e.stopPropagation()}
                 >
-<button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
-    {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
-    {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
-</button>
-{!playlistMode && (
+                <button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-3 text-sm text-white hover:bg-neutral-700 transition">
+                  {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} className="text-neutral-400" />}
+                  {isLiked ? 'Remover favorito' : 'Adicionar favorito'}
+                </button>
+
+
+  {!playlistMode && (
     <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
         <MdPlaylistAdd size={16} /> adicionar a uma playlist
     </button>
-)}
-{!playlistMode && (
+  )}
+  {!playlistMode && (
     <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
         <AiOutlineInfoCircle size={16} /> Ver_Metadata
     </button>
-)}
-{onRemove && (
+  )}
+  {onRemove && (
     <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500 active:bg-red-600/10 transition">
         <MdOutlineNotInterested size={16} /> remover da playlist
-    </button>
-)}
+      </button>
+  )}
                   
                 </div>
             )}
