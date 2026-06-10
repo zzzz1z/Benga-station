@@ -70,7 +70,7 @@ const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, 
 
   return (
     <label
-      className="cursor-pointer relative flex items-center gap-x-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all"
+      className="cursor-pointer relative flex items-center gap-x-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest "
       style={{
         background: 'rgba(239,68,68,0.1)',
         border: '1px solid rgba(239,68,68,0.35)',

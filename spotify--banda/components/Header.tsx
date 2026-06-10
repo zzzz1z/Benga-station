@@ -33,7 +33,7 @@ const HeaderPulse = () => {
   return (
     <>
       <div
-        className="absolute top-0 left-0 right-0 h-[2px] z-10 transition-all duration-1000"
+        className="absolute top-0 left-0 right-0 h-[2px] z-10  duration-1000"
         style={{
           background: playing
             ? 'linear-gradient(90deg, transparent, rgba(239,68,68,0.9), transparent)'
@@ -120,12 +120,12 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
         {/* Desktop nav */}
         <div className="hidden md:flex gap-x-2 items-center">
           <button type="button" onClick={goBack}
-            className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
+            className="flex items-center justify-center bg-black/40 border border-red-500/30  p-1"
             style={{ clipPath: BUTTON_CUT }}>
             <RxCaretLeft className="text-white" size={35} />
           </button>
           <button type="button" onClick={goForward}
-            className="flex items-center justify-center bg-black/40 border border-red-500/30 transition-all p-1"
+            className="flex items-center justify-center bg-black/40 border border-red-500/30  p-1"
             style={{ clipPath: BUTTON_CUT }}>
             <RxCaretRight className="text-white" size={35} />
           </button>
@@ -215,7 +215,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                 <FaUserAlt className="text-black" />
               </button>
               <button onClick={handleLogout}
-                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest  shadow-[0_0_15px_rgba(220,38,38,0.4)]"
                 style={{ clipPath: BUTTON_CUT }}>
                 Logout
               </button>
@@ -227,7 +227,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                 Registar
               </button>
               <button onClick={() => authModal.onOpen("sign_in")}
-                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                className="bg-red-600 px-6 py-2 text-white font-black uppercase text-xs tracking-widest  shadow-[0_0_20px_rgba(220,38,38,0.3)]"
                 style={{ clipPath: BUTTON_CUT }}>
                 Login
               </button>

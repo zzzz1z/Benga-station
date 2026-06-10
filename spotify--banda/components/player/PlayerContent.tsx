@@ -50,8 +50,8 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
 
   const renderPlayButton = (size: number) => {
     if (isLoading) return (
-      <div className="border-2 border-red-500 border-t-transparent rounded-full animate-spin"
-        style={{ width: size, height: size }} />
+<div className="border-2 border-red-500 border-t-transparent rounded-full animate-spin pointer-events-none"
+  style={{ width: size, height: size }} />
     );
     return isPlaying
       ? <BsPauseFill size={size} className="text-red-500" />
@@ -70,8 +70,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
     >
       <HiSignal size={small ? 14 : 16} />
       {session && memberCount > 1 && <span className="text-[10px] font-mono font-black">{memberCount}</span>}
-      {session && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-    </button>
+{session && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse pointer-events-none" />}    </button>
   );
 
   const showBanner = queueStatus === 'fetching' || queueStatus === 'done';
@@ -97,7 +96,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
         <div className="absolute top-0 left-0 w-full h-[1px] bg-red-600/50 shadow-[0_0_10px_#ef4444]" />
 
         {/* progress bar under the glow line */}
-        <div className="absolute top-0 left-0 h-[2px] bg-red-600/70 transition-all duration-300 md:hidden"
+        <div className="absolute top-0 left-0 h-[2px] bg-red-600/70  duration-300 md:hidden"
           style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
 
         {isGuest && (
@@ -119,7 +118,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
             {/* album art — tappable to expand */}
             <button
               onClick={onExpand}
-              className="relative flex-shrink-0 cursor-pointer transition-transform"
+              className="relative flex-shrink-0 cursor-pointer "
               style={{ width: 56, height: 56 }}
             >
            
@@ -157,7 +156,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onNext}
                 disabled={!!isGuest}
-                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
+                className={`  ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
               >
                 <AiFillStepForward size={22} />
               </button>
@@ -174,7 +173,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
         <div className="hidden md:flex flex-row items-center w-full h-full px-2">
 
           <div className="flex items-center gap-x-3 flex-1 min-w-0 overflow-hidden">
-            <button onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
+            <button onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden ">
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
                 className="object-cover" sizes="52px" unoptimized />
             </button>
@@ -192,21 +191,21 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onPrevious}
                 disabled={!!isGuest}
-                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+                className={`  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
               >
                 <AiFillStepBackward size={22} />
               </button>
               <button
                 onClick={onPlay}
                 disabled={!!isGuest}
-                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)] transition ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer'}`}
+                className={`flex items-center justify-center h-10 w-10 border border-red-600/40 bg-red-600/5 shadow-[0_0_12px_rgba(239,68,68,0.15)]  ${isGuest ? 'opacity-40 pointer-events-none cursor-default' : 'cursor-pointer'}`}
               >
                 {renderPlayButton(22)}
               </button>
               <button
                 onClick={onNext}
                 disabled={!!isGuest}
-                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+                className={`  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
               >
                 <AiFillStepForward size={22} />
               </button>

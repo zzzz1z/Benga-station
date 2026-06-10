@@ -83,7 +83,7 @@ const handleClick = (song: Song) => {
 {displayed.map((item) => (
   <button
     key={item.id}
-    className="relative transition-all duration-300 text-left w-full"
+    className="relative  duration-300 text-left w-full"
     onClick={() => handleClick(item)}
   >
     <SongItem

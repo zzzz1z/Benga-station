@@ -59,7 +59,7 @@ const FloatingRefreshButton = () => {
       onClick={handleRefresh}
       title={isStale ? `${changeCount} alteração(ões) — atualizar` : 'Atualizar dados'}
       className={`
-        fixed right-4 z-50 transition-all duration-300
+        fixed right-4 z-50  duration-300
         ${bottomClass}
         ${isStale
           ? 'opacity-100 scale-100'
@@ -70,7 +70,7 @@ const FloatingRefreshButton = () => {
       <div
         className={`
           relative flex items-center justify-center w-10 h-10
-          border bg-neutral-950 transition-all duration-300
+          border bg-neutral-950  duration-300
           ${isStale ? 'border-red-500/80' : refreshed ? 'border-green-500/80' : 'border-red-900/60'}
         `}
         style={{

@@ -147,7 +147,7 @@ const FullscreenLyrics: React.FC<{
           const isPast   = i < activeLine;
           return (
             <div key={i} className="relative" ref={isActive ? (activeLineRef as any) : null}>
-              <p className={`leading-snug uppercase tracking-tight transition-all duration-700 ${
+              <p className={`leading-snug uppercase tracking-tight  duration-700 ${
                 isActive
                   ? 'text-white font-black text-3xl'
                   : isPast
@@ -397,7 +397,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lyrics?videoId=$
               <div key={i} className="relative">
                 <p
                   ref={isActive ? activeLineRef : null}
-                  className={`leading-snug transition-all duration-700 uppercase tracking-tight ${
+                  className={`leading-snug  duration-700 uppercase tracking-tight ${
                     isActive
                       ? 'text-white text-2xl font-black'
                       : isPast
@@ -463,7 +463,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lyrics?videoId=$
               className="absolute inset-0 border border-red-900/20 overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]"
             >
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-                className="object-cover transition-all duration-700"
+                className="object-cover  duration-700"
                 sizes="280px" unoptimized priority />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
               <div className={`absolute top-3 right-3 w-2 h-2 rounded-full ${

@@ -239,7 +239,7 @@ setHasMore(data.hasMore ?? false);
           <div className="flex justify-center pt-4 pb-2">
             <button
               onClick={loadMore}
-              className="relative group overflow-hidden px-8 py-3 font-mono text-xs uppercase tracking-[0.25em] transition-all"
+              className="relative group overflow-hidden px-8 py-3 font-mono text-xs uppercase tracking-[0.25em] "
               style={{
                 background: 'linear-gradient(135deg, #0d0500, #1a0a00)',
                 border: '1px solid rgba(255,140,0,0.4)',

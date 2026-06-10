@@ -32,7 +32,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
         gap-x-4 
         bg-neutral-100/5 
      
-        transition 
+         
         pr-4
         border-l-2
         border-red-600/40
@@ -61,7 +61,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
       <div
         className="
           absolute 
-          transition 
+           
           opacity-0 
           rounded-full 
           flex 

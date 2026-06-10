@@ -22,7 +22,7 @@ const SideBarItem: React.FC<SideBarItemProps> = ({ icon: Icon, label, active, hr
       {/* Active left bar */}
       <span
         className={twMerge(
-          "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 transition-all duration-200",
+          "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5  duration-200",
           active ? "bg-red-500 opacity-100" : "bg-red-500 opacity-0"
         )}
       />

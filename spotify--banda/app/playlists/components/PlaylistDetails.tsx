@@ -171,7 +171,7 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
         <div className="mt-20 relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-x-8 px-6">
             <div
-              className="relative h-56 w-56 md:h-64 md:w-64 group flex-shrink-0 cursor-pointer transition-transform"
+              className="relative h-56 w-56 md:h-64 md:w-64 group flex-shrink-0 cursor-pointer "
               onClick={() => coverInputRef.current?.click()}
             >
               <div className="absolute inset-0 rounded-lg blur-xl opacity-40 animate-pulse"

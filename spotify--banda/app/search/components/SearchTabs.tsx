@@ -50,7 +50,7 @@ useEffect(() => {
         <button
           onClick={() => setTab('library')}
           className={`
-            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
+            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] 
             ${tab === 'library'
               ? 'text-white border-b-2 border-red-600'
               : 'text-neutral-500 border-b-2 border-transparent'
@@ -65,7 +65,7 @@ useEffect(() => {
             if (title.trim().length >= 2) setSubmittedQuery(title.trim());
           }}
           className={`
-            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] transition-all
+            relative px-6 py-2 text-xs font-black uppercase tracking-[0.2em] 
             ${tab === 'youtube'
               ? 'text-red-500 border-b-2 border-red-500'
               : 'text-neutral-500 border-b-2 border-transparent'

@@ -11,7 +11,7 @@ import { MdDragHandle, MdClose } from "react-icons/md";
 import useLoadImage from "@/hooks/useLoadImage";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import { QueueExtenderStatus } from '@/hooks/useQueueExtender';
 import LikedButton from "../LikedButton";
 import MusicSlider from "../MusicSlider";
@@ -56,7 +56,7 @@ const QueueRow = ({
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-x-3 px-3 py-2.5 transition select-none
+      className={`flex items-center gap-x-3 px-3 py-2.5 select-none
         ${dragging ? 'opacity-40 bg-white/5' : ''}
         ${isCurrent
           ? 'bg-red-950/40 border-l-2 border-red-500'
@@ -75,10 +75,10 @@ const QueueRow = ({
         <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
           className="object-cover" sizes="36px" unoptimized />
         {isCurrent && (
-          <div className="absolute inset-0 bg-red-600/20 flex items-center justify-center">
+          <div className="absolute inset-0 bg-red-600/20 flex items-center justify-center pointer-events-none">
             <div className="flex gap-x-[2px] items-end h-3">
               {[1, 0.6, 0.8].map((h, i) => (
-                <div key={i} className="w-[3px] bg-red-400 rounded-sm animate-pulse"
+                <div key={i} className="w-[3px] bg-red-400 rounded-sm animate-pulse pointer-events-none"
                   style={{ height: `${h * 100}%`, animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
@@ -117,11 +117,8 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setId  = usePlayer(s => s.setId);
   const setIds = usePlayer(s => s.setIds);
 
-  const [animState, setAnimState] = useState<'entering' | 'visible' | 'leaving'>('entering');
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setAnimState('visible')));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  // FIX: start visible immediately — no entering state that blocks first tap
+  const [animState, setAnimState] = useState<'visible' | 'leaving'>('visible');
 
   const handleClose = useCallback(() => {
     setAnimState('leaving');
@@ -227,10 +224,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const progressPct = duration > 0 ? (position / duration) * 100 : 0;
 
   const renderPlayButton = () => {
-    if (isLoading) return <div className="w-7 h-7 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />;
+    // FIX: animate-spin is pointer-events-none so it doesn't block taps on the button
+    if (isLoading) return <div className="w-7 h-7 border-2 border-red-500 border-t-transparent rounded-full animate-spin pointer-events-none" />;
     return isPlaying
-      ? <BsPauseFill size={36} className="text-white" />
-      : <BsPlayFill  size={36} className="text-white ml-1" />;
+      ? <BsPauseFill size={36} className="text-white pointer-events-none" />
+      : <BsPlayFill  size={36} className="text-white ml-1 pointer-events-none" />;
   };
 
   const hasQueue    = history.length > 0 || upcoming.length > 0;
@@ -238,17 +236,18 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     song: songs[id], globalIndex: i, isCurrent: id === activeID, isPast: i < currentIndex,
   })).filter(r => !!r.song);
 
-const slideY  = animState === 'leaving' ? '100%' : dragY > 0 ? `${dragY}px` : '0%';
-const opacity = animState === 'leaving' ? 0 : 1;
-  const isAnimating = animState !== 'visible' || dragY > 0;
+  const slideY  = animState === 'leaving' ? '100%' : dragY > 0 ? `${dragY}px` : '0%';
+  const opacity = animState === 'leaving' ? 0 : 1;
+  // FIX: isAnimating no longer depends on animState entering — only drag matters
+  const isAnimating = dragY > 0;
 
   return (
     <div
-     className="fixed inset-0 z-50 flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
       style={{
         background: 'linear-gradient(180deg, #0a0a0a 0%, #111 60%, #0d0d0d 100%)',
         transform: `translateY(${slideY})`, opacity,
-        transition: isAnimating && dragY === 0
+        transition: animState === 'leaving'
           ? 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease'
           : dragY > 0 ? 'none'
           : 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s ease',
@@ -269,8 +268,8 @@ const opacity = animState === 'leaving' ? 0 : 1;
         style={{ backgroundImage: 'repeating-linear-gradient(0deg, #fff, #fff 1px, transparent 1px, transparent 3px)' }} />
 
       {/* top progress bar */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-neutral-900 z-10">
-        <div className="h-full bg-red-500 transition-all duration-300"
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-neutral-900 z-10 pointer-events-none">
+        <div className="h-full bg-red-500 duration-300 pointer-events-none"
           style={{ width: `${progressPct}%`, boxShadow: '0 0 8px #ef4444' }} />
       </div>
 
@@ -295,18 +294,19 @@ const opacity = animState === 'leaving' ? 0 : 1;
             <IoChevronDown size={28} />
           </button>
 
-<div className="flex flex-col items-center gap-y-0.5 min-w-0 flex-1 px-2">            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
+          <div className="flex flex-col items-center gap-y-0.5 min-w-0 flex-1 px-2">
+            <p className="text-neutral-500 text-[9px] font-mono uppercase tracking-[0.25em]">
               {queueContext.source === 'playlist' && queueContext.playlistName
                 ? `▶ ${queueContext.playlistName}`
                 : queueContext.source === 'search' && queueContext.searchQuery
                 ? `⌕ ${queueContext.searchQuery}`
                 : 'A tocar agora'}
             </p>
-<MarqueeText 
-  text={song.title} 
-  className="text-white font-black uppercase tracking-tight max-w-[180px]"
-  style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
-/>
+            <MarqueeText
+              text={song.title}
+              className="text-white font-black uppercase tracking-tight max-w-[180px]"
+              style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
+            />
           </div>
 
           <button
@@ -320,21 +320,21 @@ const opacity = animState === 'leaving' ? 0 : 1;
       </div>
 
       {/* Scrollable content */}
-<div className="flex flex-col flex-1 px-5 overflow-y-scroll  pb-8 gap-y-6 relative z-10">
+      <div className="flex flex-col flex-1 px-5 overflow-y-scroll pb-8 gap-y-6 relative z-10">
         {/* Album art — large */}
         <div className="flex justify-center flex-shrink-0 mt-2">
           <div className="relative" style={{ width: 'min(72vw, 280px)', height: 'min(72vw, 280px)' }}>
             {/* corner accents */}
-            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10" />
-            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10" />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10" />
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10 pointer-events-none" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10 pointer-events-none" />
+            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10 pointer-events-none" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10 pointer-events-none" />
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {/* FIX: scale/brightness transition is pointer-events-none — not a tap target */}
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-                className={`object-cover transition-all duration-700 ${isPlaying ? 'scale-100' : 'scale-95 brightness-75'}`}
+                className={`object-cover duration-700 pointer-events-none ${isPlaying ? 'scale-100' : 'scale-95 brightness-75'}`}
                 sizes="280px" unoptimized />
             </div>
-          
           </div>
         </div>
 
@@ -360,20 +360,15 @@ const opacity = animState === 'leaving' ? 0 : 1;
         <div className="flex items-center justify-between flex-shrink-0 px-2">
           <button
             onClick={() => setShuffleOn(!shuffleOn)}
-            className={`flex flex-col items-center gap-y-1 transition  p-2 ${shuffleOn ? 'text-red-500' : 'text-neutral-600'}`}
+            className={`flex flex-col items-center gap-y-1 p-2 ${shuffleOn ? 'text-red-500' : 'text-neutral-600'}`}
           >
             <TbArrowsShuffle size={22} />
           </button>
 
-          {/* FIX: was bare icon with onClick — now a proper button */}
-          <button
-            onClick={onPrevious}
-            className="text-neutral-300 p-2"
-          >
+          <button onClick={onPrevious} className="text-neutral-300 p-2">
             <AiFillStepBackward size={32} />
           </button>
 
-          {/* FIX: was a div — now a proper button */}
           <button
             onClick={onPlay}
             className="flex items-center justify-center rounded-full"
@@ -388,11 +383,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
             {renderPlayButton()}
           </button>
 
-          {/* FIX: was bare icon with onClick — now a proper button */}
-          <button
-            onClick={handleNext}
-            className="text-neutral-300 p-2"
-          >
+          <button onClick={handleNext} className="text-neutral-300 p-2">
             <AiFillStepForward size={32} />
           </button>
 
@@ -424,13 +415,14 @@ const opacity = animState === 'leaving' ? 0 : 1;
           <div className="flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
             {queueStatus === 'fetching' && (
               <div className="flex items-center gap-x-3 px-4 py-3">
-                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                {/* FIX: animate-spin not inside a button, but add pointer-events-none anyway */}
+                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin flex-shrink-0 pointer-events-none" />
                 <span className="text-neutral-400 text-xs font-mono">A procurar mais músicas...</span>
               </div>
             )}
             {queueStatus === 'exhausted' && (
               <button onClick={queueFetchMore}
-                className="w-full flex items-center gap-x-3 px-4 py-3 transition text-left">
+                className="w-full flex items-center gap-x-3 px-4 py-3 text-left">
                 <TbDatabaseImport size={18} className="text-red-400 flex-shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-white text-xs font-semibold">Fila a acabar</span>

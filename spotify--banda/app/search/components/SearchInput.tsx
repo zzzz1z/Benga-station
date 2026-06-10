@@ -41,7 +41,7 @@ const SearchInput = () => {
                     });
                     router.replace(url, { scroll: false });
                 }}
-                className="bg-transparent border border-red-600 text-red-600 transition-all text-xs font-black uppercase px-6 py-[14px] rounded-none flex-shrink-0 tracking-[0.2em] shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                className="bg-transparent border border-red-600 text-red-600  text-xs font-black uppercase px-6 py-[14px] rounded-none flex-shrink-0 tracking-[0.2em] shadow-[0_0_10px_rgba(239,68,68,0.1)]"
             >
                 EXECUTE
             </button>

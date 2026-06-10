@@ -209,7 +209,7 @@ const handleReload = () => {
             <p className="text-neutral-300 text-sm">{state.message}</p>
             <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
               <div
-                className="h-full bg-white rounded-full transition-all duration-300"
+                className="h-full bg-white rounded-full  duration-300"
                 style={{ width: `${state.status === 'fetching' || state.status === 'matching' ? 5 : progressPercent}%` }}
               />
             </div>

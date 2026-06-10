@@ -11,7 +11,7 @@ const ImportPlaylistButton = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="group relative flex items-center gap-x-2 mt-2 px-5 py-2.5 w-fit text-sm font-bold tracking-widest uppercase overflow-hidden transition-all duration-200"
+        className="group relative flex items-center gap-x-2 mt-2 px-5 py-2.5 w-fit text-sm font-bold tracking-widest uppercase overflow-hidden  duration-200"
         style={{
           background: 'transparent',
           border: '1px solid rgba(239,68,68,0.6)',
@@ -19,7 +19,7 @@ const ImportPlaylistButton = () => {
           clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
         }}
       >
-        {/* Animated red glow fill on hover */}
+     
         <span
           className="absolute inset-0 opacity-0 "
           style={{

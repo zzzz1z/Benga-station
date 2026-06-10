@@ -16,14 +16,15 @@ export default function MarqueeText({ text, className, style }: { text: string; 
 
   return (
 <div ref={containerRef} style={style} className={`overflow-hidden whitespace-nowrap ${className}`}>
-      <span
-        ref={textRef}
-        style={shouldScroll ? {
-          display: 'inline-block',
-          animation: 'marquee 8s linear 1.5s infinite',
-          paddingRight: '3rem',
-        } : { display: 'inline-block' }}
-      >
+<span
+  ref={textRef}
+  style={shouldScroll ? {
+    display: 'inline-block',
+    animation: 'marquee 8s linear 3s infinite',
+    paddingRight: '3rem',
+    pointerEvents: 'none',
+  } : { display: 'inline-block', pointerEvents: 'none' }}
+>
         {text}
       </span>
     </div>

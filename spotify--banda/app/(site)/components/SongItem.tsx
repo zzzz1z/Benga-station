@@ -96,7 +96,7 @@ const handleAddToPlaylist = async (playlistId: string) => {
 
                     <Image
                         priority
-                        className="object-cover transition-transform duration-700 "
+                        className="object-cover  duration-700 "
                         src={imagePath ?? '/images/likedit.png'}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
