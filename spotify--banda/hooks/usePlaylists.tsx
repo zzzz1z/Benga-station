@@ -1,11 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { useUser } from '@/hooks/useUser';
 import { Playlist } from '@/types';
-
-const supabase = createClient();
+import { authedFetch } from '@/utils/api';
 
 type PlaylistContextType = {
   playlists: Playlist[];
@@ -23,21 +21,20 @@ export const PlaylistProvider = ({ children }: { children: React.ReactNode }) =>
   const refreshPlaylists = useCallback(async () => {
     if (!user?.id) return;
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('Playlists')
-      .select('*, playlist_songs(Songs(*))')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setPlaylists(
-        data.map((p: any) => ({
-          ...p,
-          songs: (p.playlist_songs ?? []).map((ps: any) => ps.Songs).filter(Boolean),
-        }))
-      );
+    try {
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/user-playlists`);
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylists(
+          data.map((p: any) => ({
+            ...p,
+            songs: (p.playlist_songs ?? []).map((ps: any) => ps.Songs).filter(Boolean),
+          }))
+        );
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [user?.id]);
 
   useEffect(() => {
