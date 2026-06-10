@@ -136,3 +136,14 @@ button, [role="button"] {
   90%  { transform: translateX(calc(-100% + 100vw - 4rem)); }
   100% { transform: translateX(calc(-100% + 100vw - 4rem)); }
 }
+
+@media (hover: none) and (pointer: coarse) {
+  *:hover {
+    color: inherit !important;
+    background: inherit !important;
+    border-color: inherit !important;
+    opacity: inherit !important;
+    filter: inherit !important;
+    transform: inherit !important;
+  }
+}
