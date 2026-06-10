@@ -31,7 +31,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
         items-center 
         gap-x-4 
         bg-neutral-100/5 
-        hover:bg-neutral-100/10 
+     
         transition 
         pr-4
         border-l-2
@@ -51,7 +51,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
           alt="Image"
         />
         {/* Neon Overlay */}
-        <div className="absolute inset-0 bg-red-600/10 opacity-40 group-hover:opacity-0 transition" />
+        <div className="absolute inset-0 bg-red-600/10 opacity-40" />
       </div>
 
       <p className="font-black uppercase tracking-widest text-[11px] text-white truncate py-5 ml-2">
@@ -71,8 +71,7 @@ const ListaItens: React.FC<ListaItensProps> = ({
           p-4 
           drop-shadow-[0_0_10px_#ef4444] 
           right-5 
-          group-hover:opacity-100 
-          hover:scale-110
+          
         "
       >
         <FaPlay className="text-black" size={14} />

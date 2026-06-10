@@ -62,11 +62,11 @@ const QueueRow = ({
           ? 'bg-red-950/40 border-l-2 border-red-500'
           : dimmed
           ? 'opacity-40'
-          : 'active:bg-white/5 cursor-pointer border-l-2 border-transparent'
+          : 'cursor-pointer border-l-2 border-transparent'
         }`}
     >
       {!isCurrent && onDragStart ? (
-        <div className="text-neutral-700 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+        <div className="text-neutral-700 cursor-grab touch-none flex-shrink-0"
           onMouseDown={onDragStart} onTouchStart={onDragStart} onClick={e => e.stopPropagation()}>
           <MdDragHandle size={16} />
         </div>
@@ -90,7 +90,7 @@ const QueueRow = ({
         <p className="text-neutral-600 text-[10px] truncate font-mono">{song.author}</p>
       </div>
       {!isCurrent && onRemove && (
-        <button onClick={onRemove} className="flex-shrink-0 text-neutral-700 active:text-red-500 transition p-1">
+        <button onClick={onRemove} className="flex-shrink-0 text-neutral-700 p-1">
           <MdClose size={12} />
         </button>
       )}
@@ -289,7 +289,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
         <div className="flex items-center justify-between px-5 py-4">
           <button
             onClick={handleClose}
-            className="text-neutral-400 active:text-white transition p-3 -ml-3"
+            className="text-neutral-400 p-3 -ml-3"
             onTouchStart={e => e.stopPropagation()}
           >
             <IoChevronDown size={28} />
@@ -311,7 +311,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
 
           <button
             onClick={handleClose}
-            className="text-neutral-500 active:text-white transition p-3 -mr-3"
+            className="text-neutral-500 p-3 -mr-3"
             onTouchStart={e => e.stopPropagation()}
           >
             <AiOutlineInfoCircle size={24} />
@@ -360,7 +360,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
         <div className="flex items-center justify-between flex-shrink-0 px-2">
           <button
             onClick={() => setShuffleOn(!shuffleOn)}
-            className={`flex flex-col items-center gap-y-1 transition active:scale-90 p-2 ${shuffleOn ? 'text-red-500' : 'text-neutral-600'}`}
+            className={`flex flex-col items-center gap-y-1 transition  p-2 ${shuffleOn ? 'text-red-500' : 'text-neutral-600'}`}
           >
             <TbArrowsShuffle size={22} />
           </button>
@@ -430,7 +430,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
             )}
             {queueStatus === 'exhausted' && (
               <button onClick={queueFetchMore}
-                className="w-full flex items-center gap-x-3 px-4 py-3 active:bg-white/5 transition text-left">
+                className="w-full flex items-center gap-x-3 px-4 py-3 transition text-left">
                 <TbDatabaseImport size={18} className="text-red-400 flex-shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-white text-xs font-semibold">Fila a acabar</span>
@@ -445,7 +445,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
         {hasQueue && (
           <div className="flex-shrink-0 border border-white/10 overflow-hidden">
             <button onClick={() => setQueueExpanded(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 text-neutral-500 active:text-white transition">
+              className="w-full flex items-center justify-between px-4 py-3 text-neutral-500">
               <span className="text-[10px] font-mono uppercase tracking-widest">Fila de reprodução</span>
               <div className="flex items-center gap-x-2">
                 <span className="text-[10px] text-neutral-700 font-mono">{ids.length}</span>

@@ -103,7 +103,7 @@ const handleReload = () => {
                 <p className="text-neutral-500 text-xs truncate max-w-[280px]">{state.playlistName}</p>
               )}
             </div>
-            <button onClick={handleReload} className="text-neutral-400 hover:text-white transition">
+            <button onClick={handleReload} className="text-neutral-400">
               <IoClose size={22} />
             </button>
           </div>
@@ -135,7 +135,7 @@ const handleReload = () => {
 
           <button
             onClick={handleReload}
-            className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-neutral-200 active:scale-95 transition"
+            className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm "
           >
             Ver Playlist ({countdown}s)
           </button>
@@ -156,7 +156,7 @@ const handleReload = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-white font-bold text-lg">Importar Playlist</h2>
           {!isRunning && (
-            <button onClick={onClose} className="text-neutral-400 hover:text-white transition">
+            <button onClick={onClose} className="text-neutral-400">
               <IoClose size={22} />
             </button>
           )}
@@ -197,7 +197,7 @@ const handleReload = () => {
             <button
               onClick={handleSubmit}
               disabled={!url.trim() || !platform}
-              className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-200 active:scale-95 transition"
+              className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed "
             >
               Importar
             </button>

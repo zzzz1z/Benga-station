@@ -17,7 +17,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         {title && <h2 className="text-xl font-bold text-white mb-4">{title}</h2>}
         <div>{children}</div>
         <Button
-          className="mt-4 text-sm text-black hover:text-white"
+          className="mt-4 text-sm text-black"
           onClick={onClose}
         >
           Cancelar

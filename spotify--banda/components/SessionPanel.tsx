@@ -69,7 +69,7 @@ const MemberCard = ({
       {isSessionHost && !isMe && onTogglePermission && (
         <button
           onClick={() => onTogglePermission(member.userId, !member.isHost)}
-          className="opacity-0 group-hover:opacity-100 transition p-1 hover:text-red-400 text-neutral-600"
+          className="opacity-0p-1  text-neutral-600"
           title={member.isHost ? 'Remover permissão' : 'Dar permissão de controlo'}
         >
           {member.isHost
@@ -165,7 +165,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
             <HiSignal size={18} className="text-red-500" />
             <span className="text-white font-black uppercase tracking-widest text-sm">Sessão Conjunta</span>
           </div>
-          <button onClick={onClose} className="text-neutral-500 hover:text-white transition">
+          <button onClick={onClose} className="text-neutral-500 transition">
             <IoClose size={20} />
           </button>
         </div>
@@ -184,14 +184,14 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
                   <div className="flex flex-col gap-y-1.5">
                     <button
                       onClick={handleCopyCode}
-                      className="flex items-center gap-x-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border border-red-900/40 text-red-400 hover:bg-red-900/20 transition"
+                      className="flex items-center gap-x-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border border-red-900/40 text-red-400"
                       style={{ clipPath: BADGE_CUT }}
                     >
                       <IoCopy size={12} /> Código
                     </button>
                     <button
                       onClick={handleCopyLink}
-                      className="flex items-center gap-x-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border border-red-900/40 text-red-400 hover:bg-red-900/20 transition"
+                      className="flex items-center gap-x-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border border-red-900/40 text-red-400"
                       style={{ clipPath: BADGE_CUT }}
                     >
                       <IoLink size={12} /> Link
@@ -234,7 +234,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
 
               <button
                 onClick={handleLeave}
-                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition text-xs font-black uppercase tracking-widest"
+                className="flex items-center justify-center gap-x-2 w-full py-2.5 border border-red-900/40 text-red-400 text-xs font-black uppercase tracking-widest"
               >
                 <IoLogOut size={16} />
                 {session.isHost && session.members.length > 1 ? 'Transferir e Sair' : 'Sair da Sessão'}
@@ -250,7 +250,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
                   <button
                     onClick={handleCreate}
                     disabled={isConnecting}
-                    className="w-full py-3 bg-red-600/90 hover:bg-red-600 transition text-white font-black uppercase tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 bg-red-600/90  text-white font-black uppercase tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)' }}
                   >
                     {isConnecting ? (
@@ -262,7 +262,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
                   </button>
                   <button
                     onClick={() => setView('join')}
-                    className="w-full py-3 border border-red-900/40 text-red-400 hover:bg-red-900/10 transition font-black uppercase tracking-widest text-sm"
+                    className="w-full py-3 border border-red-900/40 text-red-400 font-black uppercase tracking-widest text-sm"
                     style={{ clipPath: 'polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)' }}
                   >
                     Entrar numa Sessão
@@ -274,7 +274,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
                 <div className="flex flex-col gap-y-3">
                   <button
                     onClick={() => setView('home')}
-                    className="text-[10px] text-neutral-500 hover:text-white transition uppercase tracking-widest font-mono text-left"
+                    className="text-[10px] text-neutral-500 transition uppercase tracking-widest font-mono text-left"
                   >
                     ← Voltar
                   </button>
@@ -294,7 +294,7 @@ navigator.clipboard.writeText(`${window.location.origin}/session?code=${session.
                   <button
                     onClick={handleJoin}
                     disabled={isConnecting || !joinCode.trim()}
-                    className="w-full py-3 bg-red-600/90 hover:bg-red-600 transition text-white font-black uppercase tracking-widest text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full py-3 bg-red-600/90  text-white font-black uppercase tracking-widest text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)' }}
                   >
                     {isConnecting ? (

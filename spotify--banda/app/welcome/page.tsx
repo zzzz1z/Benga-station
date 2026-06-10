@@ -119,7 +119,7 @@ const WelcomePage = () => {
                     <button
                         onClick={handleSubmit}
                         disabled={loading || !code.trim()}
-                        className="w-full py-3 bg-red-600 text-white font-black uppercase tracking-widest text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-red-500 active:scale-95 transition"
+                        className="w-full py-3 bg-red-600 text-white font-black uppercase tracking-widest text-sm disabled:opacity-30 disabled:cursor-not-allowed"
                         style={{ clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)' }}
                     >
                         {loading ? 'A verificar...' : 'Entrar'}

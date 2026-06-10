@@ -63,7 +63,7 @@ const FloatingRefreshButton = () => {
         ${bottomClass}
         ${isStale
           ? 'opacity-100 scale-100'
-          : 'opacity-40 scale-90 hover:opacity-70 hover:scale-95'
+          : 'opacity-40 scale-90  '
         }
       `}
     >

@@ -171,7 +171,7 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
         <div className="mt-20 relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-x-8 px-6">
             <div
-              className="relative h-56 w-56 md:h-64 md:w-64 group flex-shrink-0 cursor-pointer transition-transform active:scale-95"
+              className="relative h-56 w-56 md:h-64 md:w-64 group flex-shrink-0 cursor-pointer transition-transform"
               onClick={() => coverInputRef.current?.click()}
             >
               <div className="absolute inset-0 rounded-lg blur-xl opacity-40 animate-pulse"
@@ -181,7 +181,7 @@ const PlaylistDetails: React.FC<{ id?: string }> = (props) => {
                 <div className="relative w-full h-full bg-neutral-900 overflow-hidden" style={{ clipPath: GAMER_CUT }}>
                   <Image fill alt="Playlist Cover" className="object-cover"
                     src={playlist.cover_image || '/images/likedit.png'} />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-y-2">
+                  <div className="absolute inset-0 bg-black/60 opacity-0flex flex-col items-center justify-center gap-y-2">
                     {uploadingCover ? (
                       <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
                     ) : (

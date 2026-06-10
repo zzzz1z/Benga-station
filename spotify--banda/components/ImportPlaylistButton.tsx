@@ -11,7 +11,7 @@ const ImportPlaylistButton = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="group relative flex items-center gap-x-2 mt-2 px-5 py-2.5 w-fit text-sm font-bold tracking-widest uppercase overflow-hidden transition-all duration-200 active:scale-95"
+        className="group relative flex items-center gap-x-2 mt-2 px-5 py-2.5 w-fit text-sm font-bold tracking-widest uppercase overflow-hidden transition-all duration-200"
         style={{
           background: 'transparent',
           border: '1px solid rgba(239,68,68,0.6)',
@@ -21,7 +21,7 @@ const ImportPlaylistButton = () => {
       >
         {/* Animated red glow fill on hover */}
         <span
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          className="absolute inset-0 opacity-0 "
           style={{
             background: 'linear-gradient(90deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.08) 100%)',
           }}
@@ -29,7 +29,7 @@ const ImportPlaylistButton = () => {
 
         {/* Scan line sweep */}
         <span
-          className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500"
+          className="absolute inset-0 -translate-x-full "
           style={{
             background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
           }}
@@ -41,9 +41,9 @@ const ImportPlaylistButton = () => {
 
         <FiDownload
           size={14}
-          className="relative z-10 text-red-400 group-hover:text-red-300 transition-colors"
+          className="relative z-10 text-red-400"
         />
-        <span className="relative z-10 text-neutral-200 group-hover:text-white transition-colors">
+        <span className="relative z-10 text-neutral-200">
           Importar Playlist
         </span>
       </button>

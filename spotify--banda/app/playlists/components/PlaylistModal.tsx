@@ -88,7 +88,7 @@ const PlaylistModal: React.FC = () => {
         <div className="flex flex-col gap-y-4 px-1">
 
           {/* Image upload */}
-          <label className="relative flex flex-col items-center justify-center h-28 border border-dashed border-red-900/40 bg-red-500/5 cursor-pointer transition active:bg-red-500/10 overflow-hidden"
+          <label className="relative flex flex-col items-center justify-center h-28 border border-dashed border-red-900/40 bg-red-500/5 cursor-pointer transition overflow-hidden"
             style={{ clipPath: SLASH }}>
             {imagePreview
               ? <img src={imagePreview} alt="cover" className="absolute inset-0 w-full h-full object-cover opacity-60" />

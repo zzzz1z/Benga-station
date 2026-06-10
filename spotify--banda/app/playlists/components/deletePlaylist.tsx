@@ -39,7 +39,7 @@ const DeletePlaylist: React.FC<DeletePlaylistProps> = ({ data }) => {
   return (
     <button
       onClick={deletePlaylist}
-      className='rounded-full p-2 flex items-center justify-center hover:opacity-75 transition'>
+      className='rounded-full p-2 flex items-center justify-center'>
       <CiTrash size={30} />
     </button>
   );

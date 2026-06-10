@@ -57,7 +57,7 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
         <div>
             <button
                 onClick={() => setIsOpen(true)}
-                className="hover:text-white transition text-neutral-400"
+                className=" text-neutral-400"
             >
                 <MdEdit size={28} />
             </button>
@@ -85,7 +85,7 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
                     <button
                         disabled={isLoading}
                         type="submit"
-                        className="w-full rounded-full bg-green-500 border border-transparent px-3 py-3 disabled:cursor-not-allowed disabled:opacity-50 text-black font-bold hover:opacity-75 transition"
+                        className="w-full rounded-full bg-green-500 border border-transparent px-3 py-3 disabled:cursor-not-allowed disabled:opacity-50 text-black font-bold"
                     >
                         Salvar Alterações
                     </button>

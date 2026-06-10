@@ -133,7 +133,7 @@ const FullscreenLyrics: React.FC<{
         <p className="text-neutral-600 font-mono text-[9px] uppercase tracking-[0.3em]">Letra completa</p>
         <button
           onClick={onClose}
-          className="text-neutral-400 active:text-white transition p-3 -mr-2 flex items-center gap-x-2"
+          className="text-neutral-400 p-3 -mr-2 flex items-center gap-x-2"
         >
           <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-600">fechar</span>
           <IoChevronDown size={22} />
@@ -496,7 +496,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lyrics?videoId=$
 
         {/* hint label */}
         <button onClick={handleTap} className="group flex flex-col items-center">
-          <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-[0.3em] group-active:text-red-500 transition-colors">
+          <p className="text-red-600/40 font-mono text-[9px] uppercase tracking-[0.3em]">
             {tapState === 0
               ? 'ACCESS_LYRIC_CORE'
               : tapState === 1 && lyricsState === 'synced'

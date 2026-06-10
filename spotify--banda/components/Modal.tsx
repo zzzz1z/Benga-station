@@ -66,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({
           <Dialog.Close asChild>
             <button className='
               text-neutral-400
-              hover:text-red-800
+           
               absolute
               top-[10px]
               right-[10px]

@@ -50,7 +50,7 @@ function SessionJoinInner() {
           </div>
           <button
             onClick={() => router.push(`/login?redirect=/session?code=${code}`)}
-            className="w-full py-3 bg-red-600 text-white font-black uppercase tracking-widest text-sm hover:bg-red-500 transition"
+            className="w-full py-3 bg-red-600 text-white font-black uppercase tracking-widest text-sm"
             style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)' }}
           >
             Iniciar Sessão
@@ -83,7 +83,7 @@ function SessionJoinInner() {
           <div className="border border-red-900/40 bg-red-900/10 px-4 py-3 w-full">
             <p className="text-red-400 text-xs font-mono">⚠ {error}</p>
             <button onClick={() => router.push('/')}
-              className="text-[10px] text-neutral-500 hover:text-white transition mt-2 font-mono uppercase tracking-widest">
+              className="text-[10px] text-neutral-500 mt-2 font-mono uppercase tracking-widest">
               Voltar ao início →
             </button>
           </div>

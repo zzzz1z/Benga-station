@@ -103,7 +103,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
         <>
 <button
     onClick={handleClick}
-    className="flex items-center gap-4 hover:bg-red-600/5 p-2 rounded-none w-full group border-l-2 border-transparent hover:border-red-600 transition-all relative text-left"
+    className="flex items-center gap-4 p-2 rounded-none w-full group border-l-2 border-transparent relative text-left"
 >
                 <div className="relative rounded-none h-14 w-16 flex-shrink-0 overflow-hidden border border-white/5">
                     <Image
@@ -111,12 +111,12 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
                         sizes="64px"
                         src={imageUrl ?? '/images/likedit.png'}
                         alt={data.title}
-                        className="object-cover grayscale-[0.4] group-hover:grayscale-0 transition duration-500"
+                        className="object-cover "
                     />
                 </div>
 
                 <div className="flex flex-col w-full gap-y-0.5 min-w-0">
-                    <p className="text-white font-black uppercase italic tracking-tighter truncate w-full group-hover:text-red-500 transition">
+                    <p className="text-white font-black uppercase italic tracking-tighter truncate w-full">
                         {data.title}
                     </p>
                     <p className="text-red-600/50 font-mono text-[10px] uppercase tracking-widest">
@@ -128,21 +128,21 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
     className="hidden md:flex items-center gap-x-4 flex-shrink-0 pr-2 transition"
     onClick={e => e.stopPropagation()}
 >
-    <button onClick={handleLike} className="text-neutral-500 hover:text-red-500 transition">
+    <button onClick={handleLike} className="text-neutral-500">
         {isLiked ? <AiFillHeart size={18} className="text-red-600" /> : <AiOutlineHeart size={18} />}
     </button>
     {!playlistMode && (
-        <button onClick={handlePlaylistClick} className="text-neutral-500 hover:text-red-500 transition">
+        <button onClick={handlePlaylistClick} className="text-neutral-500 ">
             <MdPlaylistAdd size={20} />
         </button>
     )}
     {!playlistMode && (
-        <button onClick={handleInfo} className="text-neutral-500 hover:text-red-500 transition">
+        <button onClick={handleInfo} className="text-neutral-500 ">
             <AiOutlineInfoCircle size={18} />
         </button>
     )}
     {onRemove && (
-        <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-neutral-500 hover:text-red-500 transition">
+        <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-neutral-500 ">
             <MdOutlineNotInterested size={18} />
         </button>
     )}
@@ -162,22 +162,22 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
         className="absolute right-0 bottom-full mb-1 w-44 bg-neutral-800 rounded-xl shadow-xl z-50 overflow-hidden border border-neutral-700"
         onClick={e => e.stopPropagation()}
     >
-<button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+<button onClick={handleLike} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white">
     {isLiked ? <AiFillHeart size={16} className="text-red-500" /> : <AiOutlineHeart size={16} />}
     {isLiked ? 'Remover_Fav' : 'Adicionar_Fav'}
 </button>
 {!playlistMode && (
-    <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+    <button onClick={handlePlaylistClick} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white">
         <MdPlaylistAdd size={16} /> adicionar a uma playlist
     </button>
 )}
 {!playlistMode && (
-    <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white active:bg-red-600/10 transition border-b border-white/5">
+    <button onClick={handleInfo} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-white">
         <AiOutlineInfoCircle size={16} /> Ver_Metadata
     </button>
 )}
 {onRemove && (
-    <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500 active:bg-red-600/10 transition">
+    <button onClick={e => { e.stopPropagation(); onRemove(); }} className="flex items-center gap-x-3 w-full px-4 py-4 text-[10px] font-mono uppercase tracking-widest text-red-500">
         <MdOutlineNotInterested size={16} /> remover da playlist
     </button>
 )}
@@ -193,7 +193,7 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
             ? <p className="text-neutral-400 text-sm text-center py-4">Sem playlists criadas</p>
             : playlists.map(pl => (
               <button key={pl.id} onClick={() => handleAddToPlaylist(pl.id)}
-                className="w-full text-left px-4 py-3 text-sm text-white bg-neutral-700 hover:bg-neutral-600 rounded-md transition truncate">
+                className="w-full text-left px-4 py-3 text-sm text-white bg-neutral-700 rounded-md transition truncate">
                 {pl.title}
               </button>
             ))

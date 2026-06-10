@@ -119,7 +119,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
             {/* album art — tappable to expand */}
             <button
               onClick={onExpand}
-              className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="relative flex-shrink-0 cursor-pointer transition-transform"
               style={{ width: 56, height: 56 }}
             >
            
@@ -140,14 +140,14 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onPrevious}
                 disabled={!!isGuest}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
+                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
               >
                 <AiFillStepBackward size={22} />
               </button>
               <button
                 onClick={onPlay}
                 disabled={!!isGuest}
-                className={`flex items-center justify-center rounded-full transition active:scale-90
+                className={`flex items-center justify-center rounded-full transition 
                   ${isGuest ? 'opacity-40 pointer-events-none' : 'cursor-pointer'}
                   bg-neutral-800 border border-red-600/30 shadow-[0_0_12px_rgba(239,68,68,0.2)]`}
                 style={{ width: 42, height: 42 }}
@@ -157,7 +157,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onNext}
                 disabled={!!isGuest}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
+                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none' : 'text-neutral-400'}`}
               >
                 <AiFillStepForward size={22} />
               </button>
@@ -176,7 +176,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
           <div className="flex items-center gap-x-3 flex-1 min-w-0 overflow-hidden">
             <button onClick={onExpand} className="cursor-pointer relative h-[52px] w-[52px] flex-shrink-0 border border-red-900/50 overflow-hidden group">
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-                className="object-cover grayscale-[0.3]" sizes="52px" unoptimized />
+                className="object-cover" sizes="52px" unoptimized />
             </button>
             <button onClick={onExpand} className="flex flex-col min-w-0 flex-1 cursor-pointer overflow-hidden text-left">
               <p className="text-white text-sm font-black uppercase tracking-tighter truncate">{song.title}</p>
@@ -192,7 +192,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onPrevious}
                 disabled={!!isGuest}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
               >
                 <AiFillStepBackward size={22} />
               </button>
@@ -206,7 +206,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               <button
                 onClick={onNext}
                 disabled={!!isGuest}
-                className={`transition active:scale-90 ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
+                className={`transition  ${isGuest ? 'text-neutral-700 pointer-events-none cursor-default' : 'text-neutral-400 cursor-pointer'}`}
               >
                 <AiFillStepForward size={22} />
               </button>

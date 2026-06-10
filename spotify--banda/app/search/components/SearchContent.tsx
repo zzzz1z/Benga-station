@@ -249,7 +249,7 @@ setHasMore(data.hasMore ?? false);
               }}
             >
               <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute inset-0 opacity-0"
                 style={{ background: 'linear-gradient(135deg, rgba(255,140,0,0.08), rgba(239,68,68,0.05))' }}
               />
               <div

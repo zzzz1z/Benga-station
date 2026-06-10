@@ -38,7 +38,7 @@ const ShuffleSongs: React.FC<ShuffleSongsProps> = ({ songs, playlistId, playlist
   return (
     <button
       onClick={handleShufflePlay}
-      className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition cursor-pointer"
+      className="rounded-full p-2 flex items-center justify-center cursor-pointer"
     >
       <CiShuffle size={30} />
     </button>

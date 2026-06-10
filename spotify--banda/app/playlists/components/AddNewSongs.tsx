@@ -272,7 +272,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 py-2.5 text-[10px] font-mono uppercase tracking-widest transition border-b-2 -mb-px ${
-              tab === t ? 'border-red-500 text-red-400' : 'border-transparent text-neutral-600 active:text-white'
+              tab === t ? 'border-red-500 text-red-400' : 'border-transparent text-neutral-600'
             }`}
           >
             {t === 'db' ? `BIBLIOTECA${selectedSongs.size > 0 ? ` [${selectedSongs.size}]` : ''}` : `YOUTUBE${ytSelectedIds.size > 0 ? ` [${ytSelectedIds.size}]` : ''}`}
@@ -324,7 +324,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
                     ? 'border-red-500 bg-red-500/5'
                     : playlistSongs.has(String(song.id))
                     ? 'border-neutral-800 opacity-40'
-                    : 'border-transparent active:border-red-900'
+                    : 'border-transparent'
                 }`}
               >
                 <div className="flex-1 min-w-0 pointer-events-none">
@@ -388,7 +388,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
                   className={`flex items-center gap-x-3 p-2 transition cursor-pointer border-l-2 ${
                     isUnavailable ? 'opacity-30 cursor-not-allowed border-neutral-800' :
                     isSelected ? 'border-red-500 bg-red-500/5' :
-                    'border-transparent active:border-red-900'
+                    'border-transparent '
                   }`}
                 >
                   <div className="relative w-10 h-10 overflow-hidden flex-shrink-0 bg-neutral-800">
@@ -450,7 +450,7 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
     <>
       <button
         onClick={handleOpen}
-        className="flex items-center justify-center w-10 h-10 border border-red-500/30 bg-red-500/5 active:bg-red-500/20 transition"
+        className="flex items-center justify-center w-10 h-10 border border-red-500/30 bg-red-500/5"
         style={{ clipPath: SLASH8 }}
         title="Adicionar músicas"
       >

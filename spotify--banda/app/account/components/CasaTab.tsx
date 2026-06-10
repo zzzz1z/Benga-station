@@ -26,7 +26,7 @@ const PlaylistRow = ({ playlist }: { playlist: Playlist }) => {
   return (
     <div
       onClick={() => router.push(`/playlists?id=${playlist?.id}`)}
-      className="flex items-center gap-x-3 p-2 cursor-pointer active:bg-red-500/5 transition border-l-2 border-transparent active:border-red-500 group"
+      className="flex items-center gap-x-3 p-2 cursor-pointer border-l-2 border-transparent"
     >
       <div className="relative w-11 h-11 flex-shrink-0 overflow-hidden bg-neutral-800 border border-red-900/20">
         {imageUrl ? (
@@ -70,7 +70,7 @@ const SectionHeader = ({
     </div>
     <button
       onClick={onSeeAll}
-      className="flex items-center gap-x-1 text-[9px] font-mono uppercase tracking-widest text-neutral-600 active:text-red-400 transition"
+      className="flex items-center gap-x-1 text-[9px] font-mono uppercase tracking-widest text-neutral-600"
     >
       Ver todas <TbChevronRight size={10} />
     </button>

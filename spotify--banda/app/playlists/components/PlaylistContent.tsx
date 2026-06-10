@@ -60,11 +60,11 @@ const onPlaylistClick = (playlistId: string) => {
             {/* Create button */}
             <button
                 onClick={onClick}
-                className="relative flex items-center gap-x-3 w-full px-5 py-4 bg-red-600/10 border border-red-600/30 active:bg-red-600/20 active:border-red-500/60 transition-all group overflow-hidden"
+                className="relative flex items-center gap-x-3 w-full px-5 py-4 bg-red-600/10 border border-red-600/30 overflow-hidden"
                 style={{ clipPath: SLASH_CUT }}
             >
                 {/* sweep on active */}
-                <div className="absolute inset-0 translate-x-[-100%] group-active:translate-x-[100%] transition-transform duration-500 bg-gradient-to-r from-transparent via-red-500/10 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 translate-x-[-100%]  bg-gradient-to-r from-transparent via-red-500/10 to-transparent pointer-events-none" />
                 <div className="flex items-center justify-center w-8 h-8 bg-red-600/20 border border-red-500/40 flex-shrink-0" style={{ clipPath: SLASH_CUT }}>
                     <HiPlus size={16} className="text-red-400" />
                 </div>

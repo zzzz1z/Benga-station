@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all ${extraClass}`}
+      className={`flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15  ${extraClass}`}
       style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
     >
       <Icon size={22} className="text-white" />
@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                 key={i}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 "
                 style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
               >
                 <item.icon size={20} className="text-white" />
@@ -150,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             <button
               type="button"
               onClick={() => navigate('/account')}
-              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 "
               style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
             >
               <FaUserAlt size={18} className="text-white" />
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
               <button
                 type="button"
                 onClick={handleUpload}
-                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 "
                 style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
               >
                 <AiOutlineFileAdd size={20} className="text-red-400" />
@@ -172,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-600/30 active:bg-red-600/20 active:border-red-600 transition-all"
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-600/30"
               style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
             >
               <RiLogoutBoxRLine size={20} className="text-red-500" />
@@ -186,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
                 key={i}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 active:bg-red-500/20 active:border-red-500/60 transition-all"
+                className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-neutral-900/80 border border-red-500/15 "
                 style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
               >
                 <item.icon size={20} className="text-white" />
@@ -196,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
             <button
               type="button"
               onClick={() => authModal.onOpen("sign_in")}
-              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-red-600/20 border border-red-600/50 active:bg-red-600/40 transition-all"
+              className="flex-1 flex flex-col items-center justify-center gap-y-1 py-3 bg-red-600/20 border border-red-600/50"
               style={{ clipPath: BUTTON_CUT, touchAction: 'manipulation' }}
             >
               <FaUserAlt size={18} className="text-red-400" />
@@ -210,7 +210,7 @@ const Header: React.FC<HeaderProps> = ({ children, className }) => {
           {user ? (
             <>
               <button onClick={() => navigate("/account")}
-                className="bg-white p-2 flex items-center justify-center transition active:scale-95"
+                className="bg-white p-2 flex items-center justify-center "
                 style={{ clipPath: BUTTON_CUT }}>
                 <FaUserAlt className="text-black" />
               </button>

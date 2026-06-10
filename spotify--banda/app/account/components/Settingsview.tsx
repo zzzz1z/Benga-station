@@ -72,7 +72,7 @@ const Settingsview = () => {
 
       <button
         onClick={updateNames}
-        className="w-full mt-4 p-2 bg-red-500 rounded text-white hover:bg-red-600 disabled:opacity-50"
+        className="w-full mt-4 p-2 bg-red-500 rounded text-white"
         disabled={loading}
       >
         {loading ? 'Atualizando...' : 'Atualizar dados'}

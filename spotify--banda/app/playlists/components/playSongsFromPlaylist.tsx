@@ -30,7 +30,7 @@ const PlaySongsFromPlaylist: React.FC<PlaySongsFromPlaylistProps> = ({ songs, pl
   return (
     <button
       onClick={handleClick}
-      className="rounded-full p-2 flex items-center justify-center hover:opacity-75 transition cursor-pointer"
+      className="rounded-full p-2 flex items-center justify-center cursor-pointer"
     >
       <CiPlay1 size={30} />
     </button>
