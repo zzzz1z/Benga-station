@@ -303,7 +303,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
                 : 'A tocar agora'}
             </p>
             <p
-              className="text-white font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
+              className="text-white overflow-x-scroll font-black uppercase tracking-tight whitespace-nowrap overflow-hidden max-w-[180px]"
               style={{ fontSize: `clamp(0.6rem, ${Math.max(0.6, 1.2 - song.title.length * 0.03)}rem, 0.875rem)` }}
             >
               {song.title}
@@ -369,7 +369,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
           {/* FIX: was bare icon with onClick — now a proper button */}
           <button
             onClick={onPrevious}
-            className="text-neutral-300 active:scale-90 transition active:text-white p-2"
+            className="text-neutral-300 p-2"
           >
             <AiFillStepBackward size={32} />
           </button>
@@ -377,7 +377,7 @@ const opacity = animState === 'leaving' ? 0 : 1;
           {/* FIX: was a div — now a proper button */}
           <button
             onClick={onPlay}
-            className="flex items-center justify-center rounded-full active:scale-95 transition-transform"
+            className="flex items-center justify-center rounded-full"
             style={{
               width: 70, height: 70,
               background: 'linear-gradient(135deg, #dc2626, #7f1d1d)',
@@ -392,14 +392,14 @@ const opacity = animState === 'leaving' ? 0 : 1;
           {/* FIX: was bare icon with onClick — now a proper button */}
           <button
             onClick={handleNext}
-            className="text-neutral-300 active:scale-90 transition active:text-white p-2"
+            className="text-neutral-300 p-2"
           >
             <AiFillStepForward size={32} />
           </button>
 
           <button
             onClick={cycleRepeat}
-            className={`flex flex-col items-center gap-y-1 transition active:scale-90 p-2 ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-600'}`}
+            className={`flex flex-col items-center gap-y-1 p-2 ${repeatMode !== 'off' ? 'text-red-500' : 'text-neutral-600'}`}
           >
             <RepeatIcon size={22} />
           </button>

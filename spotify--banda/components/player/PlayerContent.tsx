@@ -122,9 +122,7 @@ const PlayerContent: React.FC<PlayerContentProps> = ({
               className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{ width: 56, height: 56 }}
             >
-              {/* red corner accent */}
-              <div className="absolute -top-0.5 -left-0.5 w-3 h-3 border-t-2 border-l-2 border-red-500 z-10" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-b-2 border-r-2 border-red-500 z-10" />
+           
               <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
                 className="object-cover" sizes="56px" unoptimized />
              
