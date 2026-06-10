@@ -139,6 +139,9 @@ const timeSub = NativeAudio.addListener('currentTime', (data: any) => {
   if (data.duration && data.duration > 0) setDuration(data.duration);
 });
 
+
+
+
     const stateSub = NativeAudio.addListener('playbackState', (data: any) => {
       if (data.assetId !== ASSET_ID) return;
       const state: string = data.state ?? '';
