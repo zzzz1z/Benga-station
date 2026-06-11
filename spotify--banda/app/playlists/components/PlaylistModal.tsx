@@ -5,11 +5,11 @@ import { useUser } from "@/hooks/useUser";
 import usePlaylistModal from "@/hooks/usePlaylistModal";
 import AddNewSongs from "@/app/playlists/components/AddNewSongs";
 import toast from "react-hot-toast";
-import { createClient } from "@/utils/supabase/client";
 import { BsImageFill } from "react-icons/bs";
 import Modal from "@/components/Modal";
+import { authedFetch } from '@/utils/api';
 
-const supabase = createClient();
+
 const SLASH = 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)';
 
 const PlaylistModal: React.FC = () => {
@@ -40,7 +40,7 @@ const PlaylistModal: React.FC = () => {
     setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleCreate = async () => {
+const handleCreate = async () => {
     if (!user?.id) return toast.error('Não autenticado.');
     if (!title.trim()) return toast.error('Título obrigatório.');
 
@@ -49,6 +49,9 @@ const PlaylistModal: React.FC = () => {
       let publicURL = '';
 
       if (image) {
+        // keep Supabase Storage for file upload
+        const { createClient } = await import('@/utils/supabase/client');
+        const supabase = createClient();
         const fileName = `${Date.now()}${image.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('playlist-covers')
@@ -60,13 +63,12 @@ const PlaylistModal: React.FC = () => {
         publicURL = urlData.publicUrl;
       }
 
-      const { data, error } = await supabase
-        .from('Playlists')
-        .insert([{ title, description, user_id: user.id, cover_image: publicURL }])
-        .select()
-        .single();
-
-      if (error) throw new Error('Erro ao criar playlist.');
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist`, {
+        method: 'POST',
+        body: JSON.stringify({ title, description, cover_image: publicURL }),
+      });
+      if (!res.ok) throw new Error('Erro ao criar playlist.');
+      const data = await res.json();
 
       toast.success('Playlist criada!');
       setPlaylistId(data.id);
@@ -76,7 +78,6 @@ const PlaylistModal: React.FC = () => {
       setIsCreating(false);
     }
   };
-
   return (
     <Modal
       title="NOVA_PLAYLIST"

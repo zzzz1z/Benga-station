@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useForm, FieldValues, SubmitHandler } from 'react-hook-form';
-import { createClient } from '@/utils/supabase/client';
 import { Playlist } from '@/types';
 import { MdEdit } from 'react-icons/md';
 import Modal from '@/components/Modal';
 import Input from '@/app/search/components/Input';
 import toast from 'react-hot-toast';
 import { usePlaylists } from '@/hooks/usePlaylists';
+import { authedFetch } from '@/utils/api';
+
 
 interface EditPlaylistProps {
     data: Playlist;
@@ -18,7 +19,6 @@ interface EditPlaylistProps {
 const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const supabase = createClient();
     const { refreshPlaylists } = usePlaylists();
 
     const { register, handleSubmit } = useForm<FieldValues>({
@@ -32,26 +32,25 @@ const EditPlaylist: React.FC<EditPlaylistProps> = ({ data, onUpdate }) => {
         if (!open) setIsOpen(false);
     };
 
-    const onSubmit: SubmitHandler<FieldValues> = async (values) => {
-        try {
-            setIsLoading(true);
-            const { error } = await supabase
-                .from('Playlists')
-                .update({ title: values.title, description: values.description })
-                .eq('id', data.id);
+const onSubmit: SubmitHandler<FieldValues> = async (values) => {
+    try {
+        setIsLoading(true);
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/${data.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ title: values.title, description: values.description }),
+        });
+        if (!res.ok) throw new Error();
 
-            if (error) throw error;
-
-            toast.success('Playlist atualizada!');
-            await refreshPlaylists();
-            onUpdate();
-            setIsOpen(false);
-        } catch {
-            toast.error('Erro ao atualizar playlist.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        toast.success('Playlist atualizada!');
+        await refreshPlaylists();
+        onUpdate();
+        setIsOpen(false);
+    } catch {
+        toast.error('Erro ao atualizar playlist.');
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     return (
         <div>

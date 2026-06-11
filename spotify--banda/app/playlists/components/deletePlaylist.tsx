@@ -1,11 +1,9 @@
 import { Playlist } from '@/types';
-import { createClient } from '@/utils/supabase/client';
+import { authedFetch } from '@/utils/api';
 import React from 'react';
 import toast from 'react-hot-toast';
 import { CiTrash } from "react-icons/ci";
 import { useRouter } from "next/navigation";
-
-const supabase = createClient();
 
 interface DeletePlaylistProps {
   data: Playlist;
@@ -20,20 +18,18 @@ const DeletePlaylist: React.FC<DeletePlaylistProps> = ({ data }) => {
     const confirmDelete = confirm(`Are you sure you want to delete "${data.title}"?`);
     if (!confirmDelete) return;
 
-    try {
-      const { error } = await supabase
-        .from('Playlists')
-        .delete()
-        .eq('id', data.id);
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/${data.id}`, {
+      method: 'DELETE',
+    });
 
-      if (error) throw error;
-
-      toast.success('Playlist deleted successfully.');
-      router.push('/playlists');
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-      toast.error('Failed to delete playlist. Please try again.');
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? 'Failed to delete playlist.');
+      return;
     }
+
+    toast.success('Playlist deleted successfully.');
+    router.push('/playlists');
   };
 
   return (
