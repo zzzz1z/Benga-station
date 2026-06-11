@@ -43,7 +43,8 @@ export function useImportPlaylist() {
         body: JSON.stringify({ url }),
       });
 
-      if (!res.ok || !res.body) {
+if (!res.ok || !res.body) {
+        console.error('[importPlaylist] bad response:', res.status, res.statusText);
         setState(prev => ({ ...prev, status: 'error', message: 'Erro ao ligar ao servidor.' }));
         return;
       }
@@ -104,10 +105,21 @@ export function useImportPlaylist() {
               playlistId:   event.playlistId   ?? prev.playlistId,
               playlistName: event.playlistName ?? prev.playlistName,
             }));
+
+        // ← THE FIX: close the stream immediately on terminal events
+            if (isTerminal) {
+              if (event.status === 'error') {
+                console.error('[importPlaylist] server error event:', event);
+              }
+              reader.cancel();
+              return;
+            }
+
           } catch {}
         }
       }
-    } catch (err: any) {
+} catch (err: any) {
+      console.error('[importPlaylist] unexpected error:', err);
       setState(prev => ({ ...prev, status: 'error', message: err.message ?? 'Erro desconhecido.' }));
     }
   }, []);
