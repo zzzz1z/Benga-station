@@ -95,7 +95,7 @@ useEffect(() => {
               />
             </div>
             <div className="flex-shrink-0">
-              <LikedButton songId={song.id} initialLiked={true} />
+              <LikedButton songId={song.id} />
             </div>
           </div>
         ))}
