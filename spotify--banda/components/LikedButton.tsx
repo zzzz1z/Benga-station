@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
 import useAuthModal from "@/hooks/useAuthModal";
 import { useUser } from "@/hooks/useUser";
+import { useLikedSongs } from "@/hooks/useLikedSongs";
 import { authedFetch } from "@/utils/api";
-import { useState } from "react";
 import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { markDataStale } from "./FloatingRefreshButton";
 
 interface LikedButtonProps {
   songId: string;
-  initialLiked?: boolean;
 }
 
-const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false }) => {
+const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
   const authModal = useAuthModal();
   const { user } = useUser();
-  const [isLiked, setIsLiked] = useState(initialLiked);
+  const { likedIds, refreshLikedSongs } = useLikedSongs();
 
   const id = String(songId);
   const isYoutube = id.startsWith('yt_');
+  const isLiked = likedIds.has(id);
 
   const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');
@@ -35,9 +35,9 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, initialLiked = false 
       const json = await res.json();
       toast.error(json.error ?? 'Erro ao atualizar favoritos');
     } else {
-      setIsLiked(!isLiked);
       toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
       markDataStale();
+      await refreshLikedSongs();
     }
   };
 

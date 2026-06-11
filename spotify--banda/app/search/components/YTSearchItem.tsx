@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { useRouter } from 'next/navigation';
 import { authedFetch } from '@/utils/api';
+import { useLikedSongs } from '@/hooks/useLikedSongs';
 
 export interface YTResult {
   videoId: string;
@@ -36,13 +37,16 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
   const { user } = useUser();
   const authModal = useAuthModal();
   const router = useRouter();
-  const [isLiked, setIsLiked] = useState(false);
+  const songId = `yt_${result.videoId}`;
+  const { likedIds, refreshLikedSongs } = useLikedSongs();
+const isLiked = likedIds.has(songId); // songId = `yt_${result.videoId}`
+
   const [showModal, setShowModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const songId = `yt_${result.videoId}`;
+  
 
 
 
@@ -56,22 +60,22 @@ const YTSearchItem: React.FC<YTSearchItemProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
 
-  const handleLike = async (e: React.MouseEvent) => {
+const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
-      method,
-      body: JSON.stringify({ song_id: songId }),
+        method,
+        body: JSON.stringify({ song_id: songId }),
     });
     if (res.ok) {
-      setIsLiked(!isLiked);
-      toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
+        toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
+        await refreshLikedSongs();
     } else {
-      toast.error('Erro ao atualizar favoritos');
+        toast.error('Erro ao atualizar favoritos');
     }
     setShowMenu(false);
-  };
+};
 
   const handlePlaylistClick = async (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -2,12 +2,10 @@
 
 import useLoadImagePlaylist from "@/hooks/useLoadImagePlaylist";
 import { Playlist } from "@/types";
-import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
-const supabase = createClient();
 
 interface PlaylistItemProps {
     data: Playlist;

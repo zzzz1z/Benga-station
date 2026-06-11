@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { Song } from '@/types';
 import ModalToAddNewSongs from './ModalToAddNewSongs';
 import MediaItem from '@/components/MediaItem';
@@ -9,8 +8,8 @@ import { CiCirclePlus } from 'react-icons/ci';
 import { MdOutlineNotInterested } from 'react-icons/md';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { authedFetch } from '@/utils/api';
 
-const supabase = createClient();
 
 interface YTResult {
   videoId: string;
@@ -56,15 +55,17 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
   const totalSelected = selectedSongs.size + ytSelectedIds.size;
 
   // ── open/close ──────────────────────────────────────────────────────────────
-  const handleOpen = async () => {
-    setIsOpen(true);
-    const { data, error } = await supabase
-      .from('playlist_songs')
-      .select('song_id')
-      .eq('playlist_id', playlistId);
-    if (!error)
-      setPlaylistSongs(new Set(data?.map((i: { song_id: string }) => String(i.song_id))));
-  };
+const handleOpen = async () => {
+  setIsOpen(true);
+  const res = await authedFetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/playlist/${playlistId}`
+  );
+  if (res.ok) {
+    const data = await res.json();
+    const ids = (data.playlist_songs ?? []).map((i: any) => String(i.Songs?.id)).filter(Boolean);
+    setPlaylistSongs(new Set(ids));
+  }
+};
 
   const handleClose = () => {
     setIsOpen(false);
@@ -82,23 +83,24 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
   };
 
   // ── DB search ───────────────────────────────────────────────────────────────
-  const handleDbSearch = useCallback(async (term: string) => {
-    setSearchTerm(term);
-    if (term.trim().length < 2) { setDbResults([]); return; }
-    dbAbortRef.current?.abort();
-    dbAbortRef.current = new AbortController();
-    setDbSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from('Songs')
-        .select('*')
-        .or(`title.ilike.%${term}%,author.ilike.%${term}%`)
-        .limit(30);
-      if (!error) setDbResults(data || []);
-    } finally {
-      setDbSearching(false);
+const handleDbSearch = useCallback(async (term: string) => {
+  setSearchTerm(term);
+  if (term.trim().length < 2) { setDbResults([]); return; }
+  dbAbortRef.current?.abort();
+  dbAbortRef.current = new AbortController();
+  setDbSearching(true);
+  try {
+    const res = await authedFetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/songs?search=${encodeURIComponent(term)}&limit=30`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setDbResults(data || []);
     }
-  }, []);
+  } finally {
+    setDbSearching(false);
+  }
+}, []);
 
   const handleCheckboxChange = (songId: string) => {
     if (playlistSongs.has(songId)) {
@@ -169,95 +171,72 @@ const AddNewSongs: React.FC<AddNewSongsProps> = ({ playlistId, refreshPlaylist, 
   };
 
   // ── FINISH — commit everything ───────────────────────────────────────────────
-  const handleFinish = async () => {
-    if (totalSelected === 0) return;
-    setCommitting(true);
+const handleFinish = async () => {
+  if (totalSelected === 0) return;
+  setCommitting(true);
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    const userId = session?.user?.id;
+  let dbOk = 0, ytOk = 0, failed = 0, dupes = 0;
 
-    let dbOk = 0, ytOk = 0, failed = 0, dupes = 0;
-
-    // 1. DB songs → insert directly into playlist_songs
-    if (selectedSongs.size > 0) {
-      const rows = Array.from(selectedSongs).map(songId => ({
+  // 1. DB songs — batch insert
+  if (selectedSongs.size > 0) {
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist-songs/batch`, {
+      method: 'POST',
+      body: JSON.stringify({
         playlist_id: playlistId,
-        song_id: songId,
-        user_id: userId,
-      }));
-      const { error } = await supabase.from('playlist_songs').insert(rows);
-      if (error) failed += selectedSongs.size;
-      else dbOk = selectedSongs.size;
-    }
+        song_ids: Array.from(selectedSongs),
+      }),
+    });
+    if (res.ok) dbOk = selectedSongs.size;
+    else failed += selectedSongs.size;
+  }
 
-    // 2. YT songs — check DB first, then insert song if new, then link to playlist
-    if (ytSelectedIds.size > 0) {
-      const selected = ytResults.filter(r => ytSelectedIds.has(r.videoId));
+  // 2. YT songs
+  if (ytSelectedIds.size > 0) {
+    const selected = ytResults.filter(r => ytSelectedIds.has(r.videoId));
+    await Promise.allSettled(
+      selected.map(async r => {
+        try {
+          // upsert song
+          const songRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs`, {
+            method: 'POST',
+            body: JSON.stringify({
+              title: r.title,
+              author: r.artist,
+              source: 'youtube',
+              youtube_video_id: r.videoId,
+              thumbnail: r.thumbnail,
+            }),
+          });
+          if (!songRes.ok) throw new Error('song insert failed');
+          const { id: songId } = await songRes.json();
 
-      await Promise.allSettled(
-        selected.map(async r => {
-          try {
-            // Check if song already exists by youtube_video_id
-            const { data: existing } = await supabase
-              .from('Songs')
-              .select('id')
-              .eq('youtube_video_id', r.videoId)
-              .maybeSingle();
-
-            let songId: string;
-
-            if (existing?.id) {
-              songId = String(existing.id);
-            } else {
-              // Insert new song into Songs table
-              const { data: newSong, error: insertErr } = await supabase
-                .from('Songs')
-                .insert({
-                  title: r.title,
-                  author: r.artist,
-                  source: 'youtube',
-                  youtube_video_id: r.videoId,
-                  image_path: r.thumbnail,
-                  user_id: userId,
-                })
-                .select('id')
-                .single();
-              if (insertErr || !newSong) throw new Error('insert failed');
-              songId = String(newSong.id);
-            }
-
-            // Link to playlist
-            const { error: linkErr } = await supabase
-              .from('playlist_songs')
-              .upsert(
-                { playlist_id: playlistId, song_id: songId, user_id: userId },
-                { onConflict: 'playlist_id,song_id,user_id' }
-              );
-
-            if (linkErr) {
-              if (linkErr.code === '23505') dupes++;
-              else throw new Error('link failed');
-            } else {
-              ytOk++;
-            }
-          } catch {
-            failed++;
+          // link to playlist
+          const linkRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist-songs`, {
+            method: 'POST',
+            body: JSON.stringify({ playlist_id: playlistId, song_id: String(songId), upsert: true }),
+          });
+          if (!linkRes.ok) {
+            const err = await linkRes.json();
+            if (err.error?.includes('23505')) dupes++;
+            else throw new Error('link failed');
+          } else {
+            ytOk++;
           }
-        })
-      );
-    }
+        } catch {
+          failed++;
+        }
+      })
+    );
+  }
 
-    setCommitting(false);
-
-    const total = dbOk + ytOk;
-    if (total > 0) toast.success(`${total} track${total > 1 ? 's' : ''} adicionada${total > 1 ? 's' : ''}!`);
-    if (dupes > 0) toast.error(`${dupes} já estava${dupes > 1 ? 'm' : ''} na playlist`);
-    if (failed > 0) toast.error(`${failed} falhara${failed > 1 ? 'm' : ''}`);
-
-    handleClose();
-    refreshPlaylist();
-  };
+  setCommitting(false);
+  const total = dbOk + ytOk;
+  if (total > 0) toast.success(`${total} track${total > 1 ? 's' : ''} adicionada${total > 1 ? 's' : ''}!`);
+  if (dupes > 0) toast.error(`${dupes} já estava${dupes > 1 ? 'm' : ''} na playlist`);
+  if (failed > 0) toast.error(`${failed} falhara${failed > 1 ? 'm' : ''}`);
+  handleClose();
+  refreshPlaylist();
+};
 
   const open = inlineOpen || isOpen;
 

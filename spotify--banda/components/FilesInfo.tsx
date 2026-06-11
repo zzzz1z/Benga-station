@@ -8,6 +8,7 @@ import uniqid from "uniqid";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
 import { markDataStale } from "./FloatingRefreshButton";
+import { authedFetch } from "@/utils/api";
 
 const supabase = createClient();
 
@@ -78,7 +79,7 @@ const FilesInfo: React.FC = () => {
     reset();
   };
 
-  const uploadSingleFile = async (file: LocalFile): Promise<{ success: boolean; title: string }> => {
+const uploadSingleFile = async (file: LocalFile): Promise<{ success: boolean; title: string }> => {
     const uniqueID = uniqid();
     const safeTitle = sanitizeFilename(file.title);
 
@@ -98,20 +99,22 @@ const FilesInfo: React.FC = () => {
         throw imageResult.error;
       }
 
-      const { error: dbError } = await supabase.from("Songs").insert({
-        user_id: user?.id,
-        title: file.title,
-        author: file.author,
-        image_path: imageResult.data.path,
-        song_path: songResult.data.path,
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: file.title,
+          author: file.author,
+          image_path: imageResult.data.path,
+          song_path: songResult.data.path,
+        }),
       });
 
-      if (dbError) {
+      if (!res.ok) {
         await Promise.all([
           supabase.storage.from("musicas").remove([songResult.data.path]),
           supabase.storage.from("imagens").remove([imageResult.data.path]),
         ]);
-        throw dbError;
+        throw new Error('DB insert failed');
       }
 
       return { success: true, title: file.title };

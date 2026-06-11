@@ -4,6 +4,7 @@ import { useEffect, useState, createContext, useContext, useMemo, useCallback } 
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { UserDetails } from '@/types';
+import { authedFetch } from '@/utils/api';
 
 const supabase = createClient();
 
@@ -46,32 +47,25 @@ export const MyUserContextProvider = (props: Props) => {
     return () => subscription.unsubscribe();
   }, []);
 
-useEffect(() => {
-  if (!user) {
-    setUserDetails(null);
-    return;
-  }
-  setIsLoadingData(true);
-  supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-    .then(({ data }) => {
-      setUserDetails(data as UserDetails);
+  const fetchUserDetails = useCallback(async () => {
+    if (!user) { setUserDetails(null); return; }
+    setIsLoadingData(true);
+    try {
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserDetails(data as UserDetails);
+      }
+    } finally {
       setIsLoadingData(false);
-    });
-}, [user?.id]);
+    }
+  }, [user?.id]);
 
-  const refreshUserDetails = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    if (data) setUserDetails(data as UserDetails);
-  }, [user]);
+  useEffect(() => {
+    fetchUserDetails();
+  }, [fetchUserDetails]);
+
+  const refreshUserDetails = fetchUserDetails;
 
   const value = useMemo(
     () => ({

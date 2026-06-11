@@ -1,6 +1,8 @@
 'use client';
 
 import { createClient } from '@/utils/supabase/client';
+import { useUser } from '@/hooks/useUser';
+import { authedFetch } from '@/utils/api';
 import React, { useRef } from "react";
 
 const supabase = createClient();
@@ -11,6 +13,7 @@ interface ButtonUploadOrChangeProps {
 }
 
 const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, onImageUpdate }) => {
+  const { user } = useUser();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sanitizeFileName = (fileName: string) =>
@@ -22,17 +25,9 @@ const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, 
 
   const uploadUserImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Auth check first — before any storage work
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("User is not authenticated");
-      return;
-    }
+    if (!file || !user) return;
 
     const sanitizedFileName = sanitizeFileName(file.name);
-    // Prefix with user.id to prevent cross-user filename collisions
     const filePath = `avatars/${user.id}_${sanitizedFileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -48,29 +43,26 @@ const ButtonUploadOrChange: React.FC<ButtonUploadOrChangeProps> = ({ hasAvatar, 
       .from("avatars")
       .getPublicUrl(filePath);
 
-    if (!urlData?.publicUrl) {
-      console.error("Erro ao obter URL pública da imagem");
-      return;
-    }
+    if (!urlData?.publicUrl) return;
 
-    const { error: upsertError } = await supabase
-      .from("users")
-      .upsert([{ id: user.id, email: user.email, avatar_url: urlData.publicUrl }]);
+    // use authedFetch to update avatar_url via VPS instead of direct Supabase call
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`, {
+      method: 'PATCH',
+      body: JSON.stringify({ avatar_url: urlData.publicUrl }),
+    });
 
-    if (upsertError) {
-      console.error("Erro ao inserir o avatar no banco de dados:", upsertError);
+    if (!res.ok) {
+      console.error("Erro ao atualizar avatar");
       return;
     }
 
     onImageUpdate(urlData.publicUrl);
-
-    // Reset input so the same file can be re-uploaded if needed
     if (inputRef.current) inputRef.current.value = '';
   };
 
   return (
     <label
-      className="cursor-pointer relative flex items-center gap-x-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest "
+      className="cursor-pointer relative flex items-center gap-x-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
       style={{
         background: 'rgba(239,68,68,0.1)',
         border: '1px solid rgba(239,68,68,0.35)',

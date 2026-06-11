@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import MediaItem from '@/components/MediaItem';
 import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
 import { Song } from '@/types';
 import { markDataStale } from '@/components/FloatingRefreshButton';
+import { authedFetch } from '@/utils/api';
 import { MdMusicOff } from 'react-icons/md';
-
-const supabase = createClient();
 
 const SLASH = 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)';
 
@@ -30,8 +28,9 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
     const fetchSongs = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.from('Songs').select('*');
-        if (error) throw error;
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs`);
+        if (!res.ok) throw new Error('Failed to fetch songs');
+        const data = await res.json();
         setSongs(data || []);
         setFilteredSongs(data || []);
       } catch (e) {
@@ -40,8 +39,8 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
         setIsLoading(false);
       }
     };
-    fetchSongs();
-  }, []);
+    if (user) fetchSongs();
+  }, [user]);
 
   useEffect(() => {
     setFilteredSongs(
@@ -61,14 +60,14 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
   const handleAddSongs = async () => {
     if (selectedSongIds.length === 0) return;
     try {
-      const { error } = await supabase.from('playlist_songs').insert(
-        selectedSongIds.map(songId => ({ playlist_id: playlistId, song_id: songId, user_id: user?.id }))
-      );
-      if (error) throw error;
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist-songs/batch`, {
+        method: 'POST',
+        body: JSON.stringify({ playlist_id: playlistId, song_ids: selectedSongIds }),
+      });
+      if (!res.ok) throw new Error('Failed to add songs');
       setSelectedSongIds([]);
       toast.success('Músicas adicionadas!');
       markDataStale();
-      
       onClose?.();
     } catch {
       toast.error('Erro ao adicionar músicas.');
@@ -77,8 +76,6 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
 
   return (
     <div className="flex flex-col gap-y-3 w-full">
-
-      {/* Search */}
       <input
         type="text"
         placeholder="PESQUISAR_TRACKS..."
@@ -87,9 +84,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
         className="w-full bg-neutral-900 border border-red-900/30 text-white text-[11px] font-mono uppercase tracking-wider px-3 py-2.5 placeholder:text-neutral-700 focus:outline-none focus:border-red-500/50"
         style={{ clipPath: SLASH }}
       />
-
-      {/* List */}
-      <div className=" overflow-y-auto flex flex-col gap-y-0.5 pr-1">
+      <div className="overflow-y-auto flex flex-col gap-y-0.5 pr-1">
         {isLoading && (
           <div className="flex items-center justify-center py-8 gap-x-2">
             <div className="w-4 h-4 border-2 border-red-600 border-t-transparent animate-spin" />
@@ -107,9 +102,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
             key={song.id}
             onClick={() => handleCheckboxChange(String(song.id))}
             className={`flex items-center gap-x-2 cursor-pointer border-l-2 transition ${
-              selectedSongIds.includes(String(song.id))
-                ? 'border-red-500 bg-red-500/5'
-                : 'border-transparent'
+              selectedSongIds.includes(String(song.id)) ? 'border-red-500 bg-red-500/5' : 'border-transparent'
             }`}
           >
             <div className="flex-1 min-w-0 pointer-events-none">
@@ -117,9 +110,7 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
             </div>
             <div
               className={`flex-shrink-0 w-4 h-4 mr-2 border transition flex items-center justify-center ${
-                selectedSongIds.includes(String(song.id))
-                  ? 'bg-red-500 border-red-500'
-                  : 'border-neutral-700'
+                selectedSongIds.includes(String(song.id)) ? 'bg-red-500 border-red-500' : 'border-neutral-700'
               }`}
               style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
             >
@@ -130,8 +121,6 @@ const AddSongToPlaylistModal: React.FC<AddSongToPlaylistProps> = ({ playlistId, 
           </div>
         ))}
       </div>
-
-      {/* Add button */}
       <button
         onClick={handleAddSongs}
         disabled={selectedSongIds.length === 0}

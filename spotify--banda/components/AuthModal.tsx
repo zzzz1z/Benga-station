@@ -19,17 +19,15 @@ const AuthModal = () => {
     const [resendCooldown, setResendCooldown] = useState(0);
 
     const checkIfEmailExists = async (email: string) => {
-        const { data, error } = await supabase
-            .from("users")
-            .select("email")
-            .ilike("email", email)
-            .maybeSingle();
-
-        if (error) {
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/exists?email=${encodeURIComponent(email)}`);
+            if (!res.ok) return false;
+            const { exists } = await res.json();
+            return exists;
+        } catch {
             toast.error("Erro ao verificar o email. Tente novamente.");
             return false;
         }
-        return !!data;
     };
 
     const handleSignUp = async () => {
@@ -60,7 +58,6 @@ const AuthModal = () => {
             if (error) {
                 toast.error("Por favor verifique o seu email para poder iniciar sessão.");
             }
-            // Don't close here — onAuthStateChange SIGNED_IN handler does it
         } catch {
             toast.error("Ocorreu um erro. Tente novamente.");
         }
@@ -87,25 +84,19 @@ const AuthModal = () => {
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                // Only act on actual sign-in, not token refreshes or other events
                 if (event !== 'SIGNED_IN' || !session?.user) return;
 
-                // Upsert user row
-                const { data } = await supabase
-                    .from("users")
-                    .select("id")
-                    .eq("id", session.user.id)
-                    .single();
-
-                if (!data) {
-                    await supabase.from("users").insert({
+                // upsert user row via VPS — no direct Supabase client call
+                await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         id: session.user.id,
                         email: session.user.email,
-                    });
-                }
+                    }),
+                });
 
                 markDataStale();
-             
                 authModal.onClose();
             }
         );

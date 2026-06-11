@@ -14,6 +14,7 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { authedFetch } from "@/utils/api";
+import { useLikedSongs } from "@/hooks/useLikedSongs";
 
 interface MediaItemProps {
     data: Song;
@@ -30,13 +31,14 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
     const authModal = useAuthModal();
     const router = useRouter();
     const menuRef = useRef<HTMLDivElement>(null);
-
-    const [isLiked, setIsLiked] = useState(false);
+const songId = String(data.id);
+    const { likedIds, refreshLikedSongs } = useLikedSongs();
+const isLiked = likedIds.has(songId);
     const [showModal, setShowModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
-    const songId = String(data.id);
+    
 
 
 
@@ -57,21 +59,20 @@ const MediaItem: React.FC<MediaItemProps> = ({ data, onClick, onRemove, playlist
         else player.setId(songId);
     };
 
-    const handleLike = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        const method = isLiked ? 'DELETE' : 'POST';
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
-            method,
-            body: JSON.stringify({ song_id: songId }),
-        });
-        if (res.ok) {
-            setIsLiked(!isLiked);
-            toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
-        }
-        setShowMenu(false);
-    };
-
+const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { authModal.onOpen('sign_up'); return; }
+    const method = isLiked ? 'DELETE' : 'POST';
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+        method,
+        body: JSON.stringify({ song_id: songId }),
+    });
+    if (res.ok) {
+        toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
+        await refreshLikedSongs();
+    }
+    setShowMenu(false);
+};
     const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user) { authModal.onOpen('sign_up'); return; }

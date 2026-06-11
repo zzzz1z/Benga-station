@@ -11,6 +11,7 @@ import Modal from "@/components/Modal";
 import toast from "react-hot-toast";
 import PlayButton from "@/components/PlayButton";
 import { authedFetch } from "@/utils/api";
+import { useLikedSongs } from "@/hooks/useLikedSongs";
 
 interface SongItemProps {
     data: Song;
@@ -21,14 +22,15 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
     const imagePath = useLoadImage(data);
     const { user } = useUser();
     const authModal = useAuthModal();
-
-    const [isLiked, setIsLiked] = useState(false);
+    const songId = String(data.id);
+const { likedIds, refreshLikedSongs } = useLikedSongs();
+const isLiked = likedIds.has(songId);
     const [showModal, setShowModal] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const songId = String(data.id);
+    
 
 
 
@@ -42,20 +44,20 @@ const SongItem: React.FC<SongItemProps> = ({ data, onClick }) => {
         return () => document.removeEventListener('mousedown', handler);
     }, [showMenu]);
 
-    const handleLike = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!user) { authModal.onOpen('sign_up'); return; }
-        const method = isLiked ? 'DELETE' : 'POST';
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
-            method,
-            body: JSON.stringify({ songId }),
-        });
-        if (res.ok) {
-            setIsLiked(!isLiked);
-            toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado!');
-        }
-        setShowMenu(false);
-    };
+const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { authModal.onOpen('sign_up'); return; }
+    const method = isLiked ? 'DELETE' : 'POST';
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
+        method,
+        body: JSON.stringify({ song_id: songId }),
+    });
+    if (res.ok) {
+        toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado!');
+        await refreshLikedSongs();
+    }
+    setShowMenu(false);
+};
 
     const handlePlaylistClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
