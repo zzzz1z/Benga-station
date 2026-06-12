@@ -8,11 +8,20 @@ import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { markDataStale } from "./FloatingRefreshButton";
 
-interface LikedButtonProps {
-  songId: string;
+
+export interface YTResult {
+  videoId: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
 }
 
-const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
+interface LikedButtonProps {
+  songId: string;
+  result: YTResult;
+}
+
+const LikedButton: React.FC<LikedButtonProps> = ({ songId, result }) => {
   const authModal = useAuthModal();
   const { user } = useUser();
   const { likedIds, refreshLikedSongs } = useLikedSongs();
@@ -24,6 +33,22 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
   const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');
     
+    
+    if (isYoutube) {
+
+    const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
+        method: 'POST',
+        body: JSON.stringify({
+            title: result.title,
+            author: result.artist,
+            youtube_video_id: result.videoId,
+            image_path: result.thumbnail,
+        })
+    });
+    const { id: realSongId } = await upsertRes.json();
+    if (!realSongId) { toast.error('Erro ao processar música'); return; }
+      }
+      
 
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {

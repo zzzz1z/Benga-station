@@ -63,10 +63,24 @@ const isLiked = likedIds.has(songId); // songId = `yt_${result.videoId}`
 const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) { authModal.onOpen('sign_up'); return; }
+
+    // upsert youtube song first to get real song_id
+    const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
+        method: 'POST',
+        body: JSON.stringify({
+            title: result.title,
+            author: result.artist,
+            youtube_video_id: result.videoId,
+            image_path: result.thumbnail,
+        }),
+    });
+    const { id: realSongId } = await upsertRes.json();
+    if (!realSongId) { toast.error('Erro ao processar música'); return; }
+
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
         method,
-        body: JSON.stringify({ song_id: songId }),
+        body: JSON.stringify({ song_id: realSongId }),
     });
     if (res.ok) {
         toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
