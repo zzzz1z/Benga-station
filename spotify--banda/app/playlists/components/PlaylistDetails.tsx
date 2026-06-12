@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
 import { Playlist } from '@/types';
 import MediaItem from '@/components/MediaItem';
@@ -19,7 +18,6 @@ import Header from '@/components/Header';
 import { authedFetch } from '@/utils/api';
 import { useUser } from '@/hooks/useUser';
 
-const supabase = createClient();
 
 const GAMER_CUT = "polygon(12% 0%, 100% 0%, 100% 88%, 88% 100%, 0% 100%, 0% 12%)";
 const BADGE_CUT = "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)";
@@ -82,11 +80,14 @@ useEffect(() => {
   fetchPlaylist(); // refetch silently, no loading spinner
 }, [refreshKey]);
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !playlist) return;
     setUploadingCover(true);
     try {
+      // keep Supabase Storage for file upload only
+      const { createClient } = await import('@/utils/supabase/client');
+      const supabase = createClient();
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('playlist-covers')
@@ -95,11 +96,13 @@ useEffect(() => {
       const { data: urlData } = supabase.storage
         .from('playlist-covers')
         .getPublicUrl(uploadData.path);
-      const { error: updateError } = await supabase
-        .from('Playlists')
-        .update({ cover_image: urlData.publicUrl })
-        .eq('id', playlist.id);
-      if (updateError) throw updateError;
+
+      // use authedFetch for the DB update
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/${playlist.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cover_image: urlData.publicUrl }),
+      });
+      if (!res.ok) throw new Error();
       setPlaylist(prev => prev ? { ...prev, cover_image: urlData.publicUrl } : prev);
       toast.success('Capa sincronizada!');
     } catch {
@@ -109,13 +112,11 @@ useEffect(() => {
     }
   };
 
-  const handleRemoveSong = async (songId: string) => {
-    const { error } = await supabase
-      .from('playlist_songs')
-      .delete()
-      .eq('playlist_id', id)
-      .eq('song_id', songId);
-    if (error) toast.error('Erro ao remover música.');
+const handleRemoveSong = async (songId: string) => {
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/playlist/${id}/songs/${songId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) toast.error('Erro ao remover música.');
     else {
       setSongs(prev => prev.filter(s => String(s.id) !== songId));
       toast.success('Música removida!');
