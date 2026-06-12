@@ -30,9 +30,11 @@ const SearchInput = () => {
                     placeholder="DIGITE_A_PROCURA..."
                     value={value}
                     onChange={handleChange}
-                   onBlur={(e) => {
+onBlur={(e) => {
   const related = e.relatedTarget as HTMLElement | null;
   if (related?.tagName === 'BUTTON') return;
+  const isMobile = window.matchMedia('(pointer: coarse)').matches;
+  if (isMobile) return;
   requestAnimationFrame(() => inputRef.current?.focus());
 }}
                 />

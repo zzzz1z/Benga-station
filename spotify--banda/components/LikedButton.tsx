@@ -7,7 +7,7 @@ import { authedFetch } from "@/utils/api";
 import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { markDataStale } from "./FloatingRefreshButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface LikedButtonProps {
   songId: string;
@@ -63,6 +63,9 @@ const handleClick = async () => {
     }
 };
 
+useEffect(() => {
+  setLocalLiked(null);
+}, [songId]);
   return (
     <div className="flex items-center justify-center w-full max-w-[40px] h-full">
       <button onClick={handleClick} className="flex items-center justify-center w-[30px] h-[30px] overflow-hidden flex-shrink-0">

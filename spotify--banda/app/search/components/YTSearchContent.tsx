@@ -106,10 +106,13 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
 
         try {
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
-                { signal: abortRef.current!.signal }
-            );
+const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
+    { 
+        signal: abortRef.current!.signal,
+        cache: 'no-store',
+    }
+);
             const data = await res.json();
             if (data.error || !data.results?.length) return;
 
