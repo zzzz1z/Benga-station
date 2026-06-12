@@ -25,10 +25,11 @@ const handleSubmit = async () => {
     });
     const json = await res.json();
 
-    if (json.valid) {
-        setFading(true);
-        setTimeout(() => router.replace('/'), 600);
-    } else {
+if (json.valid) {
+    localStorage.setItem('access_granted', '1'); // native fallback
+    setFading(true);
+    setTimeout(() => router.replace('/'), 600);
+} else {
         setError('Código inválido. Tenta novamente.');
         setLoading(false);
     }
