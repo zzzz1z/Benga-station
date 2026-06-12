@@ -7,6 +7,7 @@ import { authedFetch } from "@/utils/api";
 import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { markDataStale } from "./FloatingRefreshButton";
+import { useState } from "react";
 
 interface LikedButtonProps {
   songId: string;
@@ -25,23 +26,24 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, youtubeMetadata }) =>
 
   const id = String(songId);
   const isYoutube = id.startsWith('yt_');
-  const isLiked = likedIds.has(id);
+  const [localLiked, setLocalLiked] = useState<boolean | null>(null);
+const isLiked = localLiked !== null ? localLiked : likedIds.has(id);
 
-  const handleClick = async () => {
+const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');
 
     let realSongId = id;
 
     if (isYoutube) {
-      if (!youtubeMetadata) return; // no metadata = can't upsert
+      if (!youtubeMetadata) return;
       const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
         method: 'POST',
         body: JSON.stringify(youtubeMetadata),
       });
       if (!upsertRes.ok) { toast.error('Erro ao processar música'); return; }
-      const { id: upserteId } = await upsertRes.json();
-      if (!upserteId) { toast.error('Erro ao processar música'); return; }
-      realSongId = upserteId;
+      const { id: upsertedId } = await upsertRes.json();
+      if (!upsertedId) { toast.error('Erro ao processar música'); return; }
+      realSongId = String(upsertedId);
     }
 
     const method = isLiked ? 'DELETE' : 'POST';
@@ -55,10 +57,11 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, youtubeMetadata }) =>
       toast.error(json.error ?? 'Erro ao atualizar favoritos');
     } else {
       toast.success(isLiked ? 'Removido dos favoritos' : 'Adicionado aos favoritos!');
+      setLocalLiked(!isLiked);
       markDataStale();
       await refreshLikedSongs();
     }
-  };
+};
 
   return (
     <div className="flex items-center justify-center w-full max-w-[40px] h-full">
