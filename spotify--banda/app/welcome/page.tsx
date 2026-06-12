@@ -17,20 +17,24 @@ const handleSubmit = async () => {
     setLoading(true);
     setError('');
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim() }),
-    });
-    const json = await res.json();
+    try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code.trim() }),
+        });
+        const json = await res.json();
 
-if (json.valid) {
-    localStorage.setItem('access_granted', '1'); // native fallback
-    setFading(true);
-    setTimeout(() => router.replace('/'), 600);
-} else {
-        setError('Código inválido. Tenta novamente.');
+        if (json.valid) {
+            localStorage.setItem('access_granted', '1');
+            setFading(true);
+            setTimeout(() => router.replace('/'), 600);
+        } else {
+            setError('Código inválido. Tenta novamente.');
+        }
+    } catch {
+        setError('Erro de ligação. Tenta novamente.');
+    } finally {
         setLoading(false);
     }
 };

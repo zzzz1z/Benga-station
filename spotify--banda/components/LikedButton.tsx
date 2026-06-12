@@ -23,7 +23,7 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId }) => {
 
   const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');
-    if (isYoutube) return;
+    
 
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
