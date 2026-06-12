@@ -71,7 +71,10 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
     const isFetchingMoreRef = useRef(false);
     const nextPageTokenRef = useRef<string | null>(null);
     const currentQueryRef = useRef<string>('');
+    const searchPageRef = useRef(2);
 
+
+    
     const resultsRef = useRef<YTResult[]>([]);
     useEffect(() => { resultsRef.current = results; }, [results]);
 
@@ -107,7 +110,7 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
 
         try {
 const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}`,
+   `${process.env.NEXT_PUBLIC_API_URL}/api/youtube/search?q=${encodeURIComponent(currentQueryRef.current)}&page=${searchPageRef.current}`,
     { 
         signal: abortRef.current!.signal,
         cache: 'no-store',
@@ -148,6 +151,8 @@ const res = await fetch(
             }));
 
             usePlayer.getState().appendToQueue(newSongs as any);
+            searchPageRef.current += 1;
+        
         } catch (err) {
             console.error('fetchMoreAndAppend error:', err);
         } finally {
@@ -187,6 +192,8 @@ const res = await fetch(
             nextPageTokenRef.current = null;
             currentQueryRef.current = '';
             isFetchingMoreRef.current = false;
+            searchPageRef.current = 2;
+
             stopPhraseCycle();
             return;
         }
@@ -204,6 +211,7 @@ const res = await fetch(
         nextPageTokenRef.current = null;
         currentQueryRef.current = query;
         isFetchingMoreRef.current = false;
+        searchPageRef.current = 2;
         stopPhraseCycle();
 
         const doSearch = async () => {
