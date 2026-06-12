@@ -137,7 +137,7 @@ const triggerGlitch = useCallback((nav: typeof pendingNav.current) => {
 
 useEffect(() => {
     ['/search', '/playlists', '/liked', '/account'].forEach(href => router.prefetch(href));
-  }, [router]);
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleError = (e: ErrorEvent) => {
