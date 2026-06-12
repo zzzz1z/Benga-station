@@ -30,7 +30,11 @@ const SearchInput = () => {
                     placeholder="DIGITE_A_PROCURA..."
                     value={value}
                     onChange={handleChange}
-                    onBlur={() => requestAnimationFrame(() => inputRef.current?.focus())}
+                   onBlur={(e) => {
+  const related = e.relatedTarget as HTMLElement | null;
+  if (related?.tagName === 'BUTTON') return;
+  requestAnimationFrame(() => inputRef.current?.focus());
+}}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-900/30 pointer-events-none">
                     <HiSearch size={20} />
