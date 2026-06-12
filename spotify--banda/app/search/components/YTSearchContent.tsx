@@ -381,7 +381,7 @@ const handlePlay = useCallback(async (result: YTResult) => {
                     </div>
                 ))}
 
-                // at the bottom of the return, after the results map div:
+        
 {allReady && (
     <div className="px-6 mt-4 mb-2">
         <button

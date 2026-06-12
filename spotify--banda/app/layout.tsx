@@ -12,6 +12,7 @@ import { PageTransitionProvider } from '@/providers/PageTransitionProvider';
 import KeepAlive from '@/components/KeepAlive';
 import AccessGuard from '@/components/AcessGuard';
 import Player from '@/components/player/Player';
+import PlayerPadding from '@/components/player/PlayerPadding';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,7 +32,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <LikedSongsProvider>
                     <ModalProvider />
                     <SideBar>
+                    <PlayerPadding>
                       {children}
+                    </PlayerPadding>
                     </SideBar>
                     <Player />
                     <FloatingRefreshButton />
