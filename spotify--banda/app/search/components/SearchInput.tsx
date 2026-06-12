@@ -1,24 +1,22 @@
 'use client';
 
-import useDebounce from "@/hooks/useDebounce";
 import { useEffect, useState } from "react";
 import qs from 'query-string';
-import Input from "./Input";
 import { useRouter } from "next/navigation";
 import { HiSearch } from "react-icons/hi";
+import Input from "./Input";
 
 const SearchInput = () => {
     const router = useRouter();
     const [value, setValue] = useState<string>('');
-    const debouncedValue = useDebounce<string>(value, 500);
 
     useEffect(() => {
         const url = qs.stringifyUrl({
             url: '/search',
-            query: { title: debouncedValue }
+            query: { title: value }
         });
         router.replace(url, { scroll: false });
-    }, [debouncedValue, router]);
+    }, [value, router]);
 
     return (
         <div className="flex items-center gap-x-2 w-full max-w-2xl relative">
@@ -41,7 +39,7 @@ const SearchInput = () => {
                     });
                     router.replace(url, { scroll: false });
                 }}
-                className="bg-transparent border border-red-600 text-red-600  text-xs font-black uppercase px-6 py-[14px] rounded-none flex-shrink-0 tracking-[0.2em] shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                className="bg-transparent border border-red-600 text-red-600 text-xs font-black uppercase px-6 py-[14px] rounded-none flex-shrink-0 tracking-[0.2em] shadow-[0_0_10px_rgba(239,68,68,0.1)]"
             >
                 EXECUTE
             </button>
