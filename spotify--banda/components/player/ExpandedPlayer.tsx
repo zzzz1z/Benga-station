@@ -321,22 +321,12 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
       {/* Scrollable content */}
       <div className="flex flex-col flex-1 px-5 overflow-y-scroll pb-8 gap-y-6 relative z-10">
-        {/* Album art — large */}
-        <div className="flex justify-center flex-shrink-0 mt-2">
-          <div className="relative" style={{ width: 'min(72vw, 280px)', height: 'min(72vw, 280px)' }}>
-            {/* corner accents */}
-            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-red-500 z-10 pointer-events-none" />
-            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-red-500 z-10 pointer-events-none" />
-            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-red-500 z-10 pointer-events-none" />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-red-500 z-10 pointer-events-none" />
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {/* FIX: scale/brightness transition is pointer-events-none — not a tap target */}
-              <Image fill src={imageUrl ?? '/images/likedit.png'} alt={song.title}
-                className={`object-cover duration-700 pointer-events-none ${isPlaying ? 'scale-100' : 'scale-95 brightness-75'}`}
-                sizes="280px" unoptimized />
-            </div>
-          </div>
-        </div>
+        
+        
+       {/* Lyrics flip card */}
+<div className="flex justify-center flex-shrink-0 mt-2">
+  <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
+</div>
 
         {/* Song info + like */}
         <div className="flex items-center justify-between flex-shrink-0">
@@ -405,10 +395,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </span>
         </div>
 
-        {/* Lyrics flip card */}
-        <div className="flex-shrink-0">
-          <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
-        </div>
 
 
         {(queueStatus === 'fetching' || queueStatus === 'exhausted') && (

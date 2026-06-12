@@ -30,17 +30,46 @@ export const MyUserContextProvider = (props: Props) => {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAccessToken(session?.access_token ?? null);
       setIsLoadingUser(false);
+
+      if (session?.access_token) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }),
+        });
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setUser(session?.user ?? null);
         setAccessToken(session?.access_token ?? null);
         setIsLoadingUser(false);
+
+        if (session?.access_token) {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }),
+          });
+        } else if (event === 'SIGNED_OUT') {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+        }
       }
     );
 

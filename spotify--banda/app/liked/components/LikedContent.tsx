@@ -88,7 +88,7 @@ useEffect(() => {
             className="flex items-center gap-x-3 w-full opacity-0 animate-[fadeSlideIn_0.3s_ease_forwards]"
             style={{ animationDelay: `${i * 0.035}s` }}
           >
-            <div className="flex-1 min-w-0 pointer-events-none">
+            <div className="flex-1 min-w-0">
               <MediaItem
                 onClick={() => onPlay(getSongPlayerId(song))}
                 data={song}
