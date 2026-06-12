@@ -7,9 +7,13 @@ export function useAccessGuard() {
   const router = useRouter();
 
   useEffect(() => {
-    const hasAccess = localStorage.getItem('access_granted') === '1';
-    if (!hasAccess) {
-      router.replace('/welcome');
-    }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access/check`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(({ granted }) => {
+        if (!granted) router.replace('/welcome');
+      })
+      .catch(() => router.replace('/welcome'));
   }, [router]);
 }

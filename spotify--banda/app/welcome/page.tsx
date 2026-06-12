@@ -11,27 +11,28 @@ const WelcomePage = () => {
     const [loading, setLoading] = useState(false);
     const [fading, setFading] = useState(false);
 
-    const handleSubmit = async () => {
-        if (!code.trim()) return;
-        setLoading(true);
-        setError('');
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: code.trim() }),
-        });
-        const json = await res.json();
+const handleSubmit = async () => {
+    if (!code.trim()) return;
+    setLoading(true);
+    setError('');
 
-        if (json.valid) {
-            localStorage.setItem('access_granted', '1');
-            setFading(true);
-            setTimeout(() => router.replace('/'), 600);
-        } else {
-            setError('Código inválido. Tenta novamente.');
-            setLoading(false);
-        }
-    };
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+    });
+    const json = await res.json();
+
+    if (json.valid) {
+        setFading(true);
+        setTimeout(() => router.replace('/'), 600);
+    } else {
+        setError('Código inválido. Tenta novamente.');
+        setLoading(false);
+    }
+};
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') handleSubmit();
