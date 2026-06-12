@@ -1,53 +1,50 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
-import Header from "@/components/Header";
-import SearchTabs from "./components/SearchTabs";
-import SearchInput from "./components/SearchInput";
-import { Song } from '@/types';
+import { useEffect, useState } from "react";
+import qs from 'query-string';
+import { useRouter } from "next/navigation";
+import { HiSearch } from "react-icons/hi";
+import Input from "./components/Input";
 
-function SearchPage() {
-  const searchParams = useSearchParams();
-  const title = searchParams.get('title') ?? '';
-  const yt = searchParams.get('yt') === '1';
+const SearchInput = () => {
+    const router = useRouter();
+    const [value, setValue] = useState<string>('');
 
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [hasMore, setHasMore] = useState(false);
+    useEffect(() => {
+        const url = qs.stringifyUrl({
+            url: '/search',
+            query: { title: value }
+        });
+        router.replace(url, { scroll: false });
+    }, [value, router]);
 
-useEffect(() => {
-  const params = new URLSearchParams({ limit: '50', offset: '0' });
-  if (title) params.set('search', title);
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
-    .then(r => r.json())
-    .then(data => {
-      setSongs(Array.isArray(data) ? data : data.songs ?? []);
-      setHasMore(false);
-    });
-}, [title]);
-
-  return (
-    <div className="bg-black h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
-      <Header className="from-black">
-        <div className="mb-2 flex flex-col gap-y-6">
-          <div className="flex items-center gap-x-3">
-            <div className="h-8 w-1 bg-red-600" />
-            <h1 className="text-white text-4xl font-black uppercase tracking-tighter">
-              Pesquisar<span className="text-red-600">.</span>
-            </h1>
-          </div>
-          <SearchInput />
+    return (
+        <div className="flex items-center gap-x-2 w-full max-w-2xl relative">
+            <div className="relative w-full">
+                <Input
+                    className="bg-neutral-900 border-red-900/40 focus:border-red-600 rounded-none font-mono placeholder:text-neutral-600 text-red-500 uppercase tracking-tight"
+                    placeholder="DIGITE_A_PROCURA..."
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-900/30 pointer-events-none">
+                    <HiSearch size={20} />
+                </div>
+            </div>
+            <button
+                onClick={() => {
+                    const url = qs.stringifyUrl({
+                        url: '/search',
+                        query: { title: value, yt: '1' }
+                    });
+                    router.replace(url, { scroll: false });
+                }}
+                className="bg-transparent border border-red-600 text-red-600 text-xs font-black uppercase px-6 py-[14px] rounded-none flex-shrink-0 tracking-[0.2em] shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+            >
+                EXECUTE
+            </button>
         </div>
-      </Header>
-      <SearchTabs title={title} songs={songs} hasMore={hasMore} triggerYT={yt} />
-    </div>
-  );
-}
+    );
+};
 
-export default function Search() {
-  return (
-    <Suspense>
-      <SearchPage />
-    </Suspense>
-  );
-}
+export default SearchInput;

@@ -145,6 +145,13 @@ const YTSearchContent: React.FC<YTSearchContentProps> = ({ query }) => {
         }
     }, []);
 
+
+    useEffect(() => {
+  const handler = () => fetchMoreAndAppend();
+  window.addEventListener('yt-queue-needs-more', handler);
+  return () => window.removeEventListener('yt-queue-needs-more', handler);
+}, [fetchMoreAndAppend]);
+
     useEffect(() => {
         if (!activeID || !playerIds.length) return;
         if (isFetchingMoreRef.current) return;
@@ -373,6 +380,29 @@ const handlePlay = useCallback(async (result: YTResult) => {
                         />
                     </div>
                 ))}
+
+                // at the bottom of the return, after the results map div:
+{allReady && (
+    <div className="px-6 mt-4 mb-2">
+        <button
+            onClick={fetchMoreAndAppend}
+            disabled={isFetchingMoreRef.current}
+            className="w-full flex items-center justify-center gap-x-3 py-3 border border-red-900/40 text-red-500/60 font-mono text-[10px] uppercase tracking-[0.2em] disabled:opacity-40"
+        >
+            {isFetchingMoreRef.current ? (
+                <>
+                    <div className="w-2 h-2 bg-red-600 animate-pulse" />
+                    LOADING_MORE...
+                </>
+            ) : (
+                <>
+                    <span className="text-red-900/60">{'>'}</span>
+                    LOAD_MORE_RESULTS
+                </>
+            )}
+        </button>
+    </div>
+)}
             </div>
         </div>
     );

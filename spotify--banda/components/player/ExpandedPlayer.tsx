@@ -116,7 +116,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const setRepeatMode = usePlayer(s => s.setRepeatMode);
   const setId  = usePlayer(s => s.setId);
   const setIds = usePlayer(s => s.setIds);
-
   // FIX: start visible immediately — no entering state that blocks first tap
   const [animState, setAnimState] = useState<'visible' | 'leaving'>('visible');
 
@@ -180,6 +179,9 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     dragIndexRef.current = null; dragOverIndexRef.current = null;
     setDraggingIndex(null); setDragOverIndex(null);
   }, [ids, setIds]);
+
+
+  
 
   const handleDragHandleDown = useCallback((globalIndex: number, e: React.TouchEvent | React.MouseEvent) => {
     e.stopPropagation();

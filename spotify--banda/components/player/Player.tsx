@@ -23,8 +23,15 @@ const getArtworkUrl = (song: Song): string => {
 
 const Player = () => {
   const [isMounted, setIsMounted] = useState(false);
-  const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ enabled: true });
+const { status: queueStatus, fetchMore: queueFetchMore } = useQueueExtender({ 
+  enabled: true,
+  onNeedsMoreYT: () => {
+    // dispatch a custom event that YTSearchContent listens to
+    window.dispatchEvent(new CustomEvent('yt-queue-needs-more'));
+  }
+});
 
+  
 
 
   useEffect(() => {
