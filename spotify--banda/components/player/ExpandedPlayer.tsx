@@ -54,9 +54,9 @@ const QueueRow = ({
 }) => {
   const imageUrl = useLoadImage(song);
   return (
-    <div
-      onClick={onClick}
-      className={`flex items-center gap-x-3 px-3 py-2.5 select-none
+<button
+  onClick={onClick}
+  className={`flex items-center gap-x-3 px-3 py-2.5 select-none w-full text-left
         ${dragging ? 'opacity-40 bg-white/5' : ''}
         ${isCurrent
           ? 'bg-red-950/40 border-l-2 border-red-500'
@@ -94,7 +94,7 @@ const QueueRow = ({
           <MdClose size={12} />
         </button>
       )}
-    </div>
+    </button>
   );
 };
 
@@ -410,7 +410,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           <LyricsFlipCard key={song.id} song={song} position={position} duration={duration} isPlaying={isPlaying} />
         </div>
 
-        {/* Queue extender */}
+
         {(queueStatus === 'fetching' || queueStatus === 'exhausted') && (
           <div className="flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
             {queueStatus === 'fetching' && (
