@@ -334,7 +334,15 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <MarqueeText text={song.title} className="text-white text-sm font-black uppercase tracking-tighter leading-tight" />
             <p className="text-red-500/60 font-mono text-xs uppercase tracking-widest truncate mt-0.5">{song.author}</p>
           </div>
-          <LikedButton songId={String(song.id)} />
+          <LikedButton
+  songId={String(song.id)}
+  youtubeMetadata={String(song.id).startsWith('yt_') ? {
+    title: song.title,
+    author: song.author,
+    youtube_video_id: song.youtube_video_id ?? String(song.id).replace('yt_', ''),
+    image_path: song.image_path,
+  } : undefined}
+/>
         </div>
 
         {/* Seek bar */}

@@ -8,20 +8,17 @@ import toast from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 import { markDataStale } from "./FloatingRefreshButton";
 
-
-export interface YTResult {
-  videoId: string;
-  title: string;
-  artist: string;
-  thumbnail: string;
-}
-
 interface LikedButtonProps {
   songId: string;
-  result: YTResult;
+  youtubeMetadata?: {
+    title: string;
+    author: string;
+    youtube_video_id: string;
+    image_path?: string;
+  };
 }
 
-const LikedButton: React.FC<LikedButtonProps> = ({ songId, result }) => {
+const LikedButton: React.FC<LikedButtonProps> = ({ songId, youtubeMetadata }) => {
   const authModal = useAuthModal();
   const { user } = useUser();
   const { likedIds, refreshLikedSongs } = useLikedSongs();
@@ -32,28 +29,25 @@ const LikedButton: React.FC<LikedButtonProps> = ({ songId, result }) => {
 
   const handleClick = async () => {
     if (!user) return authModal.onOpen('sign_up');
-    
-    
-    if (isYoutube) {
 
-    const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
+    let realSongId = id;
+
+    if (isYoutube) {
+      if (!youtubeMetadata) return; // no metadata = can't upsert
+      const upsertRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/upsert-youtube`, {
         method: 'POST',
-        body: JSON.stringify({
-            title: result.title,
-            author: result.artist,
-            youtube_video_id: result.videoId,
-            image_path: result.thumbnail,
-        })
-    });
-    const { id: realSongId } = await upsertRes.json();
-    if (!realSongId) { toast.error('Erro ao processar música'); return; }
-      }
-      
+        body: JSON.stringify(youtubeMetadata),
+      });
+      if (!upsertRes.ok) { toast.error('Erro ao processar música'); return; }
+      const { id: upserteId } = await upsertRes.json();
+      if (!upserteId) { toast.error('Erro ao processar música'); return; }
+      realSongId = upserteId;
+    }
 
     const method = isLiked ? 'DELETE' : 'POST';
     const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/likes`, {
       method,
-      body: JSON.stringify({ song_id: id }),
+      body: JSON.stringify({ song_id: realSongId }),
     });
 
     if (!res.ok) {
