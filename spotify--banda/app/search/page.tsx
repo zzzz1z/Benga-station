@@ -7,7 +7,7 @@ import SearchTabs from "./components/SearchTabs";
 import SearchInput from "./components/SearchInput";
 import { Song } from '@/types';
 
-function SearchPage() {
+function SearchResults() {
   const searchParams = useSearchParams();
   const title = searchParams.get('title') ?? '';
   const yt = searchParams.get('yt') === '1';
@@ -15,17 +15,21 @@ function SearchPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [hasMore, setHasMore] = useState(false);
 
-useEffect(() => {
-  const params = new URLSearchParams({ limit: '50', offset: '0' });
-  if (title) params.set('search', title);
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
-    .then(r => r.json())
-    .then(data => {
-      setSongs(Array.isArray(data) ? data : data.songs ?? []);
-      setHasMore(false);
-    });
-}, [title]);
+  useEffect(() => {
+    const params = new URLSearchParams({ limit: '50', offset: '0' });
+    if (title) params.set('search', title);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs?${params}`)
+      .then(r => r.json())
+      .then(data => {
+        setSongs(Array.isArray(data) ? data : data.songs ?? []);
+        setHasMore(false);
+      });
+  }, [title]);
 
+  return <SearchTabs title={title} songs={songs} hasMore={hasMore} triggerYT={yt} />;
+}
+
+export default function Search() {
   return (
     <div className="bg-black h-full w-full overflow-hidden pt-[30px] overflow-y-auto">
       <Header className="from-black">
@@ -39,15 +43,9 @@ useEffect(() => {
           <SearchInput />
         </div>
       </Header>
-      <SearchTabs title={title} songs={songs} hasMore={hasMore} triggerYT={yt} />
+      <Suspense fallback={null}>
+        <SearchResults />
+      </Suspense>
     </div>
-  );
-}
-
-export default function Search() {
-  return (
-    <Suspense>
-      <SearchPage />
-    </Suspense>
   );
 }
