@@ -1,7 +1,6 @@
 'use client';
 
 import { useUser } from '@/hooks/useUser';
-import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import useAdminModal from '@/hooks/useAdminModal';
@@ -12,7 +11,6 @@ import { HiLightningBolt } from 'react-icons/hi';
 import ButtonUploadOrChange from './ButtonUploadOrChange';
 import { authedFetch } from '@/utils/api';
 
-const supabase = createClient();
 const SLASH = 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)';
 const SLASH_SM = 'polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)';
 
@@ -61,14 +59,17 @@ const updateNames = async () => {
     else { toast.success('Guardado!'); onUserUpdate(); }
     setLoadingInfo(false);
   };
-    const updatePassword = async () => {
-        if (!newPassword) return;
-        setLoadingPassword(true);
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) toast.error('Erro ao atualizar password.');
-        else { toast.success('Password atualizada!'); setNewPassword(''); }
-        setLoadingPassword(false);
-    };
+const updatePassword = async () => {
+    if (!newPassword) return;
+    setLoadingPassword(true);
+    const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ password: newPassword }),
+    });
+    if (!res.ok) toast.error('Erro ao atualizar password.');
+    else { toast.success('Password atualizada!'); setNewPassword(''); }
+    setLoadingPassword(false);
+};
 
     const handleAdminClick = () => {
         if (userDetails?.role === 'admin') router.push('/account/adminControls');
